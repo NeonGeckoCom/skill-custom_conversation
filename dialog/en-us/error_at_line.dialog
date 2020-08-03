@@ -1,0 +1,1 @@
+<speak>A {{error}} error was found in line {{line}} in {{script}}.</speak> {{detail}}

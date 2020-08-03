@@ -1,0 +1,15 @@
+Script: "Test If Contains"
+Variable: {conditional}: "continue", "i do"
+Variable: {test}: "False"
+
+Neon speak: "Say {conditional} to continue"
+voice_input{test}
+
+if {test} CONTAINS {conditional}:
+    Neon speak: "Matched, exiting"
+    Exit
+else:
+    Neon speak: "Not Matched"
+    Goto: 10
+Neon speak: "Outside of if statement"
+Exit

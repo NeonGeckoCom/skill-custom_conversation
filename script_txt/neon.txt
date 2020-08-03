@@ -1,0 +1,10 @@
+Script: "Demo Intro to Neongecko"
+Variable: {name}: ""
+Variable: {more}: ""
+Neon Speak: "Welcome to the Neongecko Intro, My name is Neon."
+Neon Speak: "What is your name?"
+voice_input{name}
+Neon Speak: "hi {name}"
+Neon Speak: "Welcome to Neongecko.com." 
+Neon Speak: "Exiting the Neon Welcome Script. If your microphone and speakers are enabled you can ask me for time, weather, play music, show videos, caffeine contents, etcetera"
+EXIT

@@ -1,0 +1,695 @@
+Script: "Robbie" 
+Language: "en-us male"
+
+Variable: {userName} : ""
+Variable: {covidUserRef} : ""
+Variable: {covidIll} : ""
+Variable: {covidAge} : ""
+Variable: {covidLifeThreat} : ""
+Variable: {covidContact} : ""
+Variable: {covidFever} : ""
+Variable: {covidBreath} : ""
+Variable: {covidSevereBreath} : ""
+Variable: {covidCough} : ""
+Variable: {covidSevereCough} : ""
+Variable: {covidBP} : ""
+Variable: {covidSevereBP} : ""
+Variable: {covidNose} : ""
+Variable: {covidThroat} : ""
+Variable: {covidMuscle} : ""
+Variable: {covidTaste} : ""
+Variable: {covidFatigue} : ""
+Variable: {covidNausea} : ""
+Variable: {covidLungs} : ""
+Variable: {covidHeart} : ""
+Variable: {covidDiabetes} : ""
+Variable: {covidNeuroCough} : ""
+Variable: {covidWeakImmune} : ""
+Variable: {covidDialysis} : ""
+Variable: {covidLiver} : ""
+Variable: {covidObesity} : ""
+Variable: {covidPregnancy} : ""
+Variable: {covidComorbiditiesCount} : ""
+Variable: covidNursingHome} : ""
+Variable: {covidCareGiver} : ""
+
+Variable: {True}: 1
+Variable: {False}: 0
+
+# {yesList} =  "yes", "sure", "very", "yup", "y"
+# {NoList} = "no", "not", "I don't have", "nope", "n"
+# {ignoreList} = "I'm", "a", "the", "thanks", "thank you" # Prepositions and articles to ignore ..
+
+Variable: {yesNoList} = "yes", "no"
+
+
+Name Speak : Robbie : "<speak></speak>Version 202006167 14:40 Demo Covid-19 Screening Application"
+
+Name Speak : Robbie : "<speak></speak>This demonstration is based on the CDC's guide recommendations for Covid-19 phone screening, as of June 2020, and should not be considered a CDC or medically approved application at this time."
+# Name Speak: Robbie : "<speak></speak>Some text to print and not speak."
+
+
+#GREETING
+
+@StartCovidScreening
+
+Name Speak : Robbie : "Thank you for interacting with the demonstration Neon virtual examination room and Covid-19 conversational screening application beta test."
+Name Speak : Robbie : "My name is Neon Robbie."
+Name Speak : Robbie : "What is your name?"
+voice_input{userName}
+Name Speak : Robbie : "Hi {userName} . I am glad you chose to talk with me about Covid-19 symptoms."
+
+@promptMoreAppInfo
+
+Name Speak : Robbie : "Before starting the screening, would you like more information on the Neon conversational Covid-19 demo screening application?"
+voice_input{moreAppInfo}
+#if {moreAppInfo} !IN {yesNoList}:
+#    Goto: promptMoreAppInfo
+if {moreAppInfo} == "no":
+    Goto: BeginScreening
+Name Speak : Robbie : "The Neon conversational demonstration Covid-19 screening application is based on the Center for Disease Control and Prevention recommendations for the Coronavirus Disease 2019 Telephone Response Guide. The Covid-19 screening script is available at CDC dot gov website. </speak>https://www.cdc.gov/coronavirus/2019-ncov/hcp/phone-guide/ "
+
+@BeginScreening
+
+Name Speak : Robbie : "Your beta test virtual exam room is ready."
+Name Speak : Robbie : "In response to screening questions you can say details to hear more details."
+# Name Speak : Robbie : "or you can say previous question, or start over."
+
+@promptUserRef
+
+Name Speak : Robbie : "Are you asking for help for yourself or for someone else?"
+voice_input{covidUserRef}
+#if {covidUserRef} == "myself":
+Variable: {userSelfRefsList} =  "self", "myself", "me"
+Variable: {userElseRefsList} =  "else", "someone else", "friend"
+# [*] is required to use all elements of a list, otherwise only first element is used in substitution
+if {covidUserRef} IN {userSelfRefsList[*]}:
+    userref1 = "have you"
+    userref2 = "are you"
+    userref3 = "do you"
+    userref1C = "Have you"
+    userref2C = "Are you"
+    userref3C = "Do you"
+else:
+    if {covidUserRef} IN {userElseRefsList[*]}:
+        userref1 = "has the person you are calling about"
+        userref2 = "is the person for whom you are calling"
+        userref3 = "does the person you are calling about"
+        userref1C = "Has the person you are calling about"
+        userref2C = "Is the person for whom you are calling"
+        userref3C = "Does the person you are calling about"
+    else
+        Goto: promptUserRef
+
+Name Speak : Robbie : "Got it {userName}."
+
+
+#TRIAGE
+
+
+@promptIll
+Name Speak : Robbie : "This audio guide is for people who are ill. {userref2C} ill?"   
+# "Are you ill or contacting on behalf of someone who is ill?" 
+voice_input{covidIll}
+if {covidIll} == "no":
+    Name Speak : Robbie : "You're not symptomatic of Covid-19 but if you are concerned you have Covid-19 infection you should contact your care advisor."
+    Name Speak : Robbie : "Option for additional information on Covid-19 symptoms in progress."
+    Goto: A-noSymptoms 
+# TODO: This could do something other than run exit, continue prompting? Ask to start over? Ask to check other symptoms?
+    # Exit - Only for sick people
+else:
+    if {covidIll} == "yes":
+        Goto: promptAge
+    else:
+        if {covidIll} == "start over":
+            Goto: StartCovidScreening
+        else:
+            Goto: promptIll
+
+
+@promptAge
+Name Speak : Robbie : "This audio guide is for people over 5. How many years old {userref2} ?"
+voice_input{covidAge}
+if {covidAge} < 5:
+    Goto: C-lessThanFive 
+else:
+    if {covidAge} >= 5:
+        Goto: promptLifeThreatening
+    else:
+        Goto: promptAge
+
+
+# LIFE THREATENING
+
+
+@promptLifeThreatening
+Name Speak : Robbie : "{userRef3C} have a life-threatening emergency medical condition? Say details for details."
+voice_input{covidLifeThreat}
+if {covidLifeThreat} == "no":
+    Goto: promptContact  
+else:
+    if {covidLifeThreat} == "details":
+        Name Speak : Robbie : "Life-threatening emergency medical conditions include these symptoms:"
+        Name Speak : Robbie : "Extremely difficult breathing (can't talk without gasping for air); "
+        Name Speak : Robbie : "Blue-colored lips or face; Severe, constant dizziness or lightheadedness; "
+        Name Speak : Robbie : "Acting confused or inability to arouse; new or worsening slurred speech;"
+        Name Speak : Robbie : "New onset of seizures or seizures that won't stop; and "
+        Name Speak : Robbie : "Other life-threatening emergency signs."
+        Goto: promptLifeThreatening
+    if {covidLifeThreat} != "yes":
+            Goto: promptLifeThreatening
+    Goto: B-call911
+
+
+# SCREEN FOR SYMPTOMS
+
+
+@promptContact
+Name Speak : Robbie : "In the two weeks leading up to feeling sick {userref1} had contact with someone who was diagnosed with COVID-19, or live in or recently visited a place where COVID-19 is spreading?"
+voice_input{covidContact}
+if {covidContact} == "no":
+    covidContact = {False}  
+else:
+    if {covidContact} != "yes":
+        Goto: promptContact
+    covidContact = {True} 
+
+
+# SYMPTOMS 
+
+
+@promptFever
+Name Speak : Robbie : "{userRef3C} have a fever or felt hot or feverish in the last two days?"
+voice_input{covidFever}
+if {covidFever} == "no":
+    covidFever = {False}  
+else:
+    if {covidFever} != "yes":
+        Goto: promptFever
+    covidFever = {True}  
+    # Add - 
+    # Ask "Were you able to measure the temperature with a thermometer?"
+    # Yes: Ask "What was the temperature and when was it measured?"
+    # If No: Ask "Are you/they experiencing shaking, chills, or sweating? Do you/they feel very warm to the touch?"
+# Ask "When did the fever/feverishness start?"
+# Ask "Was fever-reducing medication given?"
+# Details: Examples of fever-reducing medications include ibuprofen and acetaminophen.
+# If Yes: Ask "How long ago was the medication taken?"
+ 
+@promptBreath
+Name Speak : Robbie : "{userRef3C} have shortness of breath?"
+voice_input{covidBreath}
+if {covidBreath} == "no":
+    covidBreath = {False} 
+    covidSevereBreath = {False} 
+else:
+    if {covidBreath} != "yes":
+        Goto: promptBreath
+    covidBreath = {True}  
+    @promptSevereBreath
+    Name Speak : Robbie : "{userRef3C} have severe shortness of breath, such as difficulty talking or walking across the room without stopping to breath?"
+    voice_input{covidSevereBreath}
+    if {covidSevereBreath} == "yes" :
+        covidSevereBreath = {True}
+        Name Speak : Robbie : "People having severe shortness of breath need urgent care and should call 911 or immediately go to the emergency department."
+        Goto: B-call911
+    else:
+        if {covidSevereBreath} != "no":
+            Goto: promptSevereBreath
+        covidSevereBreath = {False}
+@promptCough
+Name Speak : Robbie : "{userRef3C} have a cough?"
+voice_input{covidCough}
+if {covidCough} == "no":
+    covidCough = {False}  
+    covidSevereCough = {False}
+else:
+    if {covidCough} != "yes":
+        Goto: promptCough
+    covidCough = {True}  
+    @promptSevereCough
+    Name Speak : Robbie : "{userRef1C} coughed up a teaspoon of blood?"
+    voice_input{covidSevereCough}
+    if {covidSevereCough} == "yes" :
+        covidSevereCough = {True}
+        Name Speak : Robbie : "People having severe coughing (termed hemoptysis) should go to the emergency department."
+        Goto : D-gotoEmergency
+    if {covidSevereCough} != "no":
+        Goto: promptSevereCough
+    covidSevereCough = {False}
+
+
+@promptBP
+Name Speak : Robbie : "{userRef3C} have low blood pressure? Signs of low blood pressure can include cold, pale, or clammy skin; or feeling too light-headed and too weak to stand."
+voice_input{covidBP}
+if {covidBP} == "no":
+    covidBP = {False}  
+    covidSevereBP = {False}
+else:
+    if {covidBP} != "yes":
+        Goto: promptBP
+    covidBP = {True}  
+    @promptSevereBP
+    Name Speak : Robbie : "{userRef3C} have severe low BP hypotension such as not being able to stand?"
+    voice_input{covidSevereBP}
+    if {covidSevereBP} == "yes" :
+        covidSevereBP = {True}
+        Name Speak : Robbie : "People having severe low blood pressure symptoms should go to the emergency department."
+        Goto : D-gotoEmergency
+    if {covidSevereBP} != "no":
+        Goto: promptSevereBP
+    covidSevereBP = {False}
+
+
+@promptNose
+Name Speak : Robbie : "{userRef3C} have a runny or stuffy nose?"
+voice_input{covidNose}
+if {covidNose} == "no":
+    covidNose = {False}  
+else:
+    if {covidNose} != "yes":
+        Goto: promptNose
+    covidNose = {True}  
+
+
+@promptThroat
+Name Speak : Robbie : "{userRef3C} have a sore throat?"
+voice_input{covidThroat}
+if {covidThroat} == "no":
+    covidThroat = {False}  
+else:
+    if {covidThroat} != "yes":
+        Goto: promptThroat
+    covidThroat = {True}  
+
+
+@promptMuscle
+Name Speak : Robbie : "{userRef3C} have muscle aches or pains?"
+voice_input{covidMuscle}
+if {covidMuscle} == "no":
+    covidMuscle = {False}  
+else:
+    if {covidMuscle} != "yes":
+        Goto: promptMuscle
+    covidMuscle = {True}  
+
+
+@promptTaste
+Name Speak : Robbie : "{userRef3C} have a new loss of taste or smell?"
+voice_input{covidTaste}
+if {covidTaste} == "no":
+    covidTaste = {False}  
+else:
+    if {covidTaste} != "yes":
+        Goto: promptTaste
+    covidTaste = {True}  
+
+
+@promptFatigue
+Name Speak : Robbie : "{userRef3C} have fatigue or malaise?"
+voice_input{covidFatigue}
+if {covidFatigue} == "no":
+    covidFatigue = {False}  
+else:
+    if {covidFatigue} != "yes":
+        Goto: promptFatigue
+    covidFatigue = {True}  
+
+
+@promptNausea
+Name Speak : Robbie : "{userRef3C} have nausea, vomiting, or diarrhea"
+voice_input{covidNausea}
+if {covidNausea} == "no":
+    covidNausea = {False}  
+else:
+    if {covidNausea} != "yes":
+        Goto: promptNausea
+    covidNausea = {True}  
+
+
+#HIGH RISK
+
+
+Name Speak : Robbie : "I am now going to ask questions about ongoing medical conditions including pregnancy."
+
+
+@promptLungs
+Name Speak : Robbie : "{userRef3C} have chronic lung diseases?"
+# Details: "like asthma, chronic obstructive pulmonary disease [chronic bronchitis or emphysema], or other chronic conditions associated with impaired lung function or that require home oxygen?"
+voice_input{covidLungs}
+if {covidLungs} == "no":
+    covidLungs = {False}  
+else:
+    if {covidLungs} != "yes":
+        Goto: promptLungs
+    covidLungs = {True}  
+
+
+@promptHeart
+Name Speak : Robbie : "{userRef3C} have congestive heart failure?"
+voice_input{covidHeart}
+if {covidHeart} == "no":
+    covidHeart = {False}  
+else:
+    if {covidHeart} != "yes":
+        Goto: promptHeart
+    covidHeart = {True}  
+
+
+@promptDiabetes
+Name Speak : Robbie : "{userRef3C} have diabetes with complications?"
+# Details: "like limb amputation, kidney disease, vision problems, heart disease, history of stroke, or, especially if they have uncontrolled diabetes or other complications?"
+voice_input{covidDiabetes}
+if {covidDiabetes} == "no":
+    covidDiabetes = {False}  
+else:
+    if {covidDiabetes} != "yes":
+        Goto: promptDiabetes
+    covidDiabetes = {True}  
+
+
+@promptNeuroCough
+Name Speak : Robbie : "{userRef3C} have neurological conditions that weaken ability to cough?"
+# Details: "like disorders of the brain, spinal cord, peripheral nerve, and muscle such as cerebral palsy, epilepsy [seizure disorders], stroke, intellectual disability, moderate to severe developmental delay, muscular dystrophy, or spinal cord injury
+voice_input{covidNeuroCough}
+if {covidNeuroCough} == "no":
+    covidNeuroCough = {False}  
+else:
+    if {covidNeuroCough} != "yes":
+        Goto: promptNeuroCough
+    covidNeuroCough = {True}  
+
+
+@promptImmune
+Name Speak : Robbie : "{userRef3C} have a weakened immune system?"
+# Details: "like seeing a doctor for cancer and treatment such as chemotherapy or radiation, received an organ or bone marrow transplant, taking high doses of oral steroids or other immunosuppressant medications, HIV or AIDS?"
+voice_input{covidWeakImmune}
+if {covidWeakImmune} == "no":
+    covidWeakImmune = {False}  
+else:
+    if {covidWeakImmune} != "yes":
+        Goto: promptImmune
+    covidWeakImmune = {True}  
+
+
+@promptDialysis
+Name Speak : Robbie : "{userRef3C} have dialysis or under treatment for a kidney disease?"
+voice_input{covidDialysis}
+if {covidDialysis} == "no":
+    covidDialysis = {False}  
+else:
+    if {covidDialysis} != "yes":
+        Goto: promptDialysis
+    covidDialysis = {True}  
+
+
+@promptLiver
+Name Speak : Robbie : "{userRef3C} have cirrhosis of the liver, chronic hepatitis or other liver disease?"
+voice_input{covidLiver}
+if {covidLiver} == "no":
+    covidLiver = {False}  
+else:
+    if {covidLiver} != "yes":
+        Goto: promptLiver
+    covidLiver = {True}  
+
+
+@promptObesity
+Name Speak : Robbie : "{userRef3C} have extreme obesity?"
+# "like Body Mass Index [BMI] greater than or equal to 40"
+voice_input{covidObesity}
+if {covidObesity} == "no":
+    covidObesity = {False}  
+else:
+    if {covidObesity} != "yes":
+        Goto: promptObesity
+    covidObesity = {True}  
+
+
+@promptPregnancy
+Name Speak : Robbie : "{userRef3C} have a current pregnancy or pregnant in the last 2 weeks?"
+voice_input{covidPregnancy}
+if {covidPregnancy} == "no":
+    covidPregnancy = {False}  
+else:
+    if {covidPregnancy} != "yes":
+        Goto: promptPregnancy
+    covidPregnancy = {True}  
+
+
+# CALCULATE COMORBIDITIES AND ADVERSE RISKS
+
+
+Python: covidComorbiditiesCount = {covidLungs} + {covidHeart} + {covidDiabetes} + {covidNeuroCough} + {covidDialysis} + {covidLiver} + {covidObesity} + {covidPregnancy}
+
+
+if {covidComorbiditiesCount} >0 :
+    Name Speak : Robbie : "People with underlying medical conditions and illness symptoms are advised to contact their care provider and be seen within 24 hours."
+
+
+# Add - Collect details? .. If history appears unreliable: Screen for other medical conditions. "Please tell me about any medicine that you/sick person take(s) daily or regularly." Ask about current medications that might indicate underlying chronic conditions.
+
+
+# CHECK IF CAREGIVER OR LIVING IN FACILITY
+
+
+@promptNursingHome
+Name Speak : Robbie : "{userRef3C} live in a nursing home or other long-term care facility?"
+voice_input{covidNursingHome}
+if {covidNursingHome} == "no":
+    covidNursingHome = {False}  
+else:
+    if {covidNursingHome} != "yes":
+        Goto: promptNursingHome
+    covidNursingHome = {True}  
+    Name Speak : Robbie : "It is important that you immediately report these symptoms to your nursing home or care facility immediately, including shortness of breath, fever or cough." 
+    Goto: G-careFacilityReport
+
+
+@promptCareGiver
+Name Speak : Robbie : "{userRef3C} been involved as a worker, student or volunteer at a health care setting in the last two weeks?"
+# Details: in the last two weeks worked or volunteered in a hospital, emergency room, clinic, medical office, ambulance service, first responder services, or any health care setting, or taken care of patients as a student as a part of your/their work?
+voice_input{covidCareGiver}
+if {covidCareGiver} == "no":
+    covidCareGiver = {False}  
+else:
+    if {covidCareGiver} != "yes":
+        Goto: promptCareGiver
+    covidCareGiver = {True}  
+    Name Speak : Robbie : "It is important that you immediately report your symptoms to the occupational health provider for the care facility where you were involved, including shortness of breath, fever or respiratory symptoms." 
+    Goto: F-careGiverReport
+
+
+# List Symptoms, Comorbidities & Risks
+
+
+Name Speak : Robbie : "Would you like me to list your information including Symptoms and Comorbidities?"
+voice_input(userInput)
+if {userInput} == "no":
+    Goto: checkDispositions
+
+
+Name Speak : Robbie : "I will list your information. Would you like me to read out loud?"
+voice_input(userInput)
+if {userInput} == "no":
+    varNoSpeak = "</speak>"
+else
+    varNoSpeak = ""
+
+
+varProsody = "rate='x-fast'"
+
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> User Name {userName} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> User Ref {covidUserRef} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> User Ill {covidIll} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> User Age {covidAge} </prosody>"
+
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Life Threat {covidLifeThreat} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Contact {covidContact} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Fever {covidFever} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Breathing {covidBreath} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Severe Breathing {covidSevereBreath} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Cough {covidCough} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Severe Cough {covidSevereCough} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> BP {covidBP} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Severe BP {covidSevereBP} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Nose {covidNose} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Throat {covidThroat} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Muscle {covidMuscle} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Taste {covidTaste} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Fatigue {covidFatigue} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Nausea {covidNausea} </prosody>"
+
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Comorbidities </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Lungs {covidLungs} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Heart {covidHeart} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Diabetes {covidDiabetes} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Neuro Cough {covidNeuroCough} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Weakened Immune {covidWeakImmune} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Dialysis {covidDialysis} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Liver {covidLiver} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Obesity {covidObesity} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Pregnancy {covidPregnancy} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Comorbidities Total {covidComorbiditiesCount} </prosody>"
+
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Nursing Home or Facility {covidNursingHome} </prosody>"
+Name Speak : Robbie : "{varNoSpeak} <prosody {varProsody}> Care Giving {covidCareGiver} </prosody>"
+
+
+@checkDispositions
+Name Speak : Robbie : "Neon AI test - Checking for Dispositions for the reported symptoms."
+
+
+# CALCULATE D-gotoEmergency DISPOSITION
+
+
+Python: covidEmergencyCount = {covidSevereBreath} + {covidSevereCough} + {covidSevereBP}
+if {covidEmergencyCount} >0 :
+    Name Speak : Robbie : "People with these severe symptoms are advised to immediately go to the Emergency Department."
+    Goto: D-gotoEmergency
+
+
+# CALCULATE E-callMedicalProvider DISPOSITION
+# TODO: '*' is not a valid character
+Python: covidProvider24Count = {covidBreath} + ( {covidFever} * {covidComorbiditiesCount} ) + ( {covidCough} * {covidComorbiditiesCount} ) 
+if {covidProvider24Count} >0 :
+    Name Speak : Robbie : "People with the reported symptoms are advised to call a medical provider within 24 hours, and are encouraged to participate in tele-health options from their health care provider."
+    Goto: E-callMedicalProvider
+
+
+# CALCULATE BREATHING  DISPOSITIONS
+
+
+if {covidBreath}:
+    if {covidComorbiditiesCount} >= 1:
+        Goto: B-call911
+    Goto: D-gotoEmergency
+
+
+# CALCULATE H-selfCare DISPOSITION
+
+
+Python: covidStayHomeCount = {covidFever} + {covidFever} + {covidCough} 
+
+
+if {covidStayHomeCount} >0 :
+    Name Speak : Robbie : "People with the reported symptoms are advised to stay home and call their health care provider if they get worse, and are encouraged to participate in tele-health options from their health care provider."
+    Goto: H-selfCare
+
+
+# TODO: Goto line here to catch no response, different response for completion vs not ill DM
+# NO SYMPTOMS - A
+@A-noSymptoms
+Name Speak : Robbie : "The Neon AI triage service is intended for people who are ill or caring for someone who is ill. For general information about coronavirus disease 2019 (COVID-19), please refer to the Centers for Disease Control and Prevention (CDC) website. Do you have something to write with? The CDCs website is www.cdc.gov/COVID19."
+Goto: promptCreateReport
+
+
+#CALL 911 - B
+@B-call911
+Name Speak : Robbie : "Immediate medical attention is needed. You need to call 911 now. Tell the 911 operator if you have been in contact with someone with COVID-19 or if you have recently been to an area where COVID-19 is spreading."
+Goto: promptCreateReport
+
+
+#CHILD LESS THAN 5 YEARS OLD - C
+@C-lessThanFive
+Name Speak : Robbie : "This triage line is intended for children who are at least five years old and adults. If your child is younger than five years old and is sick, please contact their medical provider as soon as possible. If your child has had contact with a person who is sick with COVID-19 or has been in an area with community spread of COVID-19, please let their medical providers know."
+Goto: promptCreateReport
+
+
+#GO TO EMERGENCY DEPARTMENT - D
+@D-gotoEmergency
+Name Speak : Robbie : "Urgent medical attention is needed. You need to go to your nearest emergency department. If you have had contact with a person who is sick with COVID-19 or you have been in an area with community spread of COVID-19, please let your medical providers know as soon as you arrive at the emergency department."
+Goto: promptCreateReport
+
+
+#CONTACT MEDICAL PROVIDER WITHIN 24 HOURS - E
+@E-gotoMedicalProvider
+Name Speak : Robbie : "You have some symptoms that may be related to COVID-19. Stay home except to get medical care. Separate yourself from others in your home. Wear a facemask, if possible. Clean your hands often. Avoid sharing personal household items. Clean all high-touch surfaces everyday. Monitor your symptoms and seek prompt medical attention if your illness is worsening."
+Goto: promptCreateReport
+
+
+#CONTACT OCCUPATIONAL HEALTH PROVIDER AT WORK - F
+@F-careGiverReport
+Name Speak : Robbie : "Contact an occupational health provider in your healthcare facility as soon as possible. If you have cared for a person who is sick with COVID-19 or have been in an area with community spread of COVID-19, please let your occupational health provider know as soon as you speak with them."
+Goto: promptCreateReport
+
+
+#CONTACT HEALTHCARE PROVIDER IN LONG TERM CARE FACILITY - G
+@G-careFacilityReport
+Name Speak : Robbie : "You may be at higher risk for severe illness since you live in a nursing home or a long-term care facility. Tell a caregiver at the facility that you are sick and need to see a medical provider as soon as possible."
+Goto: promptCreateReport
+
+
+#STAY HOME AND TAKE CARE OF YOURSELF. CONTACT PROVIDER IF THINGS GET WORSE - H
+@H-selfCare
+Name Speak : Robbie : "Sorry you are feeling ill. You have one or more symptom(s) that may be related to COVID-19. Stay home and take care of yourself. Please follow steps to prevent others in your household or community from getting sick."
+Goto: promptCreateReport
+
+
+# Not Done Yet - Z
+@Z-inProgress
+Name Speak : Robbie : "I'm sorry {userName} I'm not programmed for that answer yet. I'm sorry you are feeling ill. You have one or more symptom(s) that may be related to COVID-19. Stay home and take care of yourself. Please follow steps to prevent others in your household or community from getting sick."
+Goto: promptCreateReport
+
+
+# CREATE REPORT
+
+@promptCreateReport
+Name Speak : Robbie : "Would you like me to send you an email with the information you have reported today, including User info, Symptoms and Comorbidities?"
+voice_input(userInput)
+if {userInput} == "no":
+    Goto: screeningComplete
+
+Variable: screeningReport
+screeningReport = "User Name {userName} "
+screeningReport = "{screeningReport}, User Ref {covidUserRef} "
+screeningReport = "{screeningReport}, Ill {covidIll} "
+screeningReport = "{screeningReport}, Age {covidAge} "
+
+screeningReport = "{screeningReport}, Life Threat {covidLifeThreat} "
+screeningReport = "{screeningReport}, Contact {covidContact} "
+
+screeningReport = "{screeningReport} \nSymptoms \n"
+screeningReport = "{screeningReport}Fever {covidFever} "
+screeningReport = "{screeningReport}, Breathing {covidBreath} "
+screeningReport = "{screeningReport}, Severe Breathing {covidSevereBreath} "
+screeningReport = "{screeningReport}, Cough {covidCough} "
+screeningReport = "{screeningReport}, Severe Cough {covidSevereCough} "
+screeningReport = "{screeningReport}, BP {covidBP} "
+screeningReport = "{screeningReport}, Severe BP {covidSevereBP} "
+screeningReport = "{screeningReport}, Nose {covidNose} "
+screeningReport = "{screeningReport}, Throat {covidThroat} "
+screeningReport = "{screeningReport}, Muscle {covidMuscle} "
+screeningReport = "{screeningReport}, Taste {covidTaste} "
+screeningReport = "{screeningReport}, Fatigue {covidFatigue} "
+screeningReport = "{screeningReport}, Nausea {covidNausea} "
+
+screeningReport = "{screeningReport} \nComorbidities \n"
+screeningReport = "{screeningReport}Lungs {covidLungs} "
+screeningReport = "{screeningReport}, Heart {covidHeart} "
+screeningReport = "{screeningReport}, Diabetes {covidDiabetes} "
+screeningReport = "{screeningReport}, Neuro Cough {covidNeuroCough} "
+screeningReport = "{screeningReport}, Weakened Immune {covidWeakImmune} "
+screeningReport = "{screeningReport}, Dialysis {covidDialysis} "
+screeningReport = "{screeningReport}, Liver {covidLiver} "
+screeningReport = "{screeningReport}, Obesity {covidObesity} "
+screeningReport = "{screeningReport}, Pregnancy {covidPregnancy} "
+screeningReport = "{screeningReport} \nComorbidities Total {covidComorbiditiesCount} \n"
+
+screeningReport = "{screeningReport}Nursing Home or Facility {covidNursingHome} "
+screeningReport = "{screeningReport}, Care Giving {covidCareGiver} "
+
+Name Speak : Robbie : "<prosody rate="x-fast">This is your Screening Report {screeningReport}</prosody>"
+Email: "Neon COVID Screening Report", screeningReport
+
+
+@screeningComplete
+
+Name Speak : Robbie : "Would you like to restart the demonstration Covid-19 screening application test?"
+voice_input(userInput)
+if {userInput} == "yes":
+    Goto: startCovidScreening
+
+
+exit
+

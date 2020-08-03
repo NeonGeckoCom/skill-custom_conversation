@@ -1,0 +1,20 @@
+Script: Python Math
+Synonym: "Pythagorean Demo"
+Synonym: "Demo Pythagorean"
+Synonym: "Python Math Demo"
+Synonym: "Demo Python Math"
+Variable: side_1
+Variable: side_2
+Variable: hypotenuse
+Neon speak:
+    "I will calculate the length of the hypotenuse of a right triangle."
+    "How long is one side of the triangle?"
+voice_input{side_1}
+Neon speak:
+    "How long is the other side?"
+voice_input{side_2}
+Python: hypotenuse = sqrt({side_1}**2 + {side_2}**2)
+Neon speak:
+    "The length of the hypotenuse is {hypotenuse} units"
+
+Exit

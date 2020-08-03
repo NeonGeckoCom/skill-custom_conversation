@@ -1,0 +1,48 @@
+Script: "Subroutine Test"
+
+"Name Speak : Patty : "</speak>Version 20200624 18:33 Subroutine Test"
+
+## Initialize
+
+Variable: {exitList} = "Patty exit", "Patty cancel", "never mind"
+Variable: {noList} = "no", "not now", "never mind", "nope", "n" 
+Variable: {yesList} =  "yes", "yup", "y"
+Variable: {alertsPhraseList} =  "help", "I need help", "help me", "emergency", "this is an emergency", "I need a doctor", "I need a doctor", "I need a doctor", "I need a doctor", "I need a doctor", "I need a nurse", "I need aid", "I need a caregiver", "I need assistance", "I fell", "I can't get up"
+Variable: {heyPattyList} = "hey Patty", "Patty are you there"
+
+Variable: {askPrompt} = ""
+Variable: {returnLabel} = "" 
+Variable: {askInput} = ""
+
+returnLabel = InstallAssistant
+askPrompt = "Hi, I'm Patty. Say your name, or cancel."
+
+Goto : ASK
+
+@InstallAssistant
+
+userName = askInput
+Name Speak : Patty : "Hi {userName}. I am glad you chose to test subroutines."
+Name Speak : Patty : "Patty Exiting"
+exit
+
+##
+
+@ASK
+if {askPrompt} != ""
+    Name Speak : Patty : "{askPrompt}"
+voice_input {askInput}
+if {askInput} IN {exitList[*]}:
+    Name Speak : Patty : "Say yes to confirm exiting Patty"
+    voice_input{askInput}
+    if {askInput} IN {yesList[*]}:
+        Name Speak : Patty : "Patty, signing off"
+        exit
+    else
+        goto : ASK
+if {askInput} IN {heyPattyList[*]}:
+    Name Speak : Patty : "Patty, the Neon AI Patient Assistant, is listening"
+    goto : ASK
+Name Speak : Patty : "About to return to {returnLabel}"
+Goto: {returnLabel}
+

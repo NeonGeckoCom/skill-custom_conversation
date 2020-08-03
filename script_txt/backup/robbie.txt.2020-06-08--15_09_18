@@ -1,0 +1,266 @@
+Script: "Robbie"
+Language: "en-us male"
+Variable: {name}: ""
+Variable: {more}: ""
+Variable: {symptoms}: ""
+
+@StartCovidScreening
+
+#GREETING
+
+Name Speak : Robbie : "What is your name?"
+voice_input{name}
+Name Speak : Robbie : "Hi {name}"
+Name Speak : Robbie : "Thank you for interacting with our virtual COVID-19 screening. My name is Neon."
+Name Speak : Robbie : "Please wait while I prepare your virtual exam room"
+
+#TRIAGE
+
+Name Speak : Robbie : "Are you asking for help for yourself or on behalf of someone else?"
+voice_input{response}
+if {response} == "myself":
+    Set: userref1 = "Have you"
+    Set: userref2 = "Are you"
+else:
+    Set: userref1 = "Has the person you are calling about"
+    Set: userref2 = "Is the person for whom you are calling"
+Name Speak : Robbie : "got it"
+
+@prompt0
+
+Name Speak : Robbie : "{userref2} ill?"   
+# "Are you ill or contacting on behalf of someone who is ill?" 
+voice_input{response}
+if {response} == "no":
+    Goto: A 
+    # Exit - Only for sick people
+else:
+    if {response} == "yes":
+        Goto: prompt1
+    else:
+        if {response} == "go back":
+             Goto: StartCovidScreening
+        else:
+             Goto:prompt0
+
+@prompt1
+
+Name Speak : Robbie : "What is the age of the person who is ill?"
+voice_input{response}
+if {response} < 3:
+    Goto: C 
+# Exit - Not for children
+else:
+    if {response} >= 3:
+        Goto: prompt2
+    else:
+        Goto: prompt1
+
+@prompt2
+
+#SCREENING
+
+Name Speak : Robbie : "In the two weeks leading up to feeling sick {userref1} had contact with someone who was diagnosed with COVID-19, or live in, or recently visited a place where COVID-19 is spreading?"
+voice_input{response}
+if {response} == "no":
+    Goto: A  
+ 
+else:
+    if {response} != "yes":
+        Goto: prompt1
+
+#SYMPTOMS 
+
+@prompt1
+Name Speak : Robbie : "Do you or the person you are contacting for have a fever or felt hot or feverish in the last two days?"
+voice_input{response}
+if {response} == "yes":
+    Goto: A  
+ 
+else:
+    if {response} != "yes":
+        Goto: prompt2
+
+@prompt2 
+Name Speak : Robbie : "Do you or the person you are contacting for have any shortness of breath?"
+voice_input{response}
+if {response} == "no":
+    Goto: A 
+  
+else:
+    if {response} != "yes":
+        Goto: prompt3
+@prompt3
+Name Speak : Robbie : "Do you or the person you are contacting about have a cough?"
+voice_input{response}
+if {response} == "no":
+    Goto: A  
+ 
+else:
+    if {response} != "yes":
+        Goto: prompt4
+@prompt4
+Name Speak : Robbie : "Do you or the person you are contacting about have low blood pressure? Signs of low blood pressure can include cold, pale, or clammy skin; or feeling so light-headed and so weak that you/they are not able to stand."
+voice_input{response}
+if {response} == "no":
+    Goto: A  
+ 
+else:
+    if {response} != "yes":
+        Goto: prompt5
+@prompt5
+Name Speak : Robbie : "Do you or the person you are contacting about have a runny or stuff nose?"
+voice_input{response}
+if {response} == "no":
+    Goto: A  
+ 
+else:
+    if {response} != "yes":
+        Goto: prompt6
+@prompt6
+Name Speak : Robbie : "Do you or the person you are contacting about have a sore throat?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt7
+@prompt7
+Name Speak : Robbie : "Do you or the person you are contacting about have muscle aches or pains?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt8
+@prompt8
+Name Speak : Robbie : "Do you or the person you are contacting about have a new loss of taste or smell?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt9
+@prompt9
+Name Speak : Robbie : "Do you or the person you are contacting about have fatigue or malaise?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt10
+@prompt10
+Name Speak : Robbie : "Do you or the person you are contacting about have nausea, vomiting, or diarrhea"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt11
+#HIGH RISK
+@prompt11
+Name Speak : Robbie : "Do you or the person you are contacting about have chronic lung diseases like asthma, chronic obstructive pulmonary disease [chronic bronchitis or emphysema], or other chronic conditions associated with impaired lung function or that require home oxygen?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt12
+@prompt12
+Name Speak : Robbie : "Do you or the person you are contacting about have Congestive heart failure?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt13
+@prompt13
+Name Speak : Robbie : "Do you or the person you are contacting about have Diabetes with complications?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt14
+@prompt14
+Name Speak : Robbie : "Do you or the person you are contacting about have Neurological conditions that weaken ability to cough?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt15
+@prompt15
+Name Speak : Robbie : "Do you or the person you are contacting about have Dialysis?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt16
+
+@prompt16
+Name Speak : Robbie : "Do you or the person you are contacting about have Cirrhosis of the liver?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt17
+@prompt17
+Name Speak : Robbie : "Do you or the person you are contacting about have Extreme obesity?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt18
+@prompt18
+Name Speak : Robbie : "Do you or the person you are contacting about have a current Pregnancy?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt19
+@promp19
+Name Speak : Robbie : "Do you or the person you are contacting about live in a nursing home or other long-term care facility?"
+voice_input{response}
+if {response} == "no":
+    Goto: A   
+else:
+    if {response} != "yes":
+        Goto: prompt1
+
+#NO SYMPTOMS A
+@A
+Name Speak : Robbie : "The Neon AI triage service is intended for people who are ill or caring for someone who is ill. For general information about coronavirus disease 2019 (COVID-19), please refer to the Centers for Disease Control and Prevention (CDC) website. Do you have something to write with? The CDCs website is www.cdc.gov/COVID19."
+Exit
+#CALL 911 B
+@B
+Name Speak : Robbie : "Immediate medical attention is needed. You need to call 911 now. Tell the 911 operator if you have been in contact with someone with COVID-19 or if you have recently been to an area where COVID-19 is spreading."
+Exit
+#CHILD LESS THAN 2 YEARS OLD C
+@C
+Name Speak : Robbie : "This triage line is intended for children who are at least two years old and adults. If your child is younger than two years old and is sick, please contact their medical provider as soon as possible. If your child has had contact with a person who is sick with COVID-19 or has been in an area with community spread of COVID-19, please let their medical providers know."
+Exit
+#GO TO EMERGENCY DEPARTMENT D
+@D
+Name Speak : Robbie : "Urgent medical attention is needed. You need to go to your nearest emergency department. If you have had contact with a person who is sick with COVID-19 or you have been in an area with community spread of COVID-19, please let your medical providers know as soon as you arrive at the emergency department."
+Exit
+#CONTACT MEDICAL PROVIDER WITHIN 24 HOURS E
+@E
+Name Speak : Robbie : "You have some symptoms that may be related to COVID-19. Stay home except to get medical care. Separate yourself from others in your home. Wear a facemask, if possible.Clean your hands often.Avoid sharing personal household items.Clean all "high-touch" surfaces everyday. Monitor your symptoms  and seek prompt medical attention if your illness is worsening"
+Exit
+#CONTACT OCCUPATIONAL HEALTH PROVIDER AT WORK F
+@F
+Name Speak : Robbie : "Contact an occupational health provider in your healthcare facility as soon as possible. If you have cared for a person who is sick with COVID-19 or have been in an area with community spread of COVID-19, please let your occupational health provider know as soon as you speak with them."
+Exit
+#CONTACT HEALTHCARE PROVIDER IN LONG TERM CARE FACILITY G
+@G
+Name Speak : Robbie : "You may be at higher risk for severe illness since you live in a nursing home /long-term care facility. Tell a caregiver at the facility that you are sick and need to see a medical provider as soon as possible."
+Exit
+#STAY HOME AND TAKE CARE OF YOURSELF. CONTACT PROVIDER IF THINGS GET WORSE H
+@H
+Name Speak : Robbie : "Sorry you are feeling ill. You have one or more symptom(s) that may be related to COVID-19. Stay home and take care of yourself. You can follow some steps to prevent others in your household or community from getting sick"
+Exit

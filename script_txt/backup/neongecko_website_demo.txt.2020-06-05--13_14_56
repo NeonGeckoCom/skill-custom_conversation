@@ -1,0 +1,50 @@
+Script: "Neongecko Website Demo"
+Variable: {name}: ""
+Variable: {more}: ""
+Variable: {}: ""
+Variable: {}: ""
+Neon Speak: "Welcome to the Neongecko Intro, My name is Neon."
+Neon Speak: "What is your name?"
+voice_input{name}
+Neon Speak: "hi {name}"
+Neon Speak: "Welcome to Neon gecko.com. My name is Neon, I would love to show you more about our company and our products."
+LOOP Q1
+    Neon Speak: "I'll take you to the right webpage. What interests you?"
+    Neon Speak: "For example say Android for the new Neon AI Android Communicator webpage, or more for more options" 
+    voice_input{more} 
+    Neon Speak: {more}
+    IF "more" IN {more}
+        Neon Speak: "more IN {more}"
+        Goto: say_options
+    IF "done" == {more}
+        Neon Speak: "done == {more}"
+        Goto: say_goodbye
+    IF "more" == {more}
+        Neon Speak: "more == {more}"
+        Goto: say_options
+    IF "Android" IN {more}
+        Neon Speak: "Android in more"
+        Execute: "browse to https://neongecko.com/NeonAIforAndroidPhones"
+    IF "Nano" IN {more}
+        Execute: "browse to https://neongecko.com/NeonNanoforWebsiteDesigners"
+    IF "home" IN {more}
+        Execute: "browse to https://neongecko.com/NeonAIforHome"
+    IF "Education" IN {more}
+        Execute: "browse to "https://neongecko.com/NeonAIforEducation"
+    IF "Work" IN {more}
+        Execute: "browse to https://neongecko.com/NeonAIforCorporations"
+    IF "Chat" IN {more}
+        Execute: "browse to https://neongecko.com/NeonAIforAdvancedSocialMedia"
+    IF "Developers" IN {more}
+        Execute: "browse to https://neongecko.com/NeonSDKDevelopers"
+@say_options
+    Neon Speak: "Say Nano or Education or Work or Chat or Developers"
+    # Neon Speak: "Nano for Neon AI Nano or AI Home for Neon AI Pcs designed for Home and Hobbyists, or more"
+    # Neon Speak: "AI Education for information regarding Neon AI and our commitment to Education, or more"
+    # Neon Speak: "AI Work for Neon AI Business and Corporate offerings, or more"
+    # Neon Speak: "AI Chat for Advanced Social Media, our Neon AI enhanced chat, or more" 
+    # Neon Speak: "Developers for Neon AI Programmers, join our developer community and help create the future, or more"
+LOOP Q1 END
+@say_goodbye
+Neon Speak: "Goodbye"
+Exit

@@ -1,0 +1,12 @@
+skillMetadata:
+  sections:
+    - name: Cache Settings
+      fields:
+        - name: use_cache
+          type: checkbox
+          label: Allow use of cached scripts (Flase forces reload on execution)
+          value: "false"
+        - name: auto_update
+          type: checkbox
+          label: Automatically update scripts from remote server
+          value: "true"

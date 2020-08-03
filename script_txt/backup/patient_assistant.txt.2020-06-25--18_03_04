@@ -1,0 +1,121 @@
+Script: "Patient Assistant"
+
+# Start up
+## Announce available version
+
+Name Speak : Pat : "</speak>Version 20200625 15 Neon Patient Assistant Application"
+
+## Initialize
+
+Variable: {exitList} = "exit", "cancel", "never mind"
+Variable: {noList} = "no", "not now", "never mind", "nope", "n" 
+Variable: {yesList} =  "yes", "yup", "y"
+Variable: {alertsPhraseList} =  "help", "I need help", "help me", "emergency", "this is an emergency", "i need a doctor", "i need a doctor", "i need a doctor", "i need a doctor", "i need a doctor", "i need a nurse", "i need aid", "i need a caregiver", "i need assistance", "i fell", "i can't get up"
+Variable: {heyPatList} = "hey pat", "pat are you there"
+Variable: {askPrompt} = ""
+Variable: {returnLabel} = "" 
+Variable: {askInput} = ""
+
+## Ask to install assistant
+returnLabel = InstallAssistant
+askPrompt = "Hi, I'm Pat, a demonstration patient assistant from Neon AI. Thank you for helping test this new conversational application. Say your name, or say cancel."
+Goto : ASK
+
+@InstallAssistant
+
+userName = {askInput}
+
+Name Speak : Pat : "Hi {userName}. I am glad you chose to install the Neon Patient Assistance Application."
+
+## Offer additional information
+
+Name Speak : Pat : "Before starting the Patient Assistant, would you like more information on the Neon conversational patient assistance application?"
+voice_input{moreAppInfo}
+if {moreAppInfo} IN {noList[*]}:
+    Goto: BeginAssistant
+Name Speak : Pat : "The Neon conversational demonstration patient assistant provides an automated assistant that listens for calls for help and sends alerts to the patient care administrator.  Here are some examples of things users can say to .. and more someday .. like: .. Pat play Bach .. or Pat turn the lights off or Pat send a text to 123-456-7890 .. or Pat I want to change your name to Freddie .."
+
+@BeginAssistant
+
+Name Speak : Pat : "Your demonstration patient assistant is now signing in. You can say, hey Pat, or, Pat are you there, if you want to know if I am listening."
+
+# Wait for alert
+
+@WaitForAlertPhrase
+
+askPrompt = ""
+returnLabel = GotPatientPhrase
+Name Speak : Pat : "PA 1 pre ask"
+Goto : ASK
+Name Speak : Pat : "PA ERROR after subroutine ask - this should never happen"
+@GotPatientPhrase
+Name Speak : Pat : "PA 2 pre ask"
+userSaid = {askInput}
+## Did patient ask for "help" 
+Name Speak : Pat : "PA 3 {userSaid}"
+if {userSaid} !IN {alertsPhraseList[*]}:
+    Name Speak : Pat : "PA 4 not alert, listen again"
+    Goto: WaitForAlertPhrase
+
+Name Speak : Pat : "PA 5 about to reconvey {userInput}"
+Reconvey : askInput
+Name Speak : Pat : "PA 6 did reconvey"
+
+askPrompt = "Say just kidding if this is not an emergency"
+returnLabel = ConfirmHelp
+Name Speak : Pat : "PA 7 about to ask to cancel help request"
+Goto : ASK
+@ConfirmHelp
+
+Name Speak : Pat : "PA 8 check for jk"
+userSaid = {askInput}
+## Did patient ask for "help" 
+if {userSaid} == "just kidding":
+    Name Speak : Pat : "PA 9 jk so restarting listening"
+    Goto: WaitForAlertPhrase
+
+Name Speak : Pat : "Pat the Patient Assistant would now send an emergency alert .. and keep engaged with the patient and sending follow up alerts."
+Name Speak : Pat : "Pat the Patient Assistant test completed. Say start again to start again?"
+Name Speak : Pat : "In progress exiting"
+exit
+
+## Take a photo
+## Play back to the patient what they said ("You said .." is that correct?)
+## LATER: Light up Patient Assistant Device, and turn on patient room door sign
+## Ask if assistance is NOT needed, provide cancel option
+## Send alert #1-PatientAssistanceRequest to nursing/caregiving administration with stt, recording and photo
+## Tell patient their caregiver has been alerted, provide cancel option
+## LATER: Enable interactive administrator to respond with automated and/or custom reply, with stt .. and deactivate
+# Ask for details
+## Do you have a life threatening emergency?
+## If yes then sound alarm and send alert #2-Emergency
+## Do you have bleeding .. problems breathing .. weakness .. fever .. coughing .. pulse slow or racing .. 
+## Send alert #3
+## Play back to the patient what they said ("You said .." is that correct?)
+## LATER: Keep talking, recoding, sending alerts
+## I hope you can talk to me. What's your name? Tell me a few word about your situation
+## LATER: Enable administrator to take snapshots, turn on audio, video, 
+
+# ========== Subroutines
+
+@ASK
+Name Speak : Pat : "Ask 1 Starting"
+if {askPrompt}:
+    Name Speak : Pat : " {askPrompt} "
+Name Speak : Pat : "Starting ask 2"
+voice_input {askInput}
+Name Speak : Pat : "Ask 3 got input"
+if {askInput} IN {exitList[*]}:
+    Name Speak : Pat : "Say yes to confirm exiting Pat, the Neon AI Patient Assistant"
+    voice_input{askInput}
+    if {askInput} IN {yesList[*]}:
+        Name Speak : Pat : "Pat, the Neon AI Patient Assistant, signing off"
+        exit
+    else
+        goto: ASK
+Name Speak : Pat : "Ask 4 not exit {askInput}"
+if {askInput} IN {heyPatList[*]}:
+    Name Speak : Pat : "Pat, the Neon AI Patient Assistant, is listening"
+    goto : ASK
+Name Speak : Pat : "Ask 5 About to return to {returnLabel}"
+Goto: {returnLabel}

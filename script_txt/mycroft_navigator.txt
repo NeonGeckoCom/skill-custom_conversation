@@ -1,0 +1,16 @@
+Script: "Mycroft Navigator"
+# Language: "en-us female"
+Variable: {options}:  table_scrape(https://mycroft.ai)
+Variable: {chosen}: ""
+Variable: {termination_bool}: done
+Neon speak: "Please tell me what Mycroft web page you'd like to see. You can say things like random{options}"
+LOOP WN
+    voice_input{chosen}
+#    Neon speak: "navigating to {chosen}"
+    if closest{chosen,options}:
+        Execute: "neon browse to closest{chosen,options}"
+    else:
+        Neon speak: "Page not found"
+    Neon speak: "What Mycroft web page would you like to see next?"
+LOOP WN END
+Exit

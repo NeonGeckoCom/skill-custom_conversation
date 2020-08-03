@@ -1,0 +1,10 @@
+Script: "Stevie"
+Variable: {name}: ""
+Variable: {more}: ""
+Neon Speak: "Welcome to the Neongecko Intro, My name is Stevie."
+Neon Speak: "What is your name?"
+voice_input{name}
+Neon Speak: "hi {name}"
+Neon Speak: " I am a caffeine wiz! You can ask me the caffeine content of most popular USA drinks and boosters" 
+Neon Speak: "If your microphone and speakers are enabled you can ask me questions out loud, and hear my answers. Otherwise you can type your questions in the box, after this start up exits."
+EXIT

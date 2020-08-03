@@ -1,0 +1,134 @@
+Script: "Test Neon Demo"
+Variable: {test_set}: ""
+Neon speak:
+    "Please select your test preference. You can choose from the following demos: 'personal' for profile setup"
+    "'language' for translation,"
+    "'standard',"
+    "'clapper or clap',"
+    "'av or music',"
+    "'picture or record',"
+    "'caffeine',"
+    "'email',"
+    "'coupons',"
+    "'summary',"
+    "'clear',"
+    "'alarm or timer',"
+    "'wakewords or wake words',"
+    "'dialog', or "
+    "'control' group tests."
+voice_input{test_set}
+Case: {test_set}
+    "personal"
+        Execute:
+            "neon my name is Joshua Test"
+            "neon my name is John Jacob Jingleheimer Smith"
+            "neon tell me my first name"
+            "neon tell me my last name"
+            "neon tell me my full name"
+            "neon my email address is josh@neongecko.com"
+    "language"
+        Execute:
+            "neon translate cherry to russian"
+            "neon tell me my language setting
+            "neon speak to me in english
+            "neon speak to me in Russian and French
+            "neon speak to me in english
+    "standard"
+        Execute: "neon say hello world
+        Execute: "what is the time
+        Execute: "what is today's date
+        Execute: "what time is it in paris
+        Execute: "what is the weather in seattle
+        Execute: "neon spell microphone
+        Execute: "what is 25 times 71
+        Execute: "what is the derivative of x squared
+        Execute: "what is the share price for ibm
+        Execute: "tell me a joke
+        Execute: "tell me about linux
+        Execute: "send me the source for that
+        Execute: "where are you
+        Execute: "who are you
+        Execute: "my location is Seattle, WA
+        Execute: "what is my ip address
+    "clapper or clap"
+        Execute: "Set up clapper process
+        Execute: "Quit  clapper process
+        Execute: "Deny clapper process by default
+        Execute: "Enable clapper process by default
+    "av or music"
+        Execute: "neon av play Relaxing jazz radio
+        Execute: "neon av play  Sleepy blues piano radio
+        Execute: "pause
+        Execute: "resume
+        Execute: "stop
+        Execute: "avplay american folk guitar radio
+        Execute: "increase volume
+        Execute: "decrease volume
+        Execute: "mute volume
+        Execute: "unmute volume
+        Execute: "what is the volume
+        Execute: "neon play the latest news
+    "picture or record"
+        Execute: "take a picture
+        Execute: "show me my last picture
+        Execute: "take a 3-second video
+        Execute: "show me my last video
+        Execute: "neon record 3 seconds
+        Execute: "playback my last recording
+    "caffeine"
+        Execute: "how much caffeine is in sprite
+        Execute: "how about j street coffee
+        Execute: "how much caffeine is in a cherry coke
+    "email"
+        Execute: "email me my transcripts
+    "coupons"
+        Execute: "neon update my brands
+        Execute: "i like google
+        Execute: "tell me coupons for microsoft
+        Execute: "i like neon
+        Execute: "tell me my likes
+        Execute: "i do not like alpha
+        Execute: "tell me my dislikes
+        Execute: "tell me my coupons
+        Execute: "email me my coupons
+    "summary"
+        Execute: "neon talk to me in Russian
+        Execute: "what time is it in Moscow
+        Execute: "what is the weather in Moscow
+        Execute: "tell me about electricity
+        Execute: "what is 625 divided by 25
+        Execute: "tell me my likes
+        Execute: "how many inches are in a mile
+        Execute: "translate cherry to French
+        Execute: "how much caffeine is in pepsi
+        Execute: "talk to me in English
+        Execute: "change units/measuring system
+    "clear"
+        Execute: "I want to clear my user brands
+        Execute: "I want to clear my user likes
+        Execute: "clear all of my user data
+    "alarm or timer"
+        Execute: "neon set an alarm for 6:30 pm
+        Execute: "neon remind me to go home at 7 pm
+        Execute: "neon set a 2 minute timer
+        Execute: "neon how much time is left
+        Execute: "neon clear all reminders
+        Execute: "cancel all alarms
+        Execute: "cancel all timers
+    "wakewords or wake words"
+        Execute: "require wakewords
+        Execute: "begin skipping wake words
+        Execute: "i am not alone
+        Execute: "neon i am alone
+    "dialog"
+        Execute: "switch to primary dialogue mode
+        Execute: "how are you?
+        Execute: "switch to random dialogue mode
+        Execute: "how are you?
+    "control"
+        Execute: "create a support ticket
+        Execute: "i want [you] to exit
+        Execute: " i want [you] to shutdown
+        Execute: "what is my current software version
+
+Exit

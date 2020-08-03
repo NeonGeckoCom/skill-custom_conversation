@@ -1,0 +1,11 @@
+Script: "Jody"
+Language: "en-au female"
+Variable: {name}: ""
+Variable: {more}: ""
+Name Speak : Jody : "Welcome to the Neongecko Intro, My name is Jody."
+Name Speak : Jody : "What is your name?"
+voice_input{name}
+Name Speak : Jody : "hi {name}"
+Name Speak : Jody : " I am knowledgeable about the weather. You can ask me questions like what is the weather in Seattle - or any world location" 
+Name Speak : Jody : "If your microphone and speakers are enabled you can ask me questions out loud, and hear my answers, otherwise you can type your questions in the box, after this start up exits."
+EXIT

@@ -1,0 +1,6 @@
+Script: Email Test
+Variable: title = "Testing Email Title"
+Variable: body = "Test email body\nnewline"
+Neon speak: "</speak>sending email"
+Email: My Email Title, body
+Exit

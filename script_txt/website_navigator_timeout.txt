@@ -1,0 +1,24 @@
+Script: "Website Navigator Timeout"
+Variable: {options}:  table_scrape(https://neongecko.com)
+Variable: {chosen}: ""
+Timeout: 10 instructions
+#Timeout: 10 7
+@instructions
+Neon speak: "Please tell me what Neon AI web page you'd like to see. You can say things like random{options} or say quit or exit."
+LOOP WN
+    voice_input{chosen}
+    # Neon speak: "navigating to {chosen}"
+    if {chosen} == "quit":
+        Neon speak: "say pause to turn off the mic or say exit to close the window."
+        voice_input{chosen}
+        if {chosen} == "pause":
+            # execute skill to turn off mic
+            Execute: "neon mute microphone"
+    else:
+        if closest{chosen,options}:
+            Execute: "neon browse to closest{chosen,options}"
+        else:
+            Neon speak: "Page not found"
+        Neon speak: "Tell me another Neon AI web page you'd like to see or say quit."
+LOOP WN END
+Exit

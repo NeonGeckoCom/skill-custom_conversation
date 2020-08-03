@@ -1,0 +1,8 @@
+Script: "Good Morning"
+Neon speak: "Good Morning"
+    "The time is"
+Execute: "What time is it"
+Neon speak: "The weather is"
+Execute: "what is the weather"
+Neon speak: "Thank you for starting me up. I look forward to talking with you"
+Exit

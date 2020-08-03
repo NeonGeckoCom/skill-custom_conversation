@@ -1,0 +1,40 @@
+Script: "Welcome Neon Demo"
+#Language: "English British Male"
+Language: "en-gb"
+Variable: {full_name}: ""
+Variable: {first_name}: ""
+Variable: {last_name}: ""
+Variable: {response}: ""
+Neon speak:
+    "Hello human. My full name is Neon Gecko Inc; call me Neon. Lets get started."
+Execute: "what time is it"
+Execute: "what is the weather"
+Neon speak:
+    "Please say your first and last name or say exit, or you can type your response"
+voice_input{full_name}
+Execute: "my name is {full_name}"
+Neon speak: "Thank you."
+#Execute: "tell me my full name"
+if profile{user.first_name}:
+    Execute: "tell me my first name"
+if profile{user.last_name}:
+    Execute: "tell me my last name"
+Neon speak:
+    "Is that correct? Say yes, change first name, change last name or exit"
+voice_input{response}
+    Case: {response}
+        "yes"
+            Exit
+        "change first name"
+            Neon speak:
+                "Tell me your first name or say exit"
+            voice_input{first_name}
+            Execute: "neon my first name is {first_name}"
+            Execute: "neon tell me my first name"
+        "change last name"
+            Neon speak:
+                "Tell me your last name or say exit"
+            voice_input{last_name}
+            Execute: "neon my last name is {last_name}"
+            Execute: "neon tell me my last name"
+Exit

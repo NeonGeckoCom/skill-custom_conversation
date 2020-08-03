@@ -1,0 +1,1 @@
+(launch|lunch|open|run|start|execute) (my |the |)(?P<file_to_run>.*) (script|skill)( file|)

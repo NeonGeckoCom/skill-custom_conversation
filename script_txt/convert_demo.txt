@@ -1,0 +1,17 @@
+Script: "Convert Demo"
+Language: "en-us female"
+Variable: {quantity}: ""
+Variable: {from_units}: ""
+Variable: {to_units}: ""
+Variable: {selected}: ""
+Variable: {conversions}: weight, volume, length, time, currency
+Neon speak: "Say convert select_one{conversions} to convert or exit when done"
+voice_input{selected,conversions}
+Neon speak: "How many units would you like to convert?"
+voice_input{quantity}
+Neon speak: "What are the units to convert from?"
+voice_input{from_units}
+Neon speak: "What are the units to convert to?"
+voice_input{to_units}
+Execute: "how many {to_units} are in {quantity} {from_units}"
+Exit

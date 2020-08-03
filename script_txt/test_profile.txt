@@ -1,0 +1,14 @@
+Script: Demo Profile Reconveyance
+Variable: body = "Test email body\nnewline"
+Variable: emailAddr = profile(user.email)
+Variable: spoken
+if {emailAddr}:
+    Neon speak: "your email address is {emailAddr}"
+else:
+    Neon speak: I don't know what your email address is
+Neon speak: Say something and I'll say it back to you
+voice_input(spoken)
+Neon Speak: You said:
+Reconvey: spoken
+
+Exit

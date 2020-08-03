@@ -1,0 +1,8 @@
+Script: Language test
+Language: en-us male
+Neon speak: "I am an American Male"
+Language: female en-au
+Neon speak: "Now I am Australian Female"
+Language: en-gb
+Neon speak: Now I am British in your preferred gender
+Exit

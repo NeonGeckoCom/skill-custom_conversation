@@ -1,0 +1,17 @@
+Script: "Robbie"
+Language: "en-us male"
+Variable: {name}: ""
+Variable: {more}: ""
+Name Speak : Robbie : "What is your name?"
+voice_input{name}
+Name Speak : Robbie : "hi {name}"
+Name Speak : Robbie : "Welcome to the virtual COVID-19 screening. Powered by Neon.ai"
+Name Speak : Robbie : "The following symptoms may appear 2-14 days after exposure to the virus. People with these symptoms may have COVID-19:"
+Name Speak : Robbie : "Fever or chills, Cough, Shortness of breath or difficulty breathing, Fatigue, Muscle or body aches, Headache, New loss of taste or smell, Sore throat, Congestion or runny nose, Nausea, vomiting, and Diarrhea"
+Name Speak : Robbie : "If you are showing any of these signs, seek emergency medical care immediately: Trouble breathing, Persistent pain or pressure in the chest, New confusion, Inability to wake or stay awake, and Bluish lips or face." 
+Name Speak : Robbie : "Do you have any of these symptoms?"
+voice_input{symptoms}
+if {symptoms} != "no":
+    Name Speak : Robbie : "call your doctor immediately"
+Name Speak : Robbie : "Thank you for being one of the first users of the Neon conversational medical screening system."
+EXIT

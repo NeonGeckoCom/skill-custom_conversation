@@ -1,0 +1,7 @@
+Script: "xyz"
+Neon speak "Hello"
+Neon speak: "Thank you for running the xyz script. Would you like to hear a joke"
+Execute: "tell me a joke"
+Neon speak: "Here is the current time"
+Execute: "what is the time"
+Exit

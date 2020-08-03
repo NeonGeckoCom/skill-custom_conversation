@@ -1,0 +1,5 @@
+Script: "Basic Execute"
+Neon speak: "Lets get started."
+Execute: "What time is it"
+Neon speak: "I'm finished."
+Exit

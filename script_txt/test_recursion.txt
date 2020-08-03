@@ -1,0 +1,11 @@
+Script: Recursion
+Variable: name=nobody
+Neon Speak: Let's play a game
+Run: demo_guess_number
+Speak: That was fun
+Speak: This one doesn't exist
+Run: demo_nonexistent_file
+Speak: This one does
+Run: test ssml
+Speak: I'm done now
+Exit

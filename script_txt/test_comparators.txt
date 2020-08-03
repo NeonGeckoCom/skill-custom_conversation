@@ -1,0 +1,29 @@
+Script: Comparator test
+Variable: helloList = hi,hello
+Variable: greetingList = hello,goodbye
+IF 1 == 1:
+    Neon speak: Equality true
+IF 1 != 0:
+    Neon speak: Inequality true
+IF "hello" IN {greetingList}:
+    Neon speak: In true
+IF "hi" !IN {greetingList}:
+    Neon speak: Not in true
+IF "hello" !IN {greetingList}:
+    Neon speak: Failed not in
+ELSE:
+    Neon speak: Not in false
+IF {helloList} CONTAINS {greetingList}:
+    Neon speak: Passed contains test
+IF {helloList} !CONTAINS {greetingList}:
+    Neon speak: Failed not contains
+ELSE:
+    Neon speak: Passed not contains test
+IF {helloList} STARTSWITH he:
+    Neon speak: Passed startswith check
+IF {helloList} ENDSWITH o:
+    Neon speak: Passed endswith check
+IF {greetingList} !ENDSWITH bye:
+    Neon speak: Failed not endswith
+ELSE:
+    Neon speak: Passed not endswith check

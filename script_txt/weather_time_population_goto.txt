@@ -1,0 +1,53 @@
+Script: "Weather Time Population Goto"
+Language: "en-au female"
+Synonym: "Demo WTP Goto"
+Variable: {response}: ""
+Neon speak:
+    "Say 1 or World Times for world times"
+    "Say 2 or World Weather for world weather"
+    "Say 3 or World Populations for world populations"
+voice_input{response}
+Case {response}:
+    "1 or World Times"
+        Neon speak:
+            "Say A or Athens for Athens's time"
+            "Say B or Bombay for Bombay's time"
+            "Say S or Seattle for Seattle's time"
+        voice_input{response}
+        Case {response}:
+            "A or Athens"
+                Execute: "What time is it in Athens"
+                Goto: athens_weather
+            "B or Bombay"
+                Execute: "What time is it in Bombay"
+            "S or Seattle"
+                Execute: "What time is it in Seattle"
+    "2 or World Weather"
+        Neon speak:
+            "Say A or Athens for the weather in Athens"
+            "Say B or Bombay for the weather in Bombay"
+            "Say S or Seattle for the weather in Seattle"
+        voice_input{response}
+        Case {response}:
+            "A or Athens"
+                @athens_weather
+                Execute: "What is the weather in Athens"
+                Goto: 50
+            "B or Bombay"
+                Execute: "What is the weather in Bombay"
+            "S or Seattle"
+                Execute: "What is the weather in Seattle"
+    "3 or World Populations"
+        Neon speak:
+            "Say A or Athens for Athens's population"
+            "Say B or Bombay for Bombay's population"
+            "Say S or Seattle for Seattle's population"
+        voice_input{response}
+        Case {response}:
+            "A or Athens"
+                Execute: "What is the population of Athens"
+            "B or Bombay"
+                Execute: "What is the population of Bombay"
+            "S or Seattle"
+                Execute: "What is the population of Seattle"
+Exit

@@ -1,0 +1,26 @@
+Script: "Website Navigator"
+# Synonym: "demo website navigator"
+# Synonym: "website navigator demo"
+# Language: "English American Female"
+Variable: {options}:  table_scrape(https://neongecko.com)
+# Variable: {options}: demos: https://www.neongecko.com/demos , videos: https://www.neongecko.com/demos , nano: https://www.neongecko.com/NeonNanoforWebsiteDesigners , audible: https://www.neongecko.com/NeonAudibleAiTech , tools: https://www.neongecko.com/NeonTechnology , websites: https://www.neongecko.com/neonnano , phones: https://www.neongecko.com/NeonAndroid , devices: https://www.neongecko.com/NeonAIforHome
+Variable: {chosen}: ""
+# Neon speak: "Options: {options}"
+Neon speak: "Please tell me what Neon AI web page you'd like to see. You can say things like random{options} or say quit or exit."
+LOOP WN
+    voice_input{chosen}
+    # Neon speak: "navigating to {chosen}"
+    if {chosen} == "quit":
+        Neon speak: "say pause to turn off the mic or say exit to close the window."
+        voice_input{chosen}
+        if {chosen} == "pause":
+            # execute skill to turn off mic
+            Execute: "neon mute microphone"
+    else:
+        if closest{chosen,options}:
+            Execute: "neon browse to closest{chosen,options}"
+        else:
+            Neon speak: "Page not found"
+        Neon speak: "Tell me another Neon AI web page you'd like to see or say quit."
+LOOP WN END
+Exit

@@ -1,0 +1,256 @@
+Script: "Robbie"
+Language: "en-us male"
+Variable: {userName}: ""
+Variable: {more}: ""
+Variable: {symptoms}: ""
+Variable: {True}: 1
+Variable: {False}: 0
+# {yesNoList} =  "yes", "no"
+Variable: {yesNoList} = "yes", "no"
+# yesNoList = "yes", "no"
+
+Name Speak : Robbie : "Version 20200610 20:00"
+
+@StartCovidScreening
+
+#GREETING
+
+Name Speak : Robbie : "Thank you for interacting with the Neon virtual COVID-19 screening beta test."
+Name Speak : Robbie : "My name is Neon Robbie. What is your name?"
+voice_input{userName}
+Name Speak : Robbie : "Hi {userName}"
+
+@promptMoreAppInfo
+Name Speak : Robbie : "Would you like more information on the Neon conversational Covid-19 screening application?"
+voice_input{moreAppInfo}
+#if {moreAppInfo} !IN {yesNoList}:
+#    Goto: promptMoreAppInfo
+if {moreAppInfo} == "no":
+    Goto: BeginScreening
+Name Speak : Robbie : "The Neon conversational Covid-19 screening application is based on the Center for Disease Control and Prevention recommendations for the Coronavirus Disease 2019 Telephone Response Guide. The Covid-19 screening script is available at CDC dot gov website. https://www.cdc.gov/coronavirus/2019-ncov/hcp/phone-guide/ "
+
+
+@BeginScreening
+
+Name Speak : Robbie : "Your beta test virtual exam room is ready."
+# Name Speak : Robbie : "In response to screening questions you can say details to hear more details."
+# Name Speak : Robbie : "or you can say previous question, or start over."
+
+@promptUserRef
+Name Speak : Robbie : "Are you asking for help for yourself or asking on behalf of someone else?"
+voice_input{covidUserRef}
+#if {covidUserRef} == "myself":
+Variable: {userSelfRefsList} =  "self", "myself"
+Variable: {userElseRefsList} =  "else", "someone else"
+if {covidUserRef} IN {userSelfRefsList[*]}:
+    userref1 = "Have you"
+    userref2 = "are you"
+    userref3 = "Do you"
+else:
+#    if {covidUserRef} == "someone else":
+    if {covidUserRef} IN {userElseRefsList[*]}:
+        userref1 = "Has the person you are calling about"
+        userref2 = "is the person for whom you are calling"
+        userref3 = "Does the person you are calling about"
+    else
+        Goto: promptUserRef
+
+Name Speak : Robbie : "Got it."
+
+#TRIAGE
+
+@promptIll
+Name Speak : Robbie : "{userref2} ill?"
+# "Are you ill or contacting on behalf of someone who is ill?"
+voice_input{covidIll}
+if {covidIll} == "no":
+    Goto: A-noSymptoms
+    # Exit - Only for sick people
+else:
+    if {covidIll} == "yes":
+        Goto: promptAge
+    else:
+        if {covidIll} == "start over":
+            Goto: StartCovidScreening
+        else:
+            Goto: promptIll
+
+@promptAge
+Name Speak : Robbie : "How many years old {userref2} ? "
+voice_input{covidAge}
+if {covidAge} < 5:
+    Goto: C-lessThanFive
+else:
+    if {covidAge} >= 5:
+        Goto: promptLifeThreatening
+    else:
+        Goto: promptAge
+
+# LIFE THREATENING
+
+@promptLifeThreatening
+Name Speak : Robbie : "{userref3} have a life-threatening emergency medical condition? Say details for details."
+voice_input{covidLifeThreat}
+if {covidLifeThreat} == "no":
+    Goto: promptContact
+else:
+    if {covidLifeThreat} == "details":
+        Name Speak : Robbie : "Life-threatening emergency medical conditions include these symptoms:"
+        Name Speak : Robbie : "Extremely difficult breathing (can't talk without gasping for air); "
+        Name Speak : Robbie : "Blue-colored lips or face; Severe, constant dizziness or lightheadedness; "
+        Name Speak : Robbie : "Acting confused or inability to arouse; new or worsening slurred speech;"
+        Name Speak : Robbie : "New onset of seizures or seizures that won't stop; and "
+        Name Speak : Robbie : "Other life-threatening emergency signs."
+        Goto: promptLifeThreatening
+    if {covidLifeThreat} != "yes":
+            Goto: promptLifeThreatening
+    Goto: B-call911
+
+# SCREEN FOR SYMPTOMS
+
+@promptContact
+Name Speak : Robbie : "In the two weeks leading up to feeling sick {userref1} had contact with someone who was diagnosed with COVID-19, or live in or recently visited a place where COVID-19 is spreading?"
+voice_input{covidContact}
+if {covidContact} == "no":
+    covidContact = {False}
+else:
+    if {covidContact} != "yes":
+        Goto: promptContact
+    covidContact = {True}
+
+# SYMPTOMS
+
+@promptFever
+Name Speak : Robbie : "{userref3} have a fever or felt hot or feverish in the last two days?"
+voice_input{covidFever}
+if {covidFever} == "no":
+    covidFever = {False}
+else:
+    if {covidFever} != "yes":
+        Goto: promptFever
+    covidFever = {True}
+    # Add -
+    # Ask "Were you able to measure the temperature with a thermometer?"
+    # Yes: Ask "What was the temperature and when was it measured?"
+    # If No: Ask "Are you/they experiencing shaking, chills, or sweating? Do you/they feel very warm to the touch?"
+# Ask "When did the fever/feverishness start?"
+# Ask "Was fever-reducing medication given?"
+# Details: Examples of fever-reducing medications include ibuprofen and acetaminophen.
+# If Yes: Ask "How long ago was the medication taken?"
+
+@promptBreath
+Name Speak : Robbie : "{userref3} have shortness of breath?"
+voice_input{covidBreath}
+if {covidBreath} == "no":
+    covidBreath = {False}
+else:
+    if {covidBreath} != "yes":
+        Goto: promptBreath
+    covidBreath = {True}
+    @promptSevereBreath
+    Name Speak : Robbie : "{userref3} have severe shortness of breath, such as difficulty talking or walking across the room without stopping to breath?"
+    voice_input{covidSevereBreath}
+    if {covidSevereBreath} == "yes" :
+        covidSevereBreath = {True}
+        Name Speak : Robbie : "People having severe shortness of breath need urgent care and should call 911 or immediately go to the emergency department."
+        Goto: B-call911
+    if {covidSevereBreath} != "no":
+        Goto: promptSevereBreath
+
+@promptCough
+Name Speak : Robbie : "{userref3} have a cough?"
+voice_input{covidCough}
+if {covidCough} == "no":
+    covidCough = {False}
+else:
+    if {covidCough} != "yes":
+        Goto: promptCough
+    covidCough = {True}
+    @promptSevereCough
+    Name Speak : Robbie : "{userref1} coughed up a teaspoon of blood?"
+    voice_input{covidSevereCough}
+    if {covidSevereCough} == "yes" :
+        CovidSevereCough = {True}
+        Name Speak : Robbie : "People having severe coughing (termed hemoptysis) should go to the emergency department."
+        Goto : D-gotoEmergency
+    if {covidSevereCough} != "no":
+        Goto: promptSevereCough
+
+@promptBP
+Name Speak : Robbie : "{userref3} have low blood pressure? Signs of low blood pressure can include cold, pale, or clammy skin; or feeling too light-headed and too weak to stand."
+voice_input{covidBP}
+if {covidBP} == "no":
+    covidBP = {False}
+else:
+    if {covidBP} != "yes":
+        Goto: promptBP
+    covidBP = {True}
+    @promptSevereBP
+    Name Speak : Robbie : "{userref1} have severe low BP hypotension such as not being able to stand?"
+    voice_input{covidSevereBP}
+    if {covidSevereBP} == "yes" :
+        covidSevereBP = {True}
+        Name Speak : Robbie : "People having severe low blood pressure should go to the emergency department."
+        Goto : D-gotoEmergency
+    if {covidSevereBP} != "no":
+        Goto: promptSevereBP
+
+@promptNose
+Name Speak : Robbie : "{userref3} have a runny or stuffy nose?"
+voice_input{covidNose}
+if {covidNose} == "no":
+    covidNose = {False}
+else:
+    if {covidNose} != "yes":
+        Goto: promptNose
+    covidNose = {True}
+
+@promptThroat
+Name Speak : Robbie : "{userref3} have a sore throat?"
+voice_input{covidThroat}
+if {covidThroat} == "no":
+    covidThroat = {False}
+else:
+    if {covidThroat} != "yes":
+        Goto: promptThroat
+    covidThroat = {True}
+
+@promptMuscle
+Name Speak : Robbie : "{userref3} have muscle aches or pains?"
+voice_input{covidMuscle}
+if {covidMuscle} == "no":
+    covidMuscle = {False}
+else:
+    if {covidMuscle} != "yes":
+        Goto: promptMuscle
+    covidMuscle = {True}
+
+@promptTaste
+Name Speak : Robbie : "{userref3} have a new loss of taste or smell?"
+voice_input{covidTaste}
+if {covidTaste} == "no":
+    covidTaste = {False}
+else:
+    if {covidTaste} != "yes":
+        Goto: promptTaste
+    covidTaste = {True}
+
+@promptFatigue
+Name Speak : Robbie : "{userref3} have fatigue or malaise?"
+voice_input{covidFatigue}
+if {covidFatigue} == "no":
+    covidFatigue = {False}
+else:
+    if {covidFatigue} != "yes":
+        Goto: promptFatigue
+    covidFatigue = {True}
+
+@promptNausea
+Name Speak : Robbie : "{userref3} have nausea, vomiting, or diarrhea"
+voice_input{covidNausea}
+if {covidNausea} == "no":
+    covidNausea = {False}
+else:
+    if {covidNausea} != "yes":
+        Goto: promptNausea
+    covidNausea = {True}

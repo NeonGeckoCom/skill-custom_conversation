@@ -1,0 +1,15 @@
+
+Script: "Error Checking"
+Neon Speak: Hello
+This is still speech
+Goto: nonexistent-tag
+Neon Speak: Here is
+     a poorly-indented line
+voice_input()
+Goto: myTag
+@myTag
+Neon speak: one
+Exit
+@myTag
+Neon speak: two
+Exit

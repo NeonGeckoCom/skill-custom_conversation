@@ -1,0 +1,30 @@
+Script: "Robbie" 
+Language: "en-us male"
+Variable: {name}: ""
+Variable: {more}: ""
+Variable: {symptoms}: ""
+
+@StartCovidScreening
+
+#GREETING
+
+Name Speak : Robbie : "What is your name?"
+voice_input{name}
+Name Speak : Robbie : "Hi {name}"
+Name Speak : Robbie : "Thank you for interacting with our virtual COVID-19 screening. My name is Neon."
+Name Speak : Robbie : "Please wait while I prepare your virtual exam room"
+
+#TRIAGE
+
+Name Speak : Robbie : "Are you asking for help for yourself or asking on behalf of someone else?"
+voice_input{covidUserRef}
+if {covidUserRef} == "myself":
+    Set: userref1 = "Have you"
+    Set: userref2 = "Are you"
+    Set: userref3 = "Do you"
+else:
+    Set: userref1 = "Has the person you are calling about"
+    Set: userref2 = "Is the person for whom you are calling"
+    Set: userref3 = "Does the person you are calling about"
+
+Name Speak : Robbie : "got it"

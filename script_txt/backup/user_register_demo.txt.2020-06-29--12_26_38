@@ -1,0 +1,38 @@
+Script: "User Register Demo"
+Variable: {full_name}: ""
+Variable: {first_name}: ""
+Variable: {last_name}: ""
+Variable: {selection}: ""
+Neon speak:
+    "Hello human. My full name is Neon Gecko Inc. Please call me Neon. Lets get started."
+LOOP get_name
+    Neon speak: "Please tell me your full name or say exit"
+    voice_input{full_name}
+    Execute: "neon my name is {full_name}"
+    Neon speak: "Thank you."
+    Python: time.sleep(5)
+    Execute: "neon tell me my first name"
+    Execute: "neon tell me my last name"
+    LOOP change_name
+    Neon speak: "Is that correct? Say yes, no, change first name, change last name or exit"
+    voice_input{selection}
+    Case: {selection}
+        "yes"
+            Neon speak: "Okay"
+            Execute: "exit"
+        "no"
+            Neon speak: "Sorry. Please say name to try again"
+            LOOP get_name END
+        "change first name"
+            Neon speak: "Tell me your first name or say exit"
+            voice_input{first_name}
+            Execute: "neon my first name is {first_name}"
+            Execute: "neon tell me my first name"
+            LOOP change_name END
+        "change last name"
+            Neon speak: "Tell me your last name or say exit"
+            voice_input{last_name}
+            Execute: "neon my last name is {last_name}"
+            Execute: "neon tell me my last name"
+            LOOP change_name END
+Exit

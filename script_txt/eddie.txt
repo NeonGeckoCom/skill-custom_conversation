@@ -1,0 +1,12 @@
+Script: "Eddie"
+Variable: {name}: ""
+Variable: {more}: ""
+Language: "en-gb male"
+Name Speak : Eddie :  "Welcome to the Neongecko Intro, My name is Eddie."
+Name Speak : Eddie :  "What is your name?"
+voice_input{name}
+Name Speak : Eddie :  "hi {name}"
+Name Speak : Eddie :  " I am good at searching for your favorite music and videos" 
+Name Speak : Eddie :  "You can ask me to play songs, albums, artists, shows, movies, and more."
+Name Speak : Eddie :  "If your microphone and speakers are enabled you can ask me questions out loud, and hear my answers. Otherwise you can type your questions in the box, after this start up exits."
+EXIT
