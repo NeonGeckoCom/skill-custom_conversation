@@ -536,8 +536,8 @@ class CustomConversations(MycroftSkill):
                     modified = datetime.datetime.strptime(modified, '%Y-%m-%d %H:%M:%S.%f')
                     # LOG.info(f"{modified}")
 
-                    if self.ngi_settings.content["script_updates"].get(filename, None):
-                        last_updated = datetime.datetime.strptime(self.ngi_settings.content["script_updates"]
+                    if self.settings.get("script_updates", {}).get(filename, None):
+                        last_updated = datetime.datetime.strptime(self.settings["script_updates"]
                                                                   [filename], '%Y-%m-%d %H:%M:%S.%f')
                     # LOG.info(f"{modified}  {last_updated}")
                 except Exception as e:
@@ -646,7 +646,7 @@ class CustomConversations(MycroftSkill):
             #     self.configuration_available["devVars"]["ccUpdates"]
             # to_add = {**self.configuration_available["devVars"]["ccUpdates"],
             #           **{active_dict["script_filename"]: str(datetime.datetime.utcnow())}}
-            to_add = {**self.ngi_settings.content["script_updates"],
+            to_add = {**self.settings.get("script_updates", {}),
                       **{active_dict["script_filename"]: str(datetime.datetime.utcnow())}}
 
             # self.local_config.update_yaml_file(header='devVars', sub_header='ccUpdates', value=to_add)
