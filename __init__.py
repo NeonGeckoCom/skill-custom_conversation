@@ -27,7 +27,10 @@ from copy import deepcopy
 import shutil
 from adapt.intent import IntentBuilder
 from dateutil.tz import gettz
-from script_parser import ScriptParser
+
+# TODO: Change this back after publishing parser DM
+from .NeonScriptParser.script_parser import ScriptParser
+# from script_parser import ScriptParser
 
 from mycroft.messagebus.message import Message
 from mycroft.client.speech.coupons import Coupons

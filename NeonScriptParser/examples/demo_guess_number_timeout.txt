@@ -1,0 +1,34 @@
+Script: "Demo Guess Number Timeout"
+Author: Daniel McKnight
+Timeout: 15
+Description:
+    Neon will select a number between 1 and 10 at random
+    and give hints until the user guesses correctly. If there is no response for 15 seconds, the script will exit
+
+Variable: numbers = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+Variable: neon_num = random(numbers)
+Variable: user_guess = ""
+
+Set: neon_num = random(numbers)
+Neon speak:
+#    "My number is {neon_num}"
+    "I'm thinking of a number between 1 and 10"
+    "Guess what it is or say 'exit'"
+LOOP guess
+voice_input{user_guess}
+if {user_guess} in {numbers}:
+    if {user_guess} == {neon_num}:
+        Neon speak: "You guessed it!"
+        Exit
+    if {user_guess} > {neon_num}:
+        Neon speak: "Lower"
+        LOOP guess END
+    if {user_guess} < {neon_num}:
+        Neon speak: "Higher"
+        LOOP guess END
+else
+    if {user_guess} != "exit":
+        Neon speak:
+        "That's not a valid guess, try again."
+        LOOP guess END
+Exit
