@@ -2834,7 +2834,7 @@ class CustomConversations(MycroftSkill):
         user = "local"
 
         # LOG.debug(f"DM: {message.data} | {message.context}")
-        if not message or not message.context:
+        if not message or not message.context or not utterances:
             return False
         if self.server:
             user = nick(message.context["flac_filename"])
