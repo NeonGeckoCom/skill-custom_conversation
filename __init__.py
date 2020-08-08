@@ -27,7 +27,10 @@ from copy import deepcopy
 import shutil
 from adapt.intent import IntentBuilder
 from dateutil.tz import gettz
-from script_parser import ScriptParser
+
+# TODO: Change this back after publishing parser DM
+from .NeonScriptParser.script_parser import ScriptParser
+# from script_parser import ScriptParser
 
 from mycroft.messagebus.message import Message
 from mycroft.client.speech.coupons import Coupons
@@ -2831,7 +2834,7 @@ class CustomConversations(MycroftSkill):
         user = "local"
 
         # LOG.debug(f"DM: {message.data} | {message.context}")
-        if not message or not message.context:
+        if not message or not message.context or not utterances:
             return False
         if self.server:
             user = nick(message.context["flac_filename"])
