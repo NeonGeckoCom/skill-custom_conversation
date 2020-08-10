@@ -121,14 +121,14 @@ class CustomConversations(MycroftSkill):
         self.active_conversations = dict()
         self._reset_values("local")
 
-        default = {
-            'speak_timeout': 5,
-            'response_timeout': 10,
-            'use_cache': True,
-            'auto_update': True,
-            'script_updates': {}
-        }
-        self.init_settings(default)
+        # default = {
+        #     'speak_timeout': 5,
+        #     'response_timeout': 10,
+        #     'use_cache': True,
+        #     'auto_update': True,
+        #     'script_updates': {}
+        # }
+        # self.init_settings(default)
         self.speak_timeout = 5  # self.settings['speak_timeout']
         self.response_timeout = 10  # self.settings['response_timeout']
         self.use_cache = self.settings['use_cache']
