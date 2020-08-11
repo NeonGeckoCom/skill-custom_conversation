@@ -817,6 +817,7 @@ class CustomConversations(MycroftSkill):
                                     parsed_text = text
                                 # parsed_text = normalize(parsed_text)  WYSIWYG, no normalization necessary
                                 LOG.debug(f"runtime_execute({command} {parsed_text})")
+                                message.data["parser_data"] = line_to_evaluate.get("data")
                                 self.runtime_execution[command](user, parsed_text, message)
                             # This is a variable assignment line
                             elif command in self.variable_functions:
@@ -2074,59 +2075,77 @@ class CustomConversations(MycroftSkill):
         :param user: nick on klat server, else "local"
         :param text: variable to find associated utterance for
         :param message: incoming messagebus Message
-
         """
+
         LOG.debug(f"DM: {text}")
         if user not in self.active_conversations.keys():
             self._reset_values(user)
         active_dict = self.active_conversations[user]
 
-        var_to_speak = text
-        LOG.debug(f"var_to_speak={var_to_speak}")
-        # Playback audio file if available
-        if active_dict["audio_responses"].get(var_to_speak, None):
-            # This should be some file in the transcripts directory
-            LOG.debug(active_dict["audio_responses"][var_to_speak])
-
-            if self.server:
-                # Example Filename
-                # /home/guydaniels1953/NeonAI/NGI/Documents/NeonGecko/ts_transcript_audio_segments/
-                # daniel-2020-07-07/daniel-2020-07-07 20:33:37.034829 just kidding .wav'
-
-                # file_to_play = active_dict["audio_responses"][var_to_speak][0].split("/chat_audio/")[1]
-                # LOG.debug(f'sending {file_to_play}')
-                signal_name = build_signal_name(user, text)
-                self.create_signal(signal_name)
-                message.context["cc_data"]["signal_to_check"] = signal_name
-                self.send_with_audio(active_dict["variables"][var_to_speak][0],
-                                     active_dict["audio_responses"][var_to_speak][0], message,
-                                     speaker={"name": "Neon", "language": None, "gender": None, "voice": None})
-                while self.check_for_signal(signal_name, -1):
-                    time.sleep(0.2)  # Pad next response
-                # if message.data.get("mobile"):
-                #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
-                # else:
-                #     self.speak(active_dict["variables"][var_to_speak])
-                # if message.context["mobile"]:
-                #     flac_filename = message.context["flac_filename"]
-                #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
+        if message.data.get("parser_data"):
+            parser_data = message.data.get("parser_data")
+            to_reconvey = parser_data.get("reconvey_text")
+            if '"' in to_reconvey or "'" in to_reconvey:
+                text = to_reconvey
             else:
-                if message.context["mobile"]:
-                    # TODO: Handle sending audio data to mobile (non-server so can't serve URL) DM
-                    pass
-                else:
-                    time.sleep(1)  # Pad from previous audio output end
-                    process = play_wav(active_dict["audio_responses"][var_to_speak][0])
-                    while process and process.poll() is None:
-                        time.sleep(0.2)
-        # Just speak variable value if no audio is available
+                text = active_dict["variables"].get(to_reconvey, [text])[0]
+            if parser_data.get("reconvey_file"):
+                # TODO: Resolve this to some relative directory DM
+                audio = parser_data.get("reconvey_file")
+            else:
+                audio = active_dict["audio_responses"].get(to_reconvey, [None])[0]
         else:
-            try:
-                LOG.debug(f'About to speak {active_dict["variables"][var_to_speak][0]}')
-                self.speak(active_dict["variables"][var_to_speak][0])
-            except Exception as e:
-                LOG.error(e)
-        LOG.debug(active_dict["variables"])
+            # This is original behavior, no parameters have been pre-parsed
+            var_to_speak = text
+            LOG.debug(f"var_to_speak={var_to_speak}")
+            # Playback audio file if available
+            if active_dict["audio_responses"].get(var_to_speak, None):
+                # This should be some file in the transcripts directory
+                LOG.debug(active_dict["audio_responses"][var_to_speak])
+                text = active_dict["variables"][var_to_speak][0]
+                audio = active_dict["audio_responses"][var_to_speak][0]
+
+            # Just speak variable value if no audio is available
+            else:
+                text = active_dict["variables"][var_to_speak][0]
+                audio = None
+                try:
+                    LOG.debug(f'About to speak {active_dict["variables"][var_to_speak][0]}')
+                    self.speak(active_dict["variables"][var_to_speak][0])
+                except Exception as e:
+                    LOG.error(e)
+            LOG.debug(active_dict["variables"])
+
+        # Do actual playback
+        if self.server:
+            # Example Filename
+            # /home/guydaniels1953/NeonAI/NGI/Documents/NeonGecko/ts_transcript_audio_segments/
+            # daniel-2020-07-07/daniel-2020-07-07 20:33:37.034829 just kidding .wav'
+
+            signal_name = build_signal_name(user, text)
+            self.create_signal(signal_name)
+            message.context["cc_data"]["signal_to_check"] = signal_name
+            self.send_with_audio(text, audio, message,
+                                 speaker={"name": "Neon", "language": None, "gender": None, "voice": None})
+            while self.check_for_signal(signal_name, -1):
+                time.sleep(0.2)  # Pad next response
+            # if message.data.get("mobile"):
+            #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
+            # else:
+            #     self.speak(active_dict["variables"][var_to_speak])
+            # if message.context["mobile"]:
+            #     flac_filename = message.context["flac_filename"]
+            #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
+        else:
+            if message.context["mobile"]:
+                # TODO: Handle sending audio data to mobile (non-server so can't serve URL) DM
+                pass
+            else:
+                time.sleep(1)  # Pad from previous audio output end
+                process = play_wav(audio)
+                while process and process.poll() is None:
+                    time.sleep(0.2)
+
         active_dict["current_index"] += 1
         # LOG.debug(f"DM: Continue Script Execution Call")
         self._continue_script_execution(message, user)
@@ -2259,61 +2278,63 @@ class CustomConversations(MycroftSkill):
         else:
             key, value = None, ""
 
-        # Trim whitespace
-        key = key.strip()
-        value = value.strip()
-        for opt in self.variable_functions:
-            LOG.debug(f"looking for {opt} in {value}")
+        if key:
+            # Trim whitespace
+            key = key.strip()
+            value = value.strip()
+            for opt in self.variable_functions:
+                LOG.debug(f"looking for {opt} in {value}")
 
-            # If we find an option, process it and stop looking for more options
-            if opt in value:
-                # LOG.debug(f"found {opt} in {value}")
-                if '{' in str(value):
-                    val = str(value).split('{')[1].split('}')[0]
-                elif '(' in str(value):
-                    val = str(value).split('(')[1].split(')')[0]
-                else:
-                    val = value
-                value = self.variable_functions[opt](val, user, None)
-                # LOG.debug(type(value))
-                if isinstance(value, str):
-                    if ',' in value:
-                        value = value.split(',')[1]
+                # If we find an option, process it and stop looking for more options
+                if opt in value:
+                    # LOG.debug(f"found {opt} in {value}")
+                    if '{' in str(value):
+                        val = str(value).split('{')[1].split('}')[0]
+                    elif '(' in str(value):
+                        val = str(value).split('(')[1].split(')')[0]
                     else:
-                        value = [value]
-                # LOG.debug(value)
+                        val = value
+                    value = self.variable_functions[opt](val, user, None)
+                    # LOG.debug(type(value))
+                    if isinstance(value, str):
+                        if ',' in value:
+                            value = value.split(',')[1]
+                        else:
+                            value = [value]
+                    # LOG.debug(value)
 
-                # LOG.debug(type(value))
+                    # LOG.debug(type(value))
 
-                break
+                    break
 
-        if isinstance(value, list):
-            if not any([i for i in value if ':' in i]):
-                # Standard list of values
+            if isinstance(value, list):
+                if not any([i for i in value if ':' in i]):
+                    # Standard list of values
+                    LOG.debug(active_dict["variables"])
+                    active_dict["variables"][key] = value
+                    LOG.debug(active_dict["variables"])
+                else:
+                    # list of key/value pairs, parse to dict
+                    LOG.debug(active_dict["variables"])
+                    active_dict["variables"][key] = \
+                        {i.split(": ")[0]: i.split(": ")[1] for i in value}
+                    LOG.debug(active_dict["variables"])
+            elif isinstance(value, dict):
+                # Dict
                 LOG.debug(active_dict["variables"])
                 active_dict["variables"][key] = value
                 LOG.debug(active_dict["variables"])
             else:
-                # list of key/value pairs, parse to dict
+                # String/Int, parse to list
                 LOG.debug(active_dict["variables"])
-                active_dict["variables"][key] = \
-                    {i.split(": ")[0]: i.split(": ")[1] for i in value}
+                if "," in value:
+                    value = value.replace(", ", ",").strip().split(",")
+                else:
+                    value = [value.strip()]
+                active_dict["variables"][key] = value
                 LOG.debug(active_dict["variables"])
-        elif isinstance(value, dict):
-            # Dict
-            LOG.debug(active_dict["variables"])
-            active_dict["variables"][key] = value
-            LOG.debug(active_dict["variables"])
         else:
-            # String/Int, parse to list
-            LOG.debug(active_dict["variables"])
-            if "," in value:
-                value = value.replace(", ", ",").strip().split(",")
-            else:
-                value = [value.strip()]
-            active_dict["variables"][key] = value
-            LOG.debug(active_dict["variables"])
-
+            LOG.warning(f"Variable line with no value: {text}")
         active_dict["current_index"] += 1
         self._continue_script_execution(message, user)
 

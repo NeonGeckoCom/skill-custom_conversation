@@ -28,6 +28,8 @@ IF no_val == with_val:
 ELSE:
     Reconvey: pre-exec
 
+Reconvey: pre-exec, file_param
+
 # TODO: CASE
 Case {with_val}:
     "Some value"
