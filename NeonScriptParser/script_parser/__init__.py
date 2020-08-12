@@ -845,8 +845,8 @@ class ScriptParser:
         while remainder:
             if in_quote:
                 param, remainder = remainder.lstrip(quote).split(quote, 1)
-                params.append(f'{quote}{param}{quote}"')
-                print(f">'{param}'")
+                params.append(quote + param + quote)
+                LOG.debug(f">'{param}'")
                 in_quote = False
             else:
                 if delimiter in remainder:
@@ -855,7 +855,7 @@ class ScriptParser:
                     param = remainder
                     remainder = None
                 if param and param.strip():
-                    print(f">>{param}")
+                    LOG.debug(f">>{param}")
                     params.append(param)
                 if remainder:
                     remainder = remainder.strip()

@@ -25,6 +25,8 @@ import json
 import re
 from copy import deepcopy
 import shutil
+
+import requests
 from adapt.intent import IntentBuilder
 from dateutil.tz import gettz
 
@@ -46,7 +48,7 @@ import difflib
 import datetime
 from NGI.utilities.chat_user_util import get_chat_nickname_from_filename as nick
 from NGI.utilities.utilHelper import scrape_page_for_links as scrape
-from NGI.utilities.parseUtils import clean_utterance
+from NGI.utilities.parseUtils import clean_quotes
 from mycroft.util.parse import normalize
 from mycroft.util import play_wav
 
@@ -1062,7 +1064,7 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         """
         # Catch indented section start line
-        text = clean_utterance(text)
+        text = clean_quotes(text)
         if text.lower().endswith("speak:"):
             self.active_conversations[user]["current_index"] += 1
             # LOG.debug(f"DM: Continue Script Execution Call")
@@ -2086,12 +2088,12 @@ class CustomConversations(MycroftSkill):
             parser_data = message.data.get("parser_data")
             to_reconvey = parser_data.get("reconvey_text")
             if '"' in to_reconvey or "'" in to_reconvey:
-                text = to_reconvey
+                text = clean_quotes(to_reconvey)
             else:
                 text = active_dict["variables"].get(to_reconvey, [text])[0]
             if parser_data.get("reconvey_file"):
                 # TODO: Resolve this to some relative directory DM
-                audio = parser_data.get("reconvey_file")
+                audio = clean_quotes(parser_data.get("reconvey_file"))
             else:
                 audio = active_dict["audio_responses"].get(to_reconvey, [None])[0]
         else:
@@ -2141,7 +2143,16 @@ class CustomConversations(MycroftSkill):
                 # TODO: Handle sending audio data to mobile (non-server so can't serve URL) DM
                 pass
             else:
-                time.sleep(1)  # Pad from previous audio output end
+
+                # Skills will not block while speaking, so wait here to make sure reconveyed audio doesn't overlap
+                while self.check_for_signal("CORE_isSpeaking", -1):
+                    time.sleep(0.2)
+
+                # Handle server audio file references
+                # if audio.startswith("https://"):
+                #     audio_data = requests.get(audio)
+                #     audio = self.configuration_available["dirVars"]["tempDir"] + f"/cc_tmp_{time.time()}"
+                #     open(audio, 'wb').write(audio_data.content)
                 process = play_wav(audio)
                 while process and process.poll() is None:
                     time.sleep(0.2)
@@ -2716,7 +2727,7 @@ class CustomConversations(MycroftSkill):
                         # LOG.debug(new_word)
 
                         new_word = f"{prefix}{new_word}{suffix}"
-                        new_word = clean_utterance(new_word)
+                        new_word = clean_quotes(new_word)
 
                         LOG.debug(f"replacing {word} with {new_word} in {line}")
 
