@@ -93,6 +93,8 @@ class CustomConversations(MycroftSkill):
     def __init__(self):
         super(CustomConversations, self).__init__(name="CustomConversations")
         self.file_ext = "ncs"
+        self.text_location = f"{self.__location__}/script_txt"
+        self.audio_location = f"{self.__location__}/script_audio"
         self.tz = gettz(self.user_info_available["location"]["tz"])
         self.reload_skill = False  # This skill should not be reloaded or else active users break
         # self.pre_parser_options,
@@ -236,8 +238,8 @@ class CustomConversations(MycroftSkill):
 
     @intent_handler(IntentBuilder("TellAvailableScripts").require('tell').build())
     def handle_tell_available(self, message):
-        available = [os.path.splitext(x)[0].replace("_", " ") for x in os.listdir(f'{self.__location__}/script_txt/')
-                     if os.path.isfile(os.path.join(f'{self.__location__}/script_txt', x))]
+        available = [os.path.splitext(x)[0].replace("_", " ") for x in os.listdir(self.text_location)
+                     if os.path.isfile(os.path.join(self.text_location, x))]
         LOG.info(available)
         if available:
             self.speak_dialog("available_script", {"available": f'{", ".join(available[:-1])}, and {available[-1]}'})
@@ -254,8 +256,8 @@ class CustomConversations(MycroftSkill):
         utt = message.data.get("utterance")
         script_name = " ".join(utt.split("to")[1:]).strip().replace(" ", "_")
         LOG.info(script_name)
-        available = [os.path.splitext(x)[0] for x in os.listdir(f'{self.__location__}/script_txt/')
-                     if os.path.isfile(os.path.join(f'{self.__location__}/script_txt', x))]
+        available = [os.path.splitext(x)[0] for x in os.listdir(self.text_location)
+                     if os.path.isfile(os.path.join(self.text_location, x))]
         if script_name in available:
             LOG.debug("Good Request")
             if message.context["mobile"]:
@@ -279,11 +281,11 @@ class CustomConversations(MycroftSkill):
             script_name = " ".join(utt.split("my")[1:]) \
                 .strip().replace(" ", "_").replace(message.data.get("script"), "").rstrip("_")
             # LOG.info(script_name)
-            available = [os.path.splitext(x)[0] for x in os.listdir(f'{self.__location__}/script_txt/')
-                         if os.path.isfile(os.path.join(f'{self.__location__}/script_txt', x))]
+            available = [os.path.splitext(x)[0] for x in os.listdir(self.text_location)
+                         if os.path.isfile(os.path.join(self.text_location, x))]
             LOG.info(available)
             if script_name in available:
-                file_to_send = os.path.join(f'{self.__location__}/script_txt', f"{script_name}.txt")
+                file_to_send = os.path.join(self.text_location, f"{script_name}.txt")
                 LOG.debug(f"Good Request: {file_to_send}")
 
                 # Get user email address
@@ -479,6 +481,7 @@ class CustomConversations(MycroftSkill):
 
         self.active_conversations[user] = {
             # Script Globals
+            "script_meta": {},          # Parser metadata
             "script_filename": None,    # Script filename
             "timeout": -1,              # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
             "timeout_action": '',       # String to speak when timeout is reached (before exit dialog)
@@ -528,8 +531,8 @@ class CustomConversations(MycroftSkill):
                     time.time() - timer_start < 10:
                 time.sleep(1)
             filename = None
-            for file in [x for x in os.listdir(f'{self.__location__}/script_txt/')
-                         if os.path.isfile(os.path.join(f'{self.__location__}/script_txt', x))]:
+            for file in [x for x in os.listdir(self.text_location)
+                         if os.path.isfile(os.path.join(self.text_location, x))]:
                 # LOG.debug(f"DM: script: {file}")
                 last_updated = None
                 try:
@@ -564,9 +567,9 @@ class CustomConversations(MycroftSkill):
                         else:
                             # mv from dir/file to dir/invalid/file
                             LOG.error(f"Problem with {file}")
-                            os.makedirs(os.path.join(f'{self.__location__}/script_txt/invalid/'), exist_ok=True)
-                            shutil.move(os.path.join(f'{self.__location__}/script_txt', file),
-                                        os.path.join(f'{self.__location__}/script_txt/invalid/', file))
+                            os.makedirs(os.path.join(f'{self.text_location}/invalid/'), exist_ok=True)
+                            shutil.move(os.path.join(self.text_location, file),
+                                        os.path.join(f'{self.text_location}/invalid/', file))
                             # self.speak_dialog("ProblemInFile", {"file_name": file})
                     except Exception as e:
                         # LOG.error(f"Error loading {filename}")
@@ -631,10 +634,9 @@ class CustomConversations(MycroftSkill):
             active_dict["goto_tags"] = cache_data[4]
             active_dict["timeout"] = cache_data[5]
             active_dict["timeout_action"] = cache_data[6]
-
+            active_dict["script_meta"] = cache_data[9]
             synonyms = cache_data[7]
             claps = cache_data[8]
-            meta = cache_data[9]
             #######################################################################################################
 
             cache_file = ScriptParser().parse_script_to_file(os.path.join(
@@ -2092,8 +2094,17 @@ class CustomConversations(MycroftSkill):
             else:
                 text = active_dict["variables"].get(to_reconvey, [text])[0]
             if parser_data.get("reconvey_file"):
-                # TODO: Resolve this to some relative directory DM
                 audio = clean_quotes(parser_data.get("reconvey_file"))
+                if not audio.startswith("http"):
+                    # Try handling as an absolute path
+                    audio = os.path.expanduser(audio)
+                    if not os.path.isfile(audio):
+                        script_title = active_dict["script_meta"]["title"]
+                        # Try handling as a relative path in the skill
+                        audio = os.path.join(self.audio_location, script_title, audio)
+                        if not os.path.isfile(audio):
+                            # Couldn't resolve audio file, pass None
+                            audio = None
             else:
                 audio = active_dict["audio_responses"].get(to_reconvey, [None])[0]
         else:
@@ -2140,7 +2151,7 @@ class CustomConversations(MycroftSkill):
             #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
         else:
             if message.context["mobile"]:
-                # TODO: Handle sending audio data to mobile (non-server so can't serve URL) DM
+                # TODO: Handle sending audio data to mobile (non-server so can't assume public URL) DM
                 pass
             else:
 

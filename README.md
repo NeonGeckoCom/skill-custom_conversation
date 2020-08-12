@@ -192,9 +192,12 @@ Name Speak: English Male, male, en-us: "<prosody volume="-2dB" rate="x-slow" pit
 ```
 
 #### Reconvey
-Neon plays back a user's original audio input (if available) and prints the transcription. The last value of the passed variable is
-used with the last audio_file available for that variable. No Text-To-Speech will be generated, so nothing will be played
-if there is no input audio to use.
+Reconvey can be used in two ways: one in which a user's prior input to the script is used, and another in which specified
+audio files are played back.
+
+In the first method, Neon plays back a user's original audio input (if available) 
+and prints the transcription. The last value of the passed variable is used with the last audio_file available for that 
+variable. No Text-To-Speech will be generated, so nothing will be played if there is no input audio to use.
 
 *Note: The variable named should not be enclosed in braces unless its value is the name of the variable to be spoken* 
 ```
@@ -203,6 +206,19 @@ voice_input(var_to_use)
 ...
 
 Reconvey: var_to_use
+```
+
+In the second method, a quoted text string or variable is provided along with a specified audio file. The audio file may be a 
+public URL, an absolute path to a local file, or the filename of a file saved in `script_audio/{script title}/` within 
+the skill directory.
+```
+Reconvey: var_to_use, "https://my_website/files/audio_to_play.mp3"
+```
+```
+Reconvey: "This literal will be printed", "audio_file_in_script_directory.wav"
+```
+```
+Reconvey: "Literal to print", "~/Music/audio-file.mp3"
 ```
 
 #### Execute 
