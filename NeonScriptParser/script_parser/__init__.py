@@ -33,7 +33,7 @@ class ScriptParser:
     def __init__(self):
         self._default_gender = "female"
         self._default_language = "en-US"
-        self._file_ext = "ncs"
+        self.file_ext = "ncs"
         self._no_implicit_multiline = ("if", "else", "case", "loop", "goto", "tag", "@")
         self._variable_functions = ("select_one", "voice_input", "table_scrape", "random", "closest", "profile")
         self._version = __version__
@@ -69,6 +69,18 @@ class ScriptParser:
             "email": self._parse_email_option,
             "run": self._parse_run_option
         }
+
+    @staticmethod
+    def _create_temp_file(script_text):
+        """
+        Writes input script text to a temp file to parse
+        :param script_text: text object to parse
+        :return: path to script file
+        """
+        tmp_file = path.join("/tmp", f"nsp_{time.time()}")
+        with open(tmp_file, "w") as tmp:
+            tmp.write(script_text)
+        return tmp_file
 
     def _parse_script_file(self, file_path):
         """
@@ -122,16 +134,42 @@ class ScriptParser:
 
         return cache_data
 
+    def parse_text_to_file(self, input_text, output_path=None):
+        """
+        Parses input text into a .ncs file
+        :param input_text: Raw script text to parse
+        :param output_path: Optional path or filename to write the output
+        :return: Path to output file
+        """
+
+        file = self._create_temp_file(input_text)
+        return self.parse_script_to_file(file, output_path)
+
     def parse_script_to_dict(self, file_path):
+        """
+        Parses the input file and returns the parsed object as a dictionary
+        :param file_path: Absolute path to the .nct script to parse
+        :return: Parsed dictionary object
+        """
+
         return self._parse_script_file(file_path)
 
     def parse_script_to_file(self, input_path, output_path=None):
-        cache_data = self._parse_script_file(input_path)
+        """
+        Parses the input file into a .ncs file.
+        :param input_path: Absolute path to the .nct script to parse
+        :param output_path: Optional path or filename to write the output
+        :return: Path to output file
+        """
 
+        cache_data = self._parse_script_file(input_path)
+        output_name = f"{path.splitext(path.basename(input_path))[0]}.{self._file_ext}"
         if not output_path:
             output_dir = path.dirname(input_path)
-            output_name = f"{path.splitext(path.basename(input_path))[0]}.{self._file_ext}"
             output_path = path.join(output_dir, output_name)
+        if path.isdir(output_path):
+            output_path = path.join(output_path, output_name)
+
         with open(output_path, 'wb+') as cache_file:
             pickle.dump(cache_data, cache_file, protocol=pickle.HIGHEST_PROTOCOL)
         LOG.debug(output_path)
