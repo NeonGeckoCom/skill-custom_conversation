@@ -25,6 +25,8 @@ import json
 import re
 from copy import deepcopy
 import shutil
+
+import requests
 from adapt.intent import IntentBuilder
 from dateutil.tz import gettz
 
@@ -46,7 +48,7 @@ import difflib
 import datetime
 from NGI.utilities.chat_user_util import get_chat_nickname_from_filename as nick
 from NGI.utilities.utilHelper import scrape_page_for_links as scrape
-from NGI.utilities.parseUtils import clean_utterance
+from NGI.utilities.parseUtils import clean_quotes
 from mycroft.util.parse import normalize
 from mycroft.util import play_wav
 
@@ -91,6 +93,8 @@ class CustomConversations(MycroftSkill):
     def __init__(self):
         super(CustomConversations, self).__init__(name="CustomConversations")
         self.file_ext = "ncs"
+        self.text_location = f"{self.__location__}/script_txt"
+        self.audio_location = f"{self.__location__}/script_audio"
         self.tz = gettz(self.user_info_available["location"]["tz"])
         self.reload_skill = False  # This skill should not be reloaded or else active users break
         # self.pre_parser_options,
@@ -121,14 +125,14 @@ class CustomConversations(MycroftSkill):
         self.active_conversations = dict()
         self._reset_values("local")
 
-        default = {
-            'speak_timeout': 5,
-            'response_timeout': 10,
-            'use_cache': True,
-            'auto_update': True,
-            'script_updates': {}
-        }
-        self.init_settings(default)
+        # default = {
+        #     'speak_timeout': 5,
+        #     'response_timeout': 10,
+        #     'use_cache': True,
+        #     'auto_update': True,
+        #     'script_updates': {}
+        # }
+        # self.init_settings(default)
         self.speak_timeout = 5  # self.settings['speak_timeout']
         self.response_timeout = 10  # self.settings['response_timeout']
         self.use_cache = self.settings['use_cache']
@@ -234,8 +238,8 @@ class CustomConversations(MycroftSkill):
 
     @intent_handler(IntentBuilder("TellAvailableScripts").require('tell').build())
     def handle_tell_available(self, message):
-        available = [os.path.splitext(x)[0].replace("_", " ") for x in os.listdir(f'{self.__location__}/script_txt/')
-                     if os.path.isfile(os.path.join(f'{self.__location__}/script_txt', x))]
+        available = [os.path.splitext(x)[0].replace("_", " ") for x in os.listdir(self.text_location)
+                     if os.path.isfile(os.path.join(self.text_location, x))]
         LOG.info(available)
         if available:
             self.speak_dialog("available_script", {"available": f'{", ".join(available[:-1])}, and {available[-1]}'})
@@ -252,8 +256,8 @@ class CustomConversations(MycroftSkill):
         utt = message.data.get("utterance")
         script_name = " ".join(utt.split("to")[1:]).strip().replace(" ", "_")
         LOG.info(script_name)
-        available = [os.path.splitext(x)[0] for x in os.listdir(f'{self.__location__}/script_txt/')
-                     if os.path.isfile(os.path.join(f'{self.__location__}/script_txt', x))]
+        available = [os.path.splitext(x)[0] for x in os.listdir(self.text_location)
+                     if os.path.isfile(os.path.join(self.text_location, x))]
         if script_name in available:
             LOG.debug("Good Request")
             if message.context["mobile"]:
@@ -277,11 +281,11 @@ class CustomConversations(MycroftSkill):
             script_name = " ".join(utt.split("my")[1:]) \
                 .strip().replace(" ", "_").replace(message.data.get("script"), "").rstrip("_")
             # LOG.info(script_name)
-            available = [os.path.splitext(x)[0] for x in os.listdir(f'{self.__location__}/script_txt/')
-                         if os.path.isfile(os.path.join(f'{self.__location__}/script_txt', x))]
+            available = [os.path.splitext(x)[0] for x in os.listdir(self.text_location)
+                         if os.path.isfile(os.path.join(self.text_location, x))]
             LOG.info(available)
             if script_name in available:
-                file_to_send = os.path.join(f'{self.__location__}/script_txt', f"{script_name}.txt")
+                file_to_send = os.path.join(self.text_location, f"{script_name}.txt")
                 LOG.debug(f"Good Request: {file_to_send}")
 
                 # Get user email address
@@ -477,6 +481,7 @@ class CustomConversations(MycroftSkill):
 
         self.active_conversations[user] = {
             # Script Globals
+            "script_meta": {},          # Parser metadata
             "script_filename": None,    # Script filename
             "timeout": -1,              # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
             "timeout_action": '',       # String to speak when timeout is reached (before exit dialog)
@@ -526,8 +531,8 @@ class CustomConversations(MycroftSkill):
                     time.time() - timer_start < 10:
                 time.sleep(1)
             filename = None
-            for file in [x for x in os.listdir(f'{self.__location__}/script_txt/')
-                         if os.path.isfile(os.path.join(f'{self.__location__}/script_txt', x))]:
+            for file in [x for x in os.listdir(self.text_location)
+                         if os.path.isfile(os.path.join(self.text_location, x))]:
                 # LOG.debug(f"DM: script: {file}")
                 last_updated = None
                 try:
@@ -562,9 +567,9 @@ class CustomConversations(MycroftSkill):
                         else:
                             # mv from dir/file to dir/invalid/file
                             LOG.error(f"Problem with {file}")
-                            os.makedirs(os.path.join(f'{self.__location__}/script_txt/invalid/'), exist_ok=True)
-                            shutil.move(os.path.join(f'{self.__location__}/script_txt', file),
-                                        os.path.join(f'{self.__location__}/script_txt/invalid/', file))
+                            os.makedirs(os.path.join(f'{self.text_location}/invalid/'), exist_ok=True)
+                            shutil.move(os.path.join(self.text_location, file),
+                                        os.path.join(f'{self.text_location}/invalid/', file))
                             # self.speak_dialog("ProblemInFile", {"file_name": file})
                     except Exception as e:
                         # LOG.error(f"Error loading {filename}")
@@ -629,10 +634,9 @@ class CustomConversations(MycroftSkill):
             active_dict["goto_tags"] = cache_data[4]
             active_dict["timeout"] = cache_data[5]
             active_dict["timeout_action"] = cache_data[6]
-
+            active_dict["script_meta"] = cache_data[9]
             synonyms = cache_data[7]
             claps = cache_data[8]
-            meta = cache_data[9]
             #######################################################################################################
 
             cache_file = ScriptParser().parse_script_to_file(os.path.join(
@@ -817,6 +821,7 @@ class CustomConversations(MycroftSkill):
                                     parsed_text = text
                                 # parsed_text = normalize(parsed_text)  WYSIWYG, no normalization necessary
                                 LOG.debug(f"runtime_execute({command} {parsed_text})")
+                                message.data["parser_data"] = line_to_evaluate.get("data")
                                 self.runtime_execution[command](user, parsed_text, message)
                             # This is a variable assignment line
                             elif command in self.variable_functions:
@@ -1061,7 +1066,7 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         """
         # Catch indented section start line
-        text = clean_utterance(text)
+        text = clean_quotes(text)
         if text.lower().endswith("speak:"):
             self.active_conversations[user]["current_index"] += 1
             # LOG.debug(f"DM: Continue Script Execution Call")
@@ -2074,59 +2079,95 @@ class CustomConversations(MycroftSkill):
         :param user: nick on klat server, else "local"
         :param text: variable to find associated utterance for
         :param message: incoming messagebus Message
-
         """
+
         LOG.debug(f"DM: {text}")
         if user not in self.active_conversations.keys():
             self._reset_values(user)
         active_dict = self.active_conversations[user]
 
-        var_to_speak = text
-        LOG.debug(f"var_to_speak={var_to_speak}")
-        # Playback audio file if available
-        if active_dict["audio_responses"].get(var_to_speak, None):
-            # This should be some file in the transcripts directory
-            LOG.debug(active_dict["audio_responses"][var_to_speak])
-
-            if self.server:
-                # Example Filename
-                # /home/guydaniels1953/NeonAI/NGI/Documents/NeonGecko/ts_transcript_audio_segments/
-                # daniel-2020-07-07/daniel-2020-07-07 20:33:37.034829 just kidding .wav'
-
-                # file_to_play = active_dict["audio_responses"][var_to_speak][0].split("/chat_audio/")[1]
-                # LOG.debug(f'sending {file_to_play}')
-                signal_name = build_signal_name(user, text)
-                self.create_signal(signal_name)
-                message.context["cc_data"]["signal_to_check"] = signal_name
-                self.send_with_audio(active_dict["variables"][var_to_speak][0],
-                                     active_dict["audio_responses"][var_to_speak][0], message,
-                                     speaker={"name": "Neon", "language": None, "gender": None, "voice": None})
-                while self.check_for_signal(signal_name, -1):
-                    time.sleep(0.2)  # Pad next response
-                # if message.data.get("mobile"):
-                #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
-                # else:
-                #     self.speak(active_dict["variables"][var_to_speak])
-                # if message.context["mobile"]:
-                #     flac_filename = message.context["flac_filename"]
-                #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
+        if message.data.get("parser_data"):
+            parser_data = message.data.get("parser_data")
+            to_reconvey = parser_data.get("reconvey_text")
+            if '"' in to_reconvey or "'" in to_reconvey:
+                text = clean_quotes(to_reconvey)
             else:
-                if message.context["mobile"]:
-                    # TODO: Handle sending audio data to mobile (non-server so can't serve URL) DM
-                    pass
-                else:
-                    time.sleep(1)  # Pad from previous audio output end
-                    process = play_wav(active_dict["audio_responses"][var_to_speak][0])
-                    while process and process.poll() is None:
-                        time.sleep(0.2)
-        # Just speak variable value if no audio is available
+                text = active_dict["variables"].get(to_reconvey, [text])[0]
+            if parser_data.get("reconvey_file"):
+                audio = clean_quotes(parser_data.get("reconvey_file"))
+                if not audio.startswith("http"):
+                    # Try handling as an absolute path
+                    audio = os.path.expanduser(audio)
+                    if not os.path.isfile(audio):
+                        script_title = active_dict["script_meta"]["title"]
+                        # Try handling as a relative path in the skill
+                        audio = os.path.join(self.audio_location, script_title, audio)
+                        if not os.path.isfile(audio):
+                            # Couldn't resolve audio file, pass None
+                            audio = None
+            else:
+                audio = active_dict["audio_responses"].get(to_reconvey, [None])[0]
         else:
-            try:
-                LOG.debug(f'About to speak {active_dict["variables"][var_to_speak][0]}')
-                self.speak(active_dict["variables"][var_to_speak][0])
-            except Exception as e:
-                LOG.error(e)
-        LOG.debug(active_dict["variables"])
+            # This is original behavior, no parameters have been pre-parsed
+            var_to_speak = text
+            LOG.debug(f"var_to_speak={var_to_speak}")
+            # Playback audio file if available
+            if active_dict["audio_responses"].get(var_to_speak, None):
+                # This should be some file in the transcripts directory
+                LOG.debug(active_dict["audio_responses"][var_to_speak])
+                text = active_dict["variables"][var_to_speak][0]
+                audio = active_dict["audio_responses"][var_to_speak][0]
+
+            # Just speak variable value if no audio is available
+            else:
+                text = active_dict["variables"][var_to_speak][0]
+                audio = None
+                try:
+                    LOG.debug(f'About to speak {active_dict["variables"][var_to_speak][0]}')
+                    self.speak(active_dict["variables"][var_to_speak][0])
+                except Exception as e:
+                    LOG.error(e)
+            LOG.debug(active_dict["variables"])
+
+        # Do actual playback
+        if self.server:
+            # Example Filename
+            # /home/guydaniels1953/NeonAI/NGI/Documents/NeonGecko/ts_transcript_audio_segments/
+            # daniel-2020-07-07/daniel-2020-07-07 20:33:37.034829 just kidding .wav'
+
+            signal_name = build_signal_name(user, text)
+            self.create_signal(signal_name)
+            message.context["cc_data"]["signal_to_check"] = signal_name
+            self.send_with_audio(text, audio, message,
+                                 speaker={"name": "Neon", "language": None, "gender": None, "voice": None})
+            while self.check_for_signal(signal_name, -1):
+                time.sleep(0.2)  # Pad next response
+            # if message.data.get("mobile"):
+            #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
+            # else:
+            #     self.speak(active_dict["variables"][var_to_speak])
+            # if message.context["mobile"]:
+            #     flac_filename = message.context["flac_filename"]
+            #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
+        else:
+            if message.context["mobile"]:
+                # TODO: Handle sending audio data to mobile (non-server so can't assume public URL) DM
+                pass
+            else:
+
+                # Skills will not block while speaking, so wait here to make sure reconveyed audio doesn't overlap
+                while self.check_for_signal("CORE_isSpeaking", -1):
+                    time.sleep(0.2)
+
+                # Handle server audio file references
+                # if audio.startswith("https://"):
+                #     audio_data = requests.get(audio)
+                #     audio = self.configuration_available["dirVars"]["tempDir"] + f"/cc_tmp_{time.time()}"
+                #     open(audio, 'wb').write(audio_data.content)
+                process = play_wav(audio)
+                while process and process.poll() is None:
+                    time.sleep(0.2)
+
         active_dict["current_index"] += 1
         # LOG.debug(f"DM: Continue Script Execution Call")
         self._continue_script_execution(message, user)
@@ -2259,61 +2300,63 @@ class CustomConversations(MycroftSkill):
         else:
             key, value = None, ""
 
-        # Trim whitespace
-        key = key.strip()
-        value = value.strip()
-        for opt in self.variable_functions:
-            LOG.debug(f"looking for {opt} in {value}")
+        if key:
+            # Trim whitespace
+            key = key.strip()
+            value = value.strip()
+            for opt in self.variable_functions:
+                LOG.debug(f"looking for {opt} in {value}")
 
-            # If we find an option, process it and stop looking for more options
-            if opt in value:
-                # LOG.debug(f"found {opt} in {value}")
-                if '{' in str(value):
-                    val = str(value).split('{')[1].split('}')[0]
-                elif '(' in str(value):
-                    val = str(value).split('(')[1].split(')')[0]
-                else:
-                    val = value
-                value = self.variable_functions[opt](val, user, None)
-                # LOG.debug(type(value))
-                if isinstance(value, str):
-                    if ',' in value:
-                        value = value.split(',')[1]
+                # If we find an option, process it and stop looking for more options
+                if opt in value:
+                    # LOG.debug(f"found {opt} in {value}")
+                    if '{' in str(value):
+                        val = str(value).split('{')[1].split('}')[0]
+                    elif '(' in str(value):
+                        val = str(value).split('(')[1].split(')')[0]
                     else:
-                        value = [value]
-                # LOG.debug(value)
+                        val = value
+                    value = self.variable_functions[opt](val, user, None)
+                    # LOG.debug(type(value))
+                    if isinstance(value, str):
+                        if ',' in value:
+                            value = value.split(',')[1]
+                        else:
+                            value = [value]
+                    # LOG.debug(value)
 
-                # LOG.debug(type(value))
+                    # LOG.debug(type(value))
 
-                break
+                    break
 
-        if isinstance(value, list):
-            if not any([i for i in value if ':' in i]):
-                # Standard list of values
+            if isinstance(value, list):
+                if not any([i for i in value if ':' in i]):
+                    # Standard list of values
+                    LOG.debug(active_dict["variables"])
+                    active_dict["variables"][key] = value
+                    LOG.debug(active_dict["variables"])
+                else:
+                    # list of key/value pairs, parse to dict
+                    LOG.debug(active_dict["variables"])
+                    active_dict["variables"][key] = \
+                        {i.split(": ")[0]: i.split(": ")[1] for i in value}
+                    LOG.debug(active_dict["variables"])
+            elif isinstance(value, dict):
+                # Dict
                 LOG.debug(active_dict["variables"])
                 active_dict["variables"][key] = value
                 LOG.debug(active_dict["variables"])
             else:
-                # list of key/value pairs, parse to dict
+                # String/Int, parse to list
                 LOG.debug(active_dict["variables"])
-                active_dict["variables"][key] = \
-                    {i.split(": ")[0]: i.split(": ")[1] for i in value}
+                if "," in value:
+                    value = value.replace(", ", ",").strip().split(",")
+                else:
+                    value = [value.strip()]
+                active_dict["variables"][key] = value
                 LOG.debug(active_dict["variables"])
-        elif isinstance(value, dict):
-            # Dict
-            LOG.debug(active_dict["variables"])
-            active_dict["variables"][key] = value
-            LOG.debug(active_dict["variables"])
         else:
-            # String/Int, parse to list
-            LOG.debug(active_dict["variables"])
-            if "," in value:
-                value = value.replace(", ", ",").strip().split(",")
-            else:
-                value = [value.strip()]
-            active_dict["variables"][key] = value
-            LOG.debug(active_dict["variables"])
-
+            LOG.warning(f"Variable line with no value: {text}")
         active_dict["current_index"] += 1
         self._continue_script_execution(message, user)
 
@@ -2695,7 +2738,7 @@ class CustomConversations(MycroftSkill):
                         # LOG.debug(new_word)
 
                         new_word = f"{prefix}{new_word}{suffix}"
-                        new_word = clean_utterance(new_word)
+                        new_word = clean_quotes(new_word)
 
                         LOG.debug(f"replacing {word} with {new_word} in {line}")
 

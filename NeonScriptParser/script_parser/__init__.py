@@ -1,3 +1,22 @@
+# NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
+#
+# Copyright 2008-2020 Neongecko.com Inc. | All Rights Reserved
+#
+# Notice of License - Duplicating this Notice of License near the start of any file containing
+# a derivative of this software is a condition of license for this software.
+# Friendly Licensing:
+# No charge, open source royalty free use of the Neon AI software source and object is offered for
+# educational users, noncommercial enthusiasts, Public Benefit Corporations (and LLCs) and
+# Social Purpose Corporations (and LLCs). Developers can contact developers@neon.ai
+# For commercial licensing, distribution of derivative works or redistribution please contact licenses@neon.ai
+# Distributed on an "AS IS” basis without warranties or conditions of any kind, either express or implied.
+# Trademarks of Neongecko: Neon AI(TM), Neon Assist (TM), Neon Communicator(TM), Klat(TM)
+# Authors: Guy Daniels, Daniel McKnight, Regina Bloomstine, Elon Gasper, Richard Leeds
+#
+# Specialized conversational reconveyance options from Conversation Processing Intelligence Corp.
+# US Patents 2008-2020: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
+# China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
+
 import logging
 import pickle
 import re
@@ -14,7 +33,7 @@ class ScriptParser:
     def __init__(self):
         self._default_gender = "female"
         self._default_language = "en-US"
-        self._file_ext = "ncs"
+        self.file_ext = "ncs"
         self._no_implicit_multiline = ("if", "else", "case", "loop", "goto", "tag", "@")
         self._variable_functions = ("select_one", "voice_input", "table_scrape", "random", "closest", "profile")
         self._version = __version__
@@ -50,6 +69,18 @@ class ScriptParser:
             "email": self._parse_email_option,
             "run": self._parse_run_option
         }
+
+    @staticmethod
+    def _create_temp_file(script_text):
+        """
+        Writes input script text to a temp file to parse
+        :param script_text: text object to parse
+        :return: path to script file
+        """
+        tmp_file = path.join("/tmp", f"nsp_{time.time()}")
+        with open(tmp_file, "w") as tmp:
+            tmp.write(script_text)
+        return tmp_file
 
     def _parse_script_file(self, file_path):
         """
@@ -103,16 +134,42 @@ class ScriptParser:
 
         return cache_data
 
+    def parse_text_to_file(self, input_text, output_path=None):
+        """
+        Parses input text into a .ncs file
+        :param input_text: Raw script text to parse
+        :param output_path: Optional path or filename to write the output
+        :return: Path to output file
+        """
+
+        file = self._create_temp_file(input_text)
+        return self.parse_script_to_file(file, output_path)
+
     def parse_script_to_dict(self, file_path):
+        """
+        Parses the input file and returns the parsed object as a dictionary
+        :param file_path: Absolute path to the .nct script to parse
+        :return: Parsed dictionary object
+        """
+
         return self._parse_script_file(file_path)
 
     def parse_script_to_file(self, input_path, output_path=None):
-        cache_data = self._parse_script_file(input_path)
+        """
+        Parses the input file into a .ncs file.
+        :param input_path: Absolute path to the .nct script to parse
+        :param output_path: Optional path or filename to write the output
+        :return: Path to output file
+        """
 
+        cache_data = self._parse_script_file(input_path)
+        output_name = f"{path.splitext(path.basename(input_path))[0]}.{self._file_ext}"
         if not output_path:
             output_dir = path.dirname(input_path)
-            output_name = f"{path.splitext(path.basename(input_path))[0]}.{self._file_ext}"
             output_path = path.join(output_dir, output_name)
+        if path.isdir(output_path):
+            output_path = path.join(output_path, output_name)
+
         with open(output_path, 'wb+') as cache_file:
             pickle.dump(cache_data, cache_file, protocol=pickle.HIGHEST_PROTOCOL)
         LOG.debug(output_path)
@@ -303,25 +360,37 @@ class ScriptParser:
                          active_dict["claps"]]
         return to_save_cache
 
-    @staticmethod
-    def _parse_header_option(active_dict, line_data=None):
+    def _parse_header_option(self, active_dict, line_data=None):
         """
         Does any pre-execution parsing of header lines
+
+        {'command': 'script',
+         'indent': 0,
+         'line_number': 1,
+         'parent_case_indents': [],
+         'text': 'Parser Test Script'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
+
         LOG.debug(line_data)
         option = line_data["command"]
         value = line_data["text"].strip()
         if option == "timeout":
-            if " " in value:
-                timeout, action = value.split(" ", 1)
-                active_dict["timeout"] = int(timeout)
-                active_dict["timeout_action"] = action.strip().strip('"')
-            else:
-                value = int(value)
-                active_dict["timeout"] = value
-                active_dict["timeout_action"] = None
+            params = self._parse_multi_params(" ")
+            timeout = params[0]
+            action = params[1] if len(params) == 2 else None
+            # if " " in value:
+            #     timeout, action = value.split(" ", 1)
+            #     active_dict["timeout"] = int(timeout)
+            #     active_dict["timeout_action"] = action.strip().strip('"')
+            # else:
+            #     value = int(value)
+            #     active_dict["timeout"] = value
+            #     active_dict["timeout_action"] = None
+            active_dict["timeout"] = int(timeout)
+            active_dict["timeout_action"] = action
         elif option == "author":
             active_dict["script_meta"]["author"] = value
         elif option == "description":
@@ -333,9 +402,17 @@ class ScriptParser:
     def _parse_goto_option(active_dict, line_data=None):
         """
         Finds tag lines and indexes them for use at runtime
+
+        {'command': 'goto',
+         'indent': 1,
+         'line_number': 27,
+         'parent_case_indents': [],
+         'text': 'pre-exec'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
+
         LOG.debug(line_data)
         line_txt = str(line_data["text"]).strip()
         tag = None
@@ -353,32 +430,51 @@ class ScriptParser:
     def _parse_language_option(self, active_dict, line_data=None):
         """
         Sets speaker_data parameter at script load time (doesn't change language here)
+
+        {'command': 'language',
+         'indent': 0,
+         'line_number': 12,
+         'parent_case_indents': [],
+         'text': 'en-us male'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
+
         LOG.debug(line_data)
 
         # Only handle the first Language line; ignore subsequent ones inside the script
         if not active_dict["speaker_data"].get("name", None):
-            line = re.sub('"', '', str(line_data["text"])).split()
-            LOG.debug(line)
-            if "female" in line:
-                line.remove("female")
-                gender = "female"
-            elif "male" in line:
-                line.remove("male")
-                gender = "male"
-            else:
-                LOG.warning("No gender specified in Language line!")
-                try:
-                    gender = self._default_gender
-                    LOG.debug(f"Got user preferred gender: {gender}")
-                except Exception as e:
-                    LOG.error(e)
-                    gender = "female"
+            # line = re.sub('"', '', str(line_data["text"])).split()
+            # LOG.debug(line)
+            # if "female" in line:
+            #     line.remove("female")
+            #     gender = "female"
+            # elif "male" in line:
+            #     line.remove("male")
+            #     gender = "male"
+            # else:
+            #     LOG.warning("No gender specified in Language line!")
+            #     try:
+            #         gender = self._default_gender
+            #         LOG.debug(f"Got user preferred gender: {gender}")
+            #     except Exception as e:
+            #         LOG.error(e)
+            #         gender = "female"
 
-            LOG.debug(line)
-            language = line[0].lower()
+            gender = self._default_gender
+            language = self._default_language
+
+            params = self._parse_multi_params(line_data["text"], " ")
+            if "male" in params:
+                params.remove("male")
+                gender = "male"
+            if "female" in params:
+                params.remove("female")
+                gender = "female"
+            LOG.debug(params)
+            if len(params) > 0:
+                language = params[0].lower()
 
             active_dict["speaker_data"] = {"name": "Neon",
                                            "language": language,
@@ -389,9 +485,22 @@ class ScriptParser:
     def _parse_variable_option(active_dict, line_data=None):
         """
         Loads variable names into `variables` at script load time (values are populated at runtime)
+
+        {'command': 'variable',
+         'indent': 0,
+         'line_number': 14,
+         'parent_case_indents': [],
+         'text': 'no_val'},
+        {'command': 'variable',
+         'indent': 0,
+         'line_number': 15,
+         'parent_case_indents': [],
+         'text': 'with_val = "Test Value"'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
+
         LOG.debug(line_data)
         # Parse out variable name (key)
         if ':' in line_data["text"] and "{" in line_data["text"].split(':')[0] and \
@@ -427,9 +536,22 @@ class ScriptParser:
     def _parse_loop_option(active_dict, line_data=None):
         """
         Parses loops into `loops_dict` at script load time
+
+        {'command': 'loop',
+         'indent': 0,
+         'line_number': 45,
+         'parent_case_indents': [0],
+         'text': 'LOOP check START'},
+        {'command': 'loop',
+         'indent': 0,
+         'line_number': 50,
+         'parent_case_indents': [0],
+         'text': 'LOOP check END'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
+
         if str(active_dict["line"]).lstrip().startswith("LOOP "):
             loop_parts = re.sub("\n", "", str(active_dict["line"]).lstrip()).split(' ')
             LOG.debug(loop_parts)
@@ -471,9 +593,17 @@ class ScriptParser:
     def _parse_synonym_option(active_dict, line_data=None):
         """
         Loads synonyms and emits to add them to YML configuration at script load time
+
+        {'command': 'synonym',
+         'indent': 0,
+         'line_number': 7,
+         'parent_case_indents': [],
+         'text': '"Test Script"'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
+
         LOG.debug(line_data)
         # Parse invalid characters from synonym string
         synonyms = line_data["text"].translate({ord(c): None for c in '!@#$"'}) \
@@ -486,9 +616,17 @@ class ScriptParser:
     def _parse_clap_option(active_dict, line_data=None):
         """
         Modifies yml to add specified number of claps to alias running this skill file at script load time
+
+        {'command': 'claps',
+         'indent': 0,
+         'line_number': 10,
+         'parent_case_indents': [],
+         'text': '2 Two clap action'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
+
         LOG.debug(line_data)
         num, act = line_data["text"].split(" ", 1)
         active_dict["claps"][num] = act
@@ -497,6 +635,13 @@ class ScriptParser:
     def _parse_exit_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of exit lines (i.e. could check for unreachable code, etc.)
+
+        {'command': 'exit',
+         'indent': 0,
+         'line_number': 53,
+         'parent_case_indents': [0],
+         'text': 'Exit'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
@@ -506,6 +651,13 @@ class ScriptParser:
     def _parse_python_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of python lines (i.e. could be used to validate code)
+
+        {'command': 'python',
+         'indent': 0,
+         'line_number': 43,
+         'parent_case_indents': [0],
+         'text': '1*2'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
@@ -515,6 +667,18 @@ class ScriptParser:
     def _parse_case_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of case lines (i.e. could be used to check conditional is defined)
+
+        {'command': 'case',
+         'indent': 0,
+         'line_number': 39,
+         'parent_case_indents': [0, 0],
+         'text': 'Case(no_val):'},
+        {'command': 'case',
+         'indent': 1,
+         'line_number': 40,
+         'parent_case_indents': [0, 0],
+         'text': '"no_val_1":'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
@@ -524,6 +688,13 @@ class ScriptParser:
     def _parse_if_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of if lines (i.e. could be used to check conditional is defined)
+
+        {'command': 'if',
+         'indent': 0,
+         'line_number': 26,
+         'parent_case_indents': [],
+         'text': 'IF no_val == with_val:'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
@@ -533,6 +704,13 @@ class ScriptParser:
     def _parse_else_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of else lines (i.e. could be used to check for preceding if)
+
+        {'command': 'else',
+         'indent': 0,
+         'line_number': 28,
+         'parent_case_indents': [],
+         'text': 'ELSE:'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
@@ -542,9 +720,17 @@ class ScriptParser:
     def _parse_execute_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of execute lines
+
+        {'command': 'execute',
+         'indent': 2,
+         'line_number': 41,
+         'parent_case_indents': [0, 0],
+         'text': 'what time is it'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
+
         if not line_data["text"] or line_data["text"].strip() == "":
             LOG.warning(f"null execute: {line_data}")
 
@@ -552,9 +738,17 @@ class ScriptParser:
     def _parse_speak_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of speak lines
+
+        {'command': 'neon speak',
+         'indent': 1,
+         'line_number': 20,
+         'parent_case_indents': [],
+         'text': 'Block speech start'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
+
         # TODO: ssml validation, name speak param checking DM
         if not line_data["text"] or line_data["text"].strip() == "":
             LOG.warning(f"null speak: {line_data}")
@@ -563,6 +757,9 @@ class ScriptParser:
     def _parse_substitute_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of substitution lines
+
+        TODO: Example here! DM
+
         (i.e. could check for invalid variable pairs)
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
@@ -573,6 +770,13 @@ class ScriptParser:
     def _parse_set_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of set lines (i.e. could check if in variables, etc.)
+
+        {'command': 'set',
+         'indent': 0,
+         'line_number': 46,
+         'parent_case_indents': [0],
+         'text': 'new_val = no_val'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
@@ -582,24 +786,57 @@ class ScriptParser:
     def _parse_run_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of run lines (i.e. could validate script exists, etc.)
+
+        {'command': 'run',
+         'indent': 0,
+         'line_number': 52,
+         'parent_case_indents': [0],
+         'text': 'script_name_here'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
         pass
 
-    @staticmethod
-    def _parse_reconvey_option(active_dict, line_data=None):
+    def _parse_reconvey_option(self, active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of reconvey lines (i.e. could add placeholder variables, etc.)
+
+        {'command': 'reconvey',
+         'indent': 1,
+         'line_number': 29,
+         'parent_case_indents': [],
+         'text': 'pre-exec'},
+        {'command': 'reconvey',
+         'data': {'reconvey_text': 'pre-exec',
+                  'reconvey_file': 'file_param'},
+         'indent': 0,
+         'line_number': 31,
+         'parent_case_indents': [],
+         'text': 'pre-exec, file_param'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
-        pass
+
+        # TODO: Add option to handle audio file here DM
+        LOG.error(line_data["text"])
+        params = self._parse_multi_params(line_data["text"])
+        if len(params) > 1:
+            line_data["data"] = {"reconvey_text": params[0],
+                                 "reconvey_file": params[1]}
 
     @staticmethod
     def _parse_input_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of voice_input lines (i.e. could add placeholder variables, etc.)
+
+        {'command': 'voice_input',
+         'indent': 0,
+         'line_number': 49,
+         'parent_case_indents': [0],
+         'text': 'voice_input(new_val)'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
@@ -609,7 +846,58 @@ class ScriptParser:
     def _parse_email_option(active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of email lines (i.e. could check for subject, body, etc.)
+
+        {'command': 'email',
+         'indent': 0,
+         'line_number': 51,
+         'parent_case_indents': [0],
+         'text': '"Mail Title", "email body goes here. could be a variable name in \nmost cases"'}
+
         :param active_dict: (dict) parsed script
         :param line_data: dict of data associated with current line being parsed
         """
         pass
+
+    @staticmethod
+    def _parse_multi_params(text, delimiter=","):
+        """
+        Parses multiple params from a string and returns them in a list
+        :param text (String): 'text' param from a line_data object
+        :param delimiter (Character): parameter to delimit parameters (default ",")
+        :return: list of parsed parameters
+        """
+
+        params = []
+        if text.startswith('"'):
+            quote = '"'
+        elif text.startswith("'"):
+            quote = "'"
+        else:
+            params = [param.strip() for param in text.split(delimiter)]
+            print(params)
+            return params
+
+        in_quote = True
+        remainder = text
+
+        while remainder:
+            if in_quote:
+                param, remainder = remainder.lstrip(quote).split(quote, 1)
+                params.append(quote + param + quote)
+                LOG.debug(f">'{param}'")
+                in_quote = False
+            else:
+                if delimiter in remainder:
+                    param, remainder = remainder.split(delimiter, 1)
+                else:
+                    param = remainder
+                    remainder = None
+                if param and param.strip():
+                    LOG.debug(f">>{param}")
+                    params.append(param)
+                if remainder:
+                    remainder = remainder.strip()
+                    if remainder.startswith(quote):
+                        in_quote = True
+
+        return params
