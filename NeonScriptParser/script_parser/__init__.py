@@ -163,7 +163,7 @@ class ScriptParser:
         """
 
         cache_data = self._parse_script_file(input_path)
-        output_name = f"{path.splitext(path.basename(input_path))[0]}.{self._file_ext}"
+        output_name = f"{path.splitext(path.basename(input_path))[0]}.{self.file_ext}"
         if not output_path:
             output_dir = path.dirname(input_path)
             output_path = path.join(output_dir, output_name)
