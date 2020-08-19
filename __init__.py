@@ -194,7 +194,6 @@ class CustomConversations(MycroftSkill):
             "language": self._run_language,
             "run": self._run_new_script
         }
-        # TODO: Add named reconvey DM
 
         self.variable_functions = {
             "select_one": self._variable_select_one,
@@ -214,6 +213,7 @@ class CustomConversations(MycroftSkill):
         except Exception as e:
             LOG.error(e)
         # Add event listeners
+        self.add_event("neon.script_upload", self._handle_script_upload)
         # self.add_event("cc_loop:utterance", self.check_if_script_response)
         # self.add_event('recognizer_loop:audio_output_end', self.check_end)
         self.add_event('speak', self.check_speak_event)
@@ -3068,8 +3068,25 @@ class CustomConversations(MycroftSkill):
         else:
             return False
 
+    def _handle_script_upload(self, message):
+        """
+        Handles emit from server module when a script is uploaded. Notifies the uploading user of upload status.
+        :param message: Message associated with upload status
+        """
+        name = message.data.get("script_name")
+        author = message.data.get("script_author")
+        status = message.data.get("script_status")
+        LOG.info(f"Script upload by {author} | status={status}")
+
+        if status == "exists":
+            self.speak_dialog("upload_failed", {"name": name, "reason": "the filename already exists"},
+                              message=message, private=True)
+        elif status == "created":
+            self.speak_dialog("upload_success", {"name": name, "state": status}, message=message, private=True)
+        elif status == "updated":
+            self.speak_dialog("upload_success", {"name": name, "state": status}, message=message, private=True)
+
     def stop(self):
-        # TO
         pass
 
 
