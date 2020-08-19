@@ -6,10 +6,9 @@ if {emailAddr}:
     Neon speak: "your email address is {emailAddr}"
 else:
     Neon speak: I don't know what your email address is
-#Neon speak: Say something and I'll say it back to you
-#voice_input(spoken)
-#Neon Speak: You said:
-#Reconvey: spoken
-Reconvey: "audio test", "https://2222.us/klatchat/app/files/chat_audio/sid-1385126-OWU5MDBjZjZlYzJjNGY5NzM0NDU5NmMyNzg5MzE0ZGMyMmZmMjM2ZDhmNDBhY2U5NjY5ODlkOWIyYmJiOGIzNA==-admin-false"
-Neon Speak: Done
+Neon speak: Say something and I'll say it back to you
+voice_input(spoken)
+Neon Speak: You said:
+Reconvey: spoken
+
 Exit
