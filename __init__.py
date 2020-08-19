@@ -3080,11 +3080,11 @@ class CustomConversations(MycroftSkill):
 
         if status == "exists":
             self.speak_dialog("upload_failed", {"name": name, "reason": "the filename already exists"},
-                              message=message, private=True)
+                              message=message)
         elif status == "created":
-            self.speak_dialog("upload_success", {"name": name, "state": status}, message=message, private=True)
+            self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
         elif status == "updated":
-            self.speak_dialog("upload_success", {"name": name, "state": status}, message=message, private=True)
+            self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
 
     def stop(self):
         pass
