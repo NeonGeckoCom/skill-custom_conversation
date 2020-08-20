@@ -545,6 +545,7 @@ class ScriptParser:
 
         if line_data.get("data", {}).get("in_variable"):
             LOG.debug("Variable continuation, nothing to do here.")
+            line_data["data"]["variable_value"] = f'{line_data["data"]["variable_value"]} {line_data["text"]}'
         else:
             # Parse out variable name (key)
             if ':' in line_data["text"] and "{" in line_data["text"].split(':')[0] and \
@@ -553,6 +554,7 @@ class ScriptParser:
                 LOG.error("This syntax has been depreciated, please remove all '{' and '}' from variable names")
                 key = line_data["text"].rstrip().split('{')[1].split("}")[0]
                 line_data["text"] = line_data["text"].replace("{" + key + "}", key)
+                value = None
             elif "=" in line_data["text"]:  # Handle Variable: name = value
                 key, value = line_data["text"].split('=', 1)
                 if "{" in key:  # Variable: {name} = value
@@ -562,12 +564,14 @@ class ScriptParser:
                     key = key.split(':', 1)[1].strip()
                 else:  # Catch surrounding quotes and whitespace
                     key = key.strip('"').strip()
-            elif len(line_data["text"].strip().split(" ", 1)) == 2:  # Handle Variable: name: value/Variable: name = value
+            elif len(line_data["text"].strip().split(" ", 1)) == 2:  # Variable: name: value/Variable: name = value
                 LOG.debug(line_data["text"].strip().split(" ", 1))
                 key, remainder = line_data["text"].replace(':', '').strip().split(" ", 1)
+                value = remainder.strip().lstrip('=').lstrip(':').strip()
             else:  # Handle Variable: name
                 LOG.debug(line_data["text"])
                 key = line_data["text"].replace(':', '').strip()
+                value = None
 
             if "{" in key or "}" in key:
                 LOG.error("'{' and '}' are not allowed in variable names!")
@@ -582,6 +586,7 @@ class ScriptParser:
 
             # Add variable data to line_dict
             data = {"variable_name": key,
+                    "variable_value": value,
                     "declaration_indent": line_data["indent"],
                     "in_variable": True}
             line_data["data"] = data

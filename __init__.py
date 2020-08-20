@@ -627,16 +627,27 @@ class CustomConversations(MycroftSkill):
             cache_data = ScriptParser().parse_script_to_dict(os.path.join(
                 self.__location__, "script_txt/" + active_dict["script_filename"] + ".txt"))
 
-            active_dict["formatted_script"] = cache_data[0]
-            active_dict["speaker_data"] = cache_data[1]
-            active_dict["variables"] = cache_data[2]
-            active_dict["loops_dict"] = cache_data[3]
-            active_dict["goto_tags"] = cache_data[4]
-            active_dict["timeout"] = cache_data[5]
-            active_dict["timeout_action"] = cache_data[6]
-            active_dict["script_meta"] = cache_data[9]
-            synonyms = cache_data[7]
-            claps = cache_data[8]
+            # parsed_dict = {"formatted_script": parsed_list[0],
+            #                "language": parsed_list[1],
+            #                "variables": parsed_list[2],
+            #                "loops": parsed_list[3],
+            #                "tags": parsed_list[4],
+            #                "timeout": parsed_list[5],
+            #                "timeout_action": parsed_list[6],
+            #                "synonyms": parsed_list[7],
+            #                "claps": parsed_list[8],
+            #                "meta": parsed_list[9]}
+
+            active_dict["formatted_script"] = cache_data["formatted_script"]
+            active_dict["speaker_data"] = cache_data["language"]
+            active_dict["variables"] = cache_data["variables"]
+            active_dict["loops_dict"] = cache_data["loops"]
+            active_dict["goto_tags"] = cache_data["tags"]
+            active_dict["timeout"] = cache_data["timeout"]
+            active_dict["timeout_action"] = cache_data["timeout_action"]
+            active_dict["script_meta"] = cache_data["meta"]
+            synonyms = cache_data["synonyms"]
+            claps = cache_data["claps"]
             #######################################################################################################
 
             cache_file = ScriptParser().parse_script_to_file(os.path.join(
@@ -2292,18 +2303,27 @@ class CustomConversations(MycroftSkill):
             self._reset_values(user)
         active_dict = self.active_conversations[user]
 
+        parser_data = message.data.get("parser_data")
+
         LOG.debug(text)
         if "=" in text:
             key, value = text.split("=", 1)
         elif ":" in text:
             key, value = text.split(":", 1)
         else:
-            key, value = None, ""
+            key, value = None, text
+
+        if parser_data:
+            key = parser_data.get("variable_name")
+            value = parser_data.get("variable_value", value)
 
         if key:
             # Trim whitespace
             key = key.strip()
-            value = value.strip()
+            if value:
+                value = value.strip()
+            else:
+                value = ""
             for opt in self.variable_functions:
                 LOG.debug(f"looking for {opt} in {value}")
 
