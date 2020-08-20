@@ -65,6 +65,7 @@ class ScriptParser:
             "@": self._parse_goto_option,
             "set": self._parse_set_option,
             "reconvey": self._parse_reconvey_option,
+            "name reconvey": self._parse_reconvey_option,
             "voice_input": self._parse_input_option,
             "email": self._parse_email_option,
             "run": self._parse_run_option
@@ -82,10 +83,11 @@ class ScriptParser:
             tmp.write(script_text)
         return tmp_file
 
-    def _parse_script_file(self, file_path):
+    def _parse_script_file(self, file_path, input_meta=None):
         """
         Primary entry point to parse the requested script
         :param file_path: Fully defined file_path to the text script file
+        :param input_meta: dict of extras to store in script meta, key conflicts will keep parser params
         :return:
         """
         with open(file_path, "r") as f:
@@ -97,6 +99,11 @@ class ScriptParser:
                 "author": None,
                 "description": "",
                 "raw_file": "".join(raw_text)}
+
+        # Add any passed input_meta, ignoring conflicts with compiler keys
+        if input_meta:
+            for key, val in input_meta:
+                meta[key] = meta.get(key, val)
 
         active_dict = {
             # Script Globals
@@ -121,8 +128,8 @@ class ScriptParser:
 
         cache_data = self._load_to_cache(active_dict, file_path, "Neon")
         cache_data.append(meta)
-        LOG.info(pformat(cache_data[0]))
-        LOG.info(f"language={cache_data[1]}")
+        LOG.info(pformat(cache_data[0]))  # formatted_script
+        LOG.info(f"speaker_data={cache_data[1]}")
         LOG.info(f"variables={cache_data[2]}")
         LOG.info(f"loops={cache_data[3]}")
         LOG.info(f"tags={cache_data[4]}")
@@ -134,35 +141,57 @@ class ScriptParser:
 
         return cache_data
 
-    def parse_text_to_file(self, input_text, output_path=None):
+    def parse_text_to_file(self, input_text, output_path=None, meta=None):
         """
         Parses input text into a .ncs file
         :param input_text: Raw script text to parse
         :param output_path: Optional path or filename to write the output
+        :param meta: dict of extras to store in script meta, key conflicts will keep parser params
         :return: Path to output file
         """
 
-        file = self._create_temp_file(input_text)
-        return self.parse_script_to_file(file, output_path)
+        input_file = self._create_temp_file(input_text)
+        return self.parse_script_to_file(input_file, output_path, meta)
 
-    def parse_script_to_dict(self, file_path):
+    def parse_text_to_dict(self, input_text, meta=None):
+        """
+        Parses input text and returns the parsed object as a dictionary
+        :param input_text: Raw script text to parse
+        :param meta: dict of extras to store in script meta, key conflicts will keep parser params
+        :return: Parsed dictionary object
+        """
+        return self.parse_script_to_dict(self._create_temp_file(input_text), meta)
+
+    def parse_script_to_dict(self, file_path, meta=None):
         """
         Parses the input file and returns the parsed object as a dictionary
         :param file_path: Absolute path to the .nct script to parse
+        :param meta: dict of extras to store in script meta, key conflicts will keep parser params
         :return: Parsed dictionary object
         """
+        parsed_list = self._parse_script_file(file_path, meta)
+        parsed_dict = {"formatted_script": parsed_list[0],
+                       "language": parsed_list[1],
+                       "variables": parsed_list[2],
+                       "loops": parsed_list[3],
+                       "tags": parsed_list[4],
+                       "timeout": parsed_list[5],
+                       "timeout_action": parsed_list[6],
+                       "synonyms": parsed_list[7],
+                       "claps": parsed_list[8],
+                       "meta": parsed_list[9]}
+        return parsed_dict
 
-        return self._parse_script_file(file_path)
-
-    def parse_script_to_file(self, input_path, output_path=None):
+    def parse_script_to_file(self, input_path, output_path=None, meta=None):
         """
         Parses the input file into a .ncs file.
         :param input_path: Absolute path to the .nct script to parse
         :param output_path: Optional path or filename to write the output
+        :param meta: dict of extras to store in script meta, key conflicts will keep parser params
         :return: Path to output file
         """
 
-        cache_data = self._parse_script_file(input_path)
+        cache_data = self._parse_script_file(input_path, meta)
         output_name = f"{path.splitext(path.basename(input_path))[0]}.{self.file_ext}"
         if not output_path:
             output_dir = path.dirname(input_path)
@@ -199,13 +228,16 @@ class ScriptParser:
                     if len(active_dict["formatted_script"]) > 0:
                         last_line = active_dict["formatted_script"][-1]
                     line_data["line_number"] = line_num
+
+                    # Separate out command
                     text_content = str(active_dict["line"]).strip()
                     if ': ' in text_content:
                         # Parse out command from text
                         text_content = text_content.split(': ', 1)[1]
-                    line_data["text"] = text_content.lstrip('.').lstrip()
 
-                    # Parse out comment lines
+                    line_data["text"] = text_content.lstrip()  # This may include a trailing comment
+
+                    # Check for comment lines
                     if active_dict["line"].lstrip().startswith('"""') or active_dict["line"].lstrip().endswith('"""'):
                         if in_comment_block:
                             in_comment_block = False
@@ -269,7 +301,7 @@ class ScriptParser:
                             LOG.error(line_data)
 
                     try:
-                        # Check for cases in variable_functions
+                        # Check for variable_function call
                         if not line_data.get("command", None):
                             for option in self._variable_functions:
                                 if active_dict["line"].lower().lstrip().startswith(option):
@@ -284,29 +316,37 @@ class ScriptParser:
 
                         # If no command in-lined and not a case, copy command from last line
                         if not line_data.get("command", None):
+                            # Handle variable continuation
+                            if last_line.get("data", {}).get("in_variable", False):
+                                top = last_line.get("data", {}).get("declaration_indent", 1)
+                                if line_data["indent"] > top:
+                                    # Parse this as a continuation of the variable
+                                    line_data["command"] = "variable"
+                                    line_data["data"] = last_line["data"]
+
                             # Check for variable assignment
-                            if "=" in line_data.get("text") and \
+                            elif "=" in line_data.get("text") and \
                                     line_data.get("text").split("=", 1)[0].strip() in active_dict["variables"]:
                                 line_data["command"] = "set"
                             # Same or greater indentation as last line, inherit that command unless disallowed
                             elif line_data["indent"] >= last_line["indent"] \
                                     and last_line["command"] not in self._no_implicit_multiline:
                                 line_data["command"] = last_line["command"]
-                                if line_data["command"] == "variable" and active_dict["last_variable"]:
-                                    var_to_update = active_dict["last_variable"]
-                                    LOG.debug(var_to_update)
-                                    LOG.debug(active_dict["variables"][var_to_update])
-
-                                    # Append to variable (write if empty)
-                                    if line_data["text"].rstrip(","):
-                                        if active_dict["variables"][var_to_update]:
-                                            active_dict["variables"][var_to_update] \
-                                                .append(line_data["text"].rstrip(","))
-                                        else:
-                                            active_dict["variables"][var_to_update] = [line_data["text"]]
-                                    else:
-                                        LOG.warning(f"null value line: {line_data}")
-                                    LOG.debug(active_dict["variables"][var_to_update])
+                                # if line_data["command"] == "variable" and active_dict["last_variable"]:
+                                #     var_to_update = active_dict["last_variable"]
+                                #     LOG.debug(var_to_update)
+                                #     LOG.debug(active_dict["variables"][var_to_update])
+                                #
+                                #     # Append to variable (write if empty)
+                                #     if line_data["text"].rstrip(","):
+                                #         if active_dict["variables"][var_to_update]:
+                                #             active_dict["variables"][var_to_update] \
+                                #                 .append(line_data["text"].rstrip(","))
+                                #         else:
+                                #             active_dict["variables"][var_to_update] = [line_data["text"]]
+                                #     else:
+                                #         LOG.warning(f"null value line: {line_data}")
+                                #     LOG.debug(active_dict["variables"][var_to_update])
                             # Invalid assignment, outdented from previous
                             else:
                                 LOG.warning(f"No explicit command, try assuming set: {line_data}")
@@ -502,35 +542,49 @@ class ScriptParser:
         """
 
         LOG.debug(line_data)
-        # Parse out variable name (key)
-        if ':' in line_data["text"] and "{" in line_data["text"].split(':')[0] and \
-                "}" in line_data["text"].split(':')[0]:  # Handle Variable: {name}: value  This syntax is depreciated
-            key = line_data["text"].rstrip().split('{')[1].split("}")[0]
-            line_data["text"] = line_data["text"].replace("{" + key + "}", key)
-        elif "=" in line_data["text"]:  # Handle Variable: name = value
-            key, value = line_data["text"].split('=', 1)
-            if "{" in key:  # Variable: {name} = value
-                key = key.split('{', 1)[1].split('}', 1)[0]
-            elif ":" in key:  # Variable: name = value
-                key = key.split(':', 1)[1].strip()
-            else:  # Catch surrounding quotes and whitespace
-                key = key.strip('"').strip()
-        elif len(line_data["text"].strip().split(" ", 1)) == 2:  # Handle Variable: name: value/Variable: name = value
-            LOG.debug(line_data["text"].strip().split(" ", 1))
-            key, remainder = line_data["text"].replace(':', '').strip().split(" ", 1)
-        else:  # Handle Variable: name
-            LOG.debug(line_data["text"])
-            key = line_data["text"].replace(':', '').strip()
 
-        if "{" in key or "}" in key:
-            key = key.split('{')[1].split('}')[0]
-        LOG.debug(f"key={key}")
-        active_dict["last_variable"] = key
+        if line_data.get("data", {}).get("in_variable"):
+            LOG.debug("Variable continuation, nothing to do here.")
+        else:
+            # Parse out variable name (key)
+            if ':' in line_data["text"] and "{" in line_data["text"].split(':')[0] and \
+                    "}" in line_data["text"].split(':')[0]:  # Handle Variable: {name}: value
+                # TODO: Depreciate this syntax DM
+                LOG.error("This syntax has been depreciated, please remove all '{' and '}' from variable names")
+                key = line_data["text"].rstrip().split('{')[1].split("}")[0]
+                line_data["text"] = line_data["text"].replace("{" + key + "}", key)
+            elif "=" in line_data["text"]:  # Handle Variable: name = value
+                key, value = line_data["text"].split('=', 1)
+                if "{" in key:  # Variable: {name} = value
+                    # TODO: Depreciate this syntax DM
+                    key = key.split('{', 1)[1].split('}', 1)[0]
+                elif ":" in key:  # Variable: name = value
+                    key = key.split(':', 1)[1].strip()
+                else:  # Catch surrounding quotes and whitespace
+                    key = key.strip('"').strip()
+            elif len(line_data["text"].strip().split(" ", 1)) == 2:  # Handle Variable: name: value/Variable: name = value
+                LOG.debug(line_data["text"].strip().split(" ", 1))
+                key, remainder = line_data["text"].replace(':', '').strip().split(" ", 1)
+            else:  # Handle Variable: name
+                LOG.debug(line_data["text"])
+                key = line_data["text"].replace(':', '').strip()
 
-        # This is a literal value, just parse it in
-        if key not in active_dict["variables"].keys():
-            LOG.debug(f"adding variable: {key}")
-            active_dict["variables"][key] = None
+            if "{" in key or "}" in key:
+                LOG.error("'{' and '}' are not allowed in variable names!")
+                key = key.split('{')[1].split('}')[0]
+            LOG.debug(f"key={key}")
+            active_dict["last_variable"] = key
+
+            # This is a literal value, just parse it in
+            if key not in active_dict["variables"].keys():
+                LOG.debug(f"adding variable: {key}")
+                active_dict["variables"][key] = None
+
+            # Add variable data to line_dict
+            data = {"variable_name": key,
+                    "declaration_indent": line_data["indent"],
+                    "in_variable": True}
+            line_data["data"] = data
 
     @staticmethod
     def _parse_loop_option(active_dict, line_data=None):
@@ -819,12 +873,19 @@ class ScriptParser:
         :param line_data: dict of data associated with current line being parsed
         """
 
-        # TODO: Add option to handle audio file here DM
-        LOG.error(line_data["text"])
-        params = self._parse_multi_params(line_data["text"])
-        if len(params) > 1:
-            line_data["data"] = {"reconvey_text": params[0],
-                                 "reconvey_file": params[1]}
+        if line_data["command"] == "reconvey":
+            params = self._parse_multi_params(line_data["text"])
+            if len(params) > 1:
+                line_data["data"] = {"reconvey_text": params[0],
+                                     "reconvey_file": params[1]}
+        elif line_data["command"] == "name reconvey":
+            params = self._parse_multi_params(line_data["text"])
+            line_data["data"] = {"reconvey_name": params[0],
+                                 "reconvey_text": params[1],
+                                 "reconvey_file": params[2]}
+
+        else:
+            LOG.error(f"Invalid reconvey option! {line_data}")
 
     @staticmethod
     def _parse_input_option(active_dict, line_data=None):
