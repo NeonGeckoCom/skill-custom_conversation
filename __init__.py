@@ -3079,12 +3079,14 @@ class CustomConversations(MycroftSkill):
         LOG.info(f"Script upload by {author} | status={status}")
 
         if status == "exists":
-            self.speak_dialog("upload_failed", {"name": name, "reason": "the filename already exists"},
-                              message=message)
+            self.speak_dialog("upload_failed", {"name": name, "reason": "the filename already exists"}, message=message)
         elif status == "created":
             self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
         elif status == "updated":
             self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
+        elif status == "no title":
+            self.speak_dialog("upload_failed", {"name": name, "reason": "no script title was found"}, message=message)
+
 
     def stop(self):
         pass
