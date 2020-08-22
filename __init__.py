@@ -190,11 +190,11 @@ class CustomConversations(MycroftSkill):
             "sub_key": self._run_sub_string,
             "set": self._run_set,
             "reconvey": self._run_reconvey,
+            "name reconvey": self._run_reconvey,
             "email": self._run_email,
             "language": self._run_language,
             "run": self._run_new_script
         }
-        # TODO: Add named reconvey DM
 
         self.variable_functions = {
             "select_one": self._variable_select_one,
@@ -214,6 +214,7 @@ class CustomConversations(MycroftSkill):
         except Exception as e:
             LOG.error(e)
         # Add event listeners
+        self.add_event("neon.script_upload", self._handle_script_upload)
         # self.add_event("cc_loop:utterance", self.check_if_script_response)
         # self.add_event('recognizer_loop:audio_output_end', self.check_end)
         self.add_event('speak', self.check_speak_event)
@@ -627,16 +628,27 @@ class CustomConversations(MycroftSkill):
             cache_data = ScriptParser().parse_script_to_dict(os.path.join(
                 self.__location__, "script_txt/" + active_dict["script_filename"] + ".txt"))
 
-            active_dict["formatted_script"] = cache_data[0]
-            active_dict["speaker_data"] = cache_data[1]
-            active_dict["variables"] = cache_data[2]
-            active_dict["loops_dict"] = cache_data[3]
-            active_dict["goto_tags"] = cache_data[4]
-            active_dict["timeout"] = cache_data[5]
-            active_dict["timeout_action"] = cache_data[6]
-            active_dict["script_meta"] = cache_data[9]
-            synonyms = cache_data[7]
-            claps = cache_data[8]
+            # parsed_dict = {"formatted_script": parsed_list[0],
+            #                "language": parsed_list[1],
+            #                "variables": parsed_list[2],
+            #                "loops": parsed_list[3],
+            #                "tags": parsed_list[4],
+            #                "timeout": parsed_list[5],
+            #                "timeout_action": parsed_list[6],
+            #                "synonyms": parsed_list[7],
+            #                "claps": parsed_list[8],
+            #                "meta": parsed_list[9]}
+
+            active_dict["formatted_script"] = cache_data["formatted_script"]
+            active_dict["speaker_data"] = cache_data["language"]
+            active_dict["variables"] = cache_data["variables"]
+            active_dict["loops_dict"] = cache_data["loops"]
+            active_dict["goto_tags"] = cache_data["tags"]
+            active_dict["timeout"] = cache_data["timeout"]
+            active_dict["timeout_action"] = cache_data["timeout_action"]
+            active_dict["script_meta"] = cache_data["meta"]
+            synonyms = cache_data["synonyms"]
+            claps = cache_data["claps"]
             #######################################################################################################
 
             cache_file = ScriptParser().parse_script_to_file(os.path.join(
@@ -822,6 +834,14 @@ class CustomConversations(MycroftSkill):
                                 # parsed_text = normalize(parsed_text)  WYSIWYG, no normalization necessary
                                 LOG.debug(f"runtime_execute({command} {parsed_text})")
                                 message.data["parser_data"] = line_to_evaluate.get("data")
+                                try:
+                                    if message.data.get("parser_data"):
+                                        for key, val in message.data.get("parser_data").items():
+                                            if val and isinstance(val, str) and "{" in val and "}" in val:
+                                                message.data.get("parser_data")[key] = \
+                                                    self._substitute_variables(user, val, message, False)
+                                except Exception as e:
+                                    LOG.error(e)
                                 self.runtime_execution[command](user, parsed_text, message)
                             # This is a variable assignment line
                             elif command in self.variable_functions:
@@ -1100,7 +1120,14 @@ class CustomConversations(MycroftSkill):
             # LOG.debug(f"DM: Continue Script Execution Call")
             self._continue_script_execution(message, user)
         else:
-            speaker, text = text.split(':', 1)
+            if message.data.get("parser_data"):
+                parser_data = message.data.get("parser_data")
+                speaker = parser_data.get("name")
+                text = parser_data.get("phrase", text)
+                if '"' in text or "'" in text:
+                    text = clean_quotes(text)
+            else:
+                speaker, text = text.split(':', 1)
             LOG.debug(f"{speaker} Speak: {text}")
             signal = build_signal_name(user, text)
             # for opt in self.variable_functions:
@@ -2075,13 +2102,14 @@ class CustomConversations(MycroftSkill):
 
     def _run_reconvey(self, user, text, message):
         """
-        Set variable values to static values at script runtime
+        Handle a reconvey script command
         :param user: nick on klat server, else "local"
         :param text: variable to find associated utterance for
         :param message: incoming messagebus Message
         """
 
         LOG.debug(f"DM: {text}")
+        LOG.debug(message.data.get("parser_data"))
         if user not in self.active_conversations.keys():
             self._reset_values(user)
         active_dict = self.active_conversations[user]
@@ -2089,6 +2117,8 @@ class CustomConversations(MycroftSkill):
         if message.data.get("parser_data"):
             parser_data = message.data.get("parser_data")
             to_reconvey = parser_data.get("reconvey_text")
+            name = parser_data.get("name", "Neon")
+            name = name.strip('"').strip("'")  # TODO: Handle variable here DM
             if '"' in to_reconvey or "'" in to_reconvey:
                 text = clean_quotes(to_reconvey)
             else:
@@ -2100,16 +2130,26 @@ class CustomConversations(MycroftSkill):
                     audio = os.path.expanduser(audio)
                     if not os.path.isfile(audio):
                         script_title = active_dict["script_meta"]["title"]
+                        dir_name = script_title.strip('"').lower().replace(" ", "_")
+
                         # Try handling as a relative path in the skill
-                        audio = os.path.join(self.audio_location, script_title, audio)
+                        audio = os.path.join(self.audio_location, dir_name, audio)
                         if not os.path.isfile(audio):
-                            # Couldn't resolve audio file, pass None
-                            audio = None
+                            LOG.warning(f"Could not resolve audio file: {audio}")
+
+                            # Try to resolve in skill audio directory
+                            if os.path.isdir(os.path.join(self.audio_location, dir_name)):
+                                LOG.debug(f"search for: {os.path.basename(audio)}")
+                                for file in os.listdir(os.path.join(self.audio_location, dir_name)):
+                                    if audio and os.path.splitext(file)[0].strip() == os.path.basename(audio).strip():
+                                        audio = os.path.join(self.audio_location, dir_name, file)
+                                        break
             else:
                 audio = active_dict["audio_responses"].get(to_reconvey, [None])[0]
         else:
             # This is original behavior, no parameters have been pre-parsed
             var_to_speak = text
+            name = "Neon"
             LOG.debug(f"var_to_speak={var_to_speak}")
             # Playback audio file if available
             if active_dict["audio_responses"].get(var_to_speak, None):
@@ -2139,7 +2179,7 @@ class CustomConversations(MycroftSkill):
             self.create_signal(signal_name)
             message.context["cc_data"]["signal_to_check"] = signal_name
             self.send_with_audio(text, audio, message,
-                                 speaker={"name": "Neon", "language": None, "gender": None, "voice": None})
+                                 speaker={"name": name, "language": None, "gender": None, "voice": None})
             while self.check_for_signal(signal_name, -1):
                 time.sleep(0.2)  # Pad next response
             # if message.data.get("mobile"):
@@ -2164,9 +2204,13 @@ class CustomConversations(MycroftSkill):
                 #     audio_data = requests.get(audio)
                 #     audio = self.configuration_available["dirVars"]["tempDir"] + f"/cc_tmp_{time.time()}"
                 #     open(audio, 'wb').write(audio_data.content)
-                process = play_wav(audio)
-                while process and process.poll() is None:
-                    time.sleep(0.2)
+                if os.path.isfile(audio):
+                    process = play_wav(audio)
+                    while process and process.poll() is None:
+                        time.sleep(0.2)
+                else:
+                    LOG.error(f"Audio file not found! {audio}")
+                    self.speak(text)
 
         active_dict["current_index"] += 1
         # LOG.debug(f"DM: Continue Script Execution Call")
@@ -2292,18 +2336,27 @@ class CustomConversations(MycroftSkill):
             self._reset_values(user)
         active_dict = self.active_conversations[user]
 
+        parser_data = message.data.get("parser_data")
+
         LOG.debug(text)
         if "=" in text:
             key, value = text.split("=", 1)
         elif ":" in text:
             key, value = text.split(":", 1)
         else:
-            key, value = None, ""
+            key, value = None, text
+
+        if parser_data:
+            key = parser_data.get("variable_name")
+            value = parser_data.get("variable_value", value)
 
         if key:
             # Trim whitespace
             key = key.strip()
-            value = value.strip()
+            if value:
+                value = value.strip()
+            else:
+                value = ""
             for opt in self.variable_functions:
                 LOG.debug(f"looking for {opt} in {value}")
 
@@ -3068,8 +3121,27 @@ class CustomConversations(MycroftSkill):
         else:
             return False
 
+    def _handle_script_upload(self, message):
+        """
+        Handles emit from server module when a script is uploaded. Notifies the uploading user of upload status.
+        :param message: Message associated with upload status
+        """
+        name = message.data.get("script_name")
+        author = message.data.get("script_author")
+        status = message.data.get("script_status")
+        LOG.info(f"Script upload by {author} | status={status}")
+
+        if status == "exists":
+            self.speak_dialog("upload_failed", {"name": name, "reason": "the filename already exists"}, message=message)
+        elif status == "created":
+            self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
+        elif status == "updated":
+            self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
+        elif status == "no title":
+            self.speak_dialog("upload_failed", {"name": name, "reason": "no script title was found"}, message=message)
+
+
     def stop(self):
-        # TO
         pass
 
 
