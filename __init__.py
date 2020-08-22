@@ -2118,6 +2118,7 @@ class CustomConversations(MycroftSkill):
             parser_data = message.data.get("parser_data")
             to_reconvey = parser_data.get("reconvey_text")
             name = parser_data.get("name", "Neon")
+            name = name.strip('"').strip("'")  # TODO: Handle variable here DM
             if '"' in to_reconvey or "'" in to_reconvey:
                 text = clean_quotes(to_reconvey)
             else:
