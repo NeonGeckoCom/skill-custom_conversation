@@ -190,6 +190,7 @@ class CustomConversations(MycroftSkill):
             "sub_key": self._run_sub_string,
             "set": self._run_set,
             "reconvey": self._run_reconvey,
+            "name reconvey": self._run_reconvey,
             "email": self._run_email,
             "language": self._run_language,
             "run": self._run_new_script
@@ -833,6 +834,14 @@ class CustomConversations(MycroftSkill):
                                 # parsed_text = normalize(parsed_text)  WYSIWYG, no normalization necessary
                                 LOG.debug(f"runtime_execute({command} {parsed_text})")
                                 message.data["parser_data"] = line_to_evaluate.get("data")
+                                try:
+                                    if message.data.get("parser_data"):
+                                        for key, val in message.data.get("parser_data").items():
+                                            if val and isinstance(val, str) and "{" in val and "}" in val:
+                                                message.data.get("parser_data")[key] = \
+                                                    self._substitute_variables(user, val, message, False)
+                                except Exception as e:
+                                    LOG.error(e)
                                 self.runtime_execution[command](user, parsed_text, message)
                             # This is a variable assignment line
                             elif command in self.variable_functions:
@@ -1111,7 +1120,14 @@ class CustomConversations(MycroftSkill):
             # LOG.debug(f"DM: Continue Script Execution Call")
             self._continue_script_execution(message, user)
         else:
-            speaker, text = text.split(':', 1)
+            if message.data.get("parser_data"):
+                parser_data = message.data.get("parser_data")
+                speaker = parser_data.get("name")
+                text = parser_data.get("phrase", text)
+                if '"' in text or "'" in text:
+                    text = clean_quotes(text)
+            else:
+                speaker, text = text.split(':', 1)
             LOG.debug(f"{speaker} Speak: {text}")
             signal = build_signal_name(user, text)
             # for opt in self.variable_functions:
@@ -2086,13 +2102,14 @@ class CustomConversations(MycroftSkill):
 
     def _run_reconvey(self, user, text, message):
         """
-        Set variable values to static values at script runtime
+        Handle a reconvey script command
         :param user: nick on klat server, else "local"
         :param text: variable to find associated utterance for
         :param message: incoming messagebus Message
         """
 
         LOG.debug(f"DM: {text}")
+        LOG.debug(message.data.get("parser_data"))
         if user not in self.active_conversations.keys():
             self._reset_values(user)
         active_dict = self.active_conversations[user]
@@ -2100,6 +2117,7 @@ class CustomConversations(MycroftSkill):
         if message.data.get("parser_data"):
             parser_data = message.data.get("parser_data")
             to_reconvey = parser_data.get("reconvey_text")
+            name = parser_data.get("name", "Neon")
             if '"' in to_reconvey or "'" in to_reconvey:
                 text = clean_quotes(to_reconvey)
             else:
@@ -2111,16 +2129,26 @@ class CustomConversations(MycroftSkill):
                     audio = os.path.expanduser(audio)
                     if not os.path.isfile(audio):
                         script_title = active_dict["script_meta"]["title"]
+                        dir_name = script_title.strip('"').lower().replace(" ", "_")
+
                         # Try handling as a relative path in the skill
-                        audio = os.path.join(self.audio_location, script_title, audio)
+                        audio = os.path.join(self.audio_location, dir_name, audio)
                         if not os.path.isfile(audio):
-                            # Couldn't resolve audio file, pass None
-                            audio = None
+                            LOG.warning(f"Could not resolve audio file: {audio}")
+
+                            # Try to resolve in skill audio directory
+                            if os.path.isdir(os.path.join(self.audio_location, dir_name)):
+                                LOG.debug(f"search for: {os.path.basename(audio)}")
+                                for file in os.listdir(os.path.join(self.audio_location, dir_name)):
+                                    if audio and os.path.splitext(file)[0].strip() == os.path.basename(audio).strip():
+                                        audio = os.path.join(self.audio_location, dir_name, file)
+                                        break
             else:
                 audio = active_dict["audio_responses"].get(to_reconvey, [None])[0]
         else:
             # This is original behavior, no parameters have been pre-parsed
             var_to_speak = text
+            name = "Neon"
             LOG.debug(f"var_to_speak={var_to_speak}")
             # Playback audio file if available
             if active_dict["audio_responses"].get(var_to_speak, None):
@@ -2150,7 +2178,7 @@ class CustomConversations(MycroftSkill):
             self.create_signal(signal_name)
             message.context["cc_data"]["signal_to_check"] = signal_name
             self.send_with_audio(text, audio, message,
-                                 speaker={"name": "Neon", "language": None, "gender": None, "voice": None})
+                                 speaker={"name": name, "language": None, "gender": None, "voice": None})
             while self.check_for_signal(signal_name, -1):
                 time.sleep(0.2)  # Pad next response
             # if message.data.get("mobile"):
@@ -2175,9 +2203,13 @@ class CustomConversations(MycroftSkill):
                 #     audio_data = requests.get(audio)
                 #     audio = self.configuration_available["dirVars"]["tempDir"] + f"/cc_tmp_{time.time()}"
                 #     open(audio, 'wb').write(audio_data.content)
-                process = play_wav(audio)
-                while process and process.poll() is None:
-                    time.sleep(0.2)
+                if os.path.isfile(audio):
+                    process = play_wav(audio)
+                    while process and process.poll() is None:
+                        time.sleep(0.2)
+                else:
+                    LOG.error(f"Audio file not found! {audio}")
+                    self.speak(text)
 
         active_dict["current_index"] += 1
         # LOG.debug(f"DM: Continue Script Execution Call")
