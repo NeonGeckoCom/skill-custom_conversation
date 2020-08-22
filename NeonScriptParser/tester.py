@@ -20,11 +20,15 @@
 from script_parser import ScriptParser
 import logging
 
+# Configure logger (Adjust level as needed for debugging)
 fmt = '%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=fmt, datefmt='%Y-%m-%d:%H:%M:%S')
+logging.basicConfig(level=logging.INFO, format=fmt, datefmt='%Y-%m-%d:%H:%M:%S')
 
+# Define parser
 parser = ScriptParser()
-# parser.parse_script_to_file("examples/test.txt")
+
+# Pick method to use here
+parser.parse_script_to_file("examples/covid_19_audio.txt")
 # parser.parse_script_to_file("examples/test.txt", "examples/test.out")
-parser.parse_script_to_dict("examples/eliza.txt")
+# parser.parse_script_to_dict("examples/eliza.txt")
 # parser.parse_script_to_dict("examples/demo_profile_reconveyance.txt")

@@ -29,6 +29,7 @@ ELSE:
     Reconvey: pre-exec
 
 Reconvey: pre-exec, file_param
+Name Reconvey: "Someone", "some text", "/path/to/file"
 
 # TODO: CASE
 Case {with_val}:

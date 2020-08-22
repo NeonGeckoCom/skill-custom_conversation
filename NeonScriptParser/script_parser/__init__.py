@@ -34,6 +34,7 @@ class ScriptParser:
         self._default_gender = "female"
         self._default_language = "en-US"
         self.file_ext = "ncs"
+        self.audio_ext = "mp3"
         self._no_implicit_multiline = ("if", "else", "case", "loop", "goto", "tag", "@")
         self._variable_functions = ("select_one", "voice_input", "table_scrape", "random", "closest", "profile")
         self._version = __version__
@@ -316,13 +317,14 @@ class ScriptParser:
 
                         # If no command in-lined and not a case, copy command from last line
                         if not line_data.get("command", None):
-                            # Handle variable continuation
-                            if last_line.get("data", {}).get("in_variable", False):
-                                top = last_line.get("data", {}).get("declaration_indent", 1)
-                                if line_data["indent"] > top:
-                                    # Parse this as a continuation of the variable
-                                    line_data["command"] = "variable"
-                                    line_data["data"] = last_line["data"]
+                            top = last_line.get("data", {}).get("declaration_indent", 1)
+
+                            # Handle speech or variable continuation
+                            if last_line.get("data", {}).get("in_variable", False) or \
+                                    last_line.get("data", {}).get("in_speak", False) and line_data["indent"] > top:
+                                # Parse this as a continuation of the variable
+                                line_data["command"] = deepcopy(last_line["command"])
+                                line_data["data"] = deepcopy(last_line["data"])
 
                             # Check for variable assignment
                             elif "=" in line_data.get("text") and \
@@ -353,6 +355,7 @@ class ScriptParser:
                                 if "=" in line_data["text"]:
                                     line_data["command"] = "set"
                                 else:
+                                    line_data["command"] = None
                                     LOG.error(f"No command found for: {line_data}")
 
                         # If we previously found parent_cases, write them out
@@ -376,11 +379,13 @@ class ScriptParser:
                             self._pre_parser_options[line_data["command"]](active_dict, line_data)
                         except Exception as x:
                             LOG.error(x)
+                            LOG.error(line_data)
                         # Write out line data
                         LOG.debug(f'write out line_data: {line_data}')
                         active_dict["formatted_script"].append(line_data)
                     except Exception as e:
                         LOG.error(e)
+                        LOG.error(line_data)
             # End Line loop
 
             # Log data from parsing
@@ -416,9 +421,10 @@ class ScriptParser:
 
         LOG.debug(line_data)
         option = line_data["command"]
-        value = line_data["text"].strip()
+        value = line_data["text"].strip().strip("'").strip('"')
         if option == "timeout":
-            params = self._parse_multi_params(" ")
+            params = self._parse_multi_params(line_data["text"], " ")
+            LOG.debug(params)
             timeout = params[0]
             action = params[1] if len(params) == 2 else None
             # if " " in value:
@@ -545,7 +551,7 @@ class ScriptParser:
 
         if line_data.get("data", {}).get("in_variable"):
             LOG.debug("Variable continuation, nothing to do here.")
-            line_data["data"]["variable_value"] = f'{line_data["data"]["variable_value"]} {line_data["text"]}'
+            line_data["data"]["variable_value"] = line_data["text"]
         else:
             # Parse out variable name (key)
             if ':' in line_data["text"] and "{" in line_data["text"].split(':')[0] and \
@@ -793,8 +799,7 @@ class ScriptParser:
         if not line_data["text"] or line_data["text"].strip() == "":
             LOG.warning(f"null execute: {line_data}")
 
-    @staticmethod
-    def _parse_speak_option(active_dict, line_data=None):
+    def _parse_speak_option(self, active_dict, line_data=None):
         """
         Does any pre-execution parsing and validation of speak lines
 
@@ -808,9 +813,45 @@ class ScriptParser:
         :param line_data: dict of data associated with current line being parsed
         """
 
-        # TODO: ssml validation, name speak param checking DM
-        if not line_data["text"] or line_data["text"].strip() == "":
-            LOG.warning(f"null speak: {line_data}")
+        if line_data.get("data", {}).get("in_speak"):
+            LOG.debug("Speech continuation, nothing to do here.")
+            line_data["data"]["phrase"] = line_data["text"]
+        else:
+            # TODO: ssml validation? DM
+            if line_data["command"] == "neon speak":
+                name = "Neon"
+                phrase = line_data["text"]
+            elif line_data["command"] == "name speak":
+                params = self._parse_multi_params(line_data["text"])
+                if len(params) > 1:
+                    name = params[0]
+                    phrase = params[1]
+                elif ":" in params[0]:
+                    LOG.warning("'Name Speak: Name: Phrase' syntax is depreciated,"
+                                " please use 'Name Speak: \"Name\", \"Phrase\"")
+                    name, phrase = params[0].split(':', 1)
+                    name = name.strip()
+                    phrase = phrase.strip()
+                else:
+                    LOG.error("Name speak called with one param!")
+                    name, phrase = None, None
+            elif line_data["command"] == "speak":
+                name = "Neon"
+                phrase = line_data["text"]
+            else:
+                LOG.error(f"Unhandled Speak command! {line_data['command']}")
+                name = "Neon"
+                phrase = line_data["text"]
+
+            if not phrase or phrase.strip() == "" or phrase.lower() == f'{line_data["command"]}:':
+                LOG.warning(f"null speak: {line_data}")
+                phrase = None
+
+            data = {"name": name,
+                    "phrase": phrase,
+                    "declaration_indent": int(line_data["indent"]),
+                    "in_speak": True}
+            line_data["data"] = data
 
     @staticmethod
     def _parse_substitute_option(active_dict, line_data=None):
@@ -885,9 +926,23 @@ class ScriptParser:
                                      "reconvey_file": params[1]}
         elif line_data["command"] == "name reconvey":
             params = self._parse_multi_params(line_data["text"])
+
+            if len(params) > 2:
+                reconvey_file = params[2].strip().strip('"').strip("'")
+            else:
+                reconvey_file = params[1].strip().strip('"').strip("'")
+
+            # If this is a string literal, check for file extension for faster execution
+            if (reconvey_file.startswith('"') and reconvey_file.endswith("'")) or \
+                    (reconvey_file.startswith("'") and reconvey_file.endswith("'")):
+                LOG.error(path.splitext(reconvey_file))
+                if path.splitext(reconvey_file)[1] in ("", "."):
+                    LOG.warning(f"No file ext! {reconvey_file}")
+                    reconvey_file = f'"{reconvey_file}.{self.audio_ext}"'
+
             line_data["data"] = {"reconvey_name": params[0],
                                  "reconvey_text": params[1],
-                                 "reconvey_file": params[2]}
+                                 "reconvey_file": reconvey_file}
 
         else:
             LOG.error(f"Invalid reconvey option! {line_data}")
