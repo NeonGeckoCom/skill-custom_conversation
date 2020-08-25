@@ -520,7 +520,9 @@ class CustomConversations(MycroftSkill):
         if self.server:
             try:
                 self.create_signal("CC_updating")
-                Coupons.get_scripts_from_ngi()
+                self.create_signal("UpdateConversationFiles")
+                while self.check_for_signal("CC_updating", 30):
+                    time.sleep(0.5)
             except Exception as e:
                 LOG.error(e)
                 self.check_for_signal("CC_updating")
