@@ -1,9 +1,11 @@
 Script: "Covid 19 Audio"
 Language: "en-us male"
+Description: "Neon AI Demonstration script based on the CDC's guide recommendations for Covid-19 phone screening, as of June 2020."
 @restartCovidScreening
 
+# License look up
 
-Name Speak: "Robbie", "</speak>Version 20200709 17-40 Demo Covid-19 Screening Application"
+Name Speak : Robbie : "</speak>Version 20200813 a Demo Covid-19 Screening Application"
 
 Variable: userName
 Variable: covidUserRef
@@ -799,6 +801,7 @@ Name Speak: "Robbie", "Thank you {userName} for testing the Neon AI Conversation
 Name Speak: "Robbie", "Would you like to test the Neon AI Patient Assistant Script?"
 voice_input {askReturnValue}
 if {askReturnValue} IN {yesList[*]}:
+# TODO: Update below line
     Name Reconvey: "Robbie", "Transferring to Pat, our Patient Assistant demonstration. Goodbye {userName}.", "Goodbye"
     Execute : "Run the patient assistant script"
     # Name Speak : Robbie :"</speak>Neon run the Patient Assistant script starting at SCRIPTENTRY"

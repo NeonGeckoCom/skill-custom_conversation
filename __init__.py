@@ -2900,7 +2900,7 @@ class CustomConversations(MycroftSkill):
                         message.context["cc_data"].get("signal_to_check", None):
                     LOG.debug("Active, about to check request")
                     # Check if this speak event is related to the last request
-                    if message.context["cc_data"]["request"] == active_dict["last_request"] and not \
+                    if message.context["cc_data"]["request"] == active_dict.get("last_request", "") and not \
                             self.check_for_signal(f"{user}_CC_inputNeeded", -1):
                         LOG.debug("Neon response found. Continuing script.")
                         self.active_conversations[user]["last_request"] = ""
