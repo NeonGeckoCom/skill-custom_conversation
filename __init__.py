@@ -94,7 +94,7 @@ class CustomConversations(MycroftSkill):
 
     def __init__(self):
         super(CustomConversations, self).__init__(name="CustomConversations")
-        self.file_ext = "ncs"
+        # self.file_ext = "ncs"
         self.text_location = f"{self.__location__}/script_txt"
         self.audio_location = f"{self.__location__}/script_audio"
         self.tz = gettz(self.user_info_available["location"]["tz"])
@@ -139,43 +139,11 @@ class CustomConversations(MycroftSkill):
         self.response_timeout = 10  # self.settings['response_timeout']
         self.use_cache = self.settings['use_cache']
         self.auto_update = self.settings['auto_update']
-        self.server_bus = MessageBusClient(host="64.34.186.120")
+        # self.server_bus = MessageBusClient(host="64.34.186.120")
 
     def initialize(self):
         self.make_active(-1)  # Make this skill active so that it never
-        create_daemon(self.server_bus.run_forever())
-
-        # Many of these do nothing, can be used for pre-execution line validation or other pre-exec functions
-        # self.pre_parser_options = {
-        #     "language": self._parse_language_option,
-        #     "case": self._parse_case_option,
-        #     "script": self._parse_header_option,
-        #     "description": self._parse_header_option,
-        #     "author": self._parse_header_option,
-        #     "timeout": self._parse_header_option,
-        #     "execute": self._parse_execute_option,
-        #     "speak": self._parse_speak_option,
-        #     "neon speak": self._parse_speak_option,
-        #     "name speak": self._parse_speak_option,
-        #     "sub_values": self._parse_substitute_option,
-        #     "sub_key": self._parse_substitute_option,
-        #     "exit": self._parse_exit_option,
-        #     "variable": self._parse_variable_option,
-        #     "loop": self._parse_loop_option,
-        #     "synonym": self._parse_synonym_option,
-        #     "python": self._parse_python_option,
-        #     "claps": self._parse_clap_option,
-        #     "if": self._parse_if_option,
-        #     "else": self._parse_else_option,
-        #     "goto": self._parse_goto_option,
-        #     "tag": self._parse_goto_option,
-        #     "@": self._parse_goto_option,
-        #     "set": self._parse_set_option,
-        #     "reconvey": self._parse_reconvey_option,
-        #     "voice_input": self._parse_input_option,
-        #     "email": self._parse_email_option,
-        #     "run": self._parse_run_option
-        # }
+        # create_daemon(self.server_bus.run_forever())
 
         self.runtime_execution = {
             "variable": self._run_variable,
@@ -529,6 +497,7 @@ class CustomConversations(MycroftSkill):
         """
         if self.server:
             try:
+                self.bus.emit('neon.update_scripts')
                 self.create_signal("UpdateConversationFiles")  # TODO: Not this, just emit from here! DM
                 while self.check_for_signal("CC_updating", 10):
                     time.sleep(0.5)
@@ -536,8 +505,8 @@ class CustomConversations(MycroftSkill):
                 LOG.error(e)
                 self.check_for_signal("CC_updating")
         else:
-            self.server_bus.once("neon.server.update_scripts.response", self._handle_updated_scripts)
-            self.server_bus.emit(Message("neon.server.update_scripts"))  # TODO: Consider adding data here DM
+            self.bus.once("neon.server.update_scripts.response", self._handle_updated_scripts)
+            self.bus.emit(Message("neon.client.update_scripts"))  # TODO: Consider adding context here DM
             # os.chdir(self.configuration_available["dirVars"]["ngiDir"])
             # subprocess.Popen(['bash', '-c', ". ./functions.sh; getConversations; exit"])
             # timer_start = time.time()
