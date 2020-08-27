@@ -1,5 +1,0 @@
-Script: Test Run
-
-Speak: let's start the test ssml script
-Execute: run my test ssml script
-Exit

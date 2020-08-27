@@ -1,9 +1,0 @@
-Script: "Neon AI Android Startup"
-Language: "English American Female"
-Variable: {startup_skill}: ""
-Neon speak: "Welcome to Neon AI Scripts. Please choose a script to run when you open the app."
-Execute: "tell me my scripts"
-Neon speak: "Which one would you like?"
-voice_input{startup_skill}
-Execute: "set my startup script to {startup_skill}"
-Exit

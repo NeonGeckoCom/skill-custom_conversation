@@ -1,5 +1,0 @@
-Script: Test Email
-Variable: body = "Test email body\nnewline"
-Neon speak: "</speak>sending email"
-Email: My Email Title, body
-Exit
