@@ -32,7 +32,7 @@ from dateutil.tz import gettz
 
 # from mycroft.messagebus import MessageBusClient
 # TODO: some conditional import or something if parser package is installed DM
-# from .NeonScriptParser.script_parser import ScriptParser
+from .NeonScriptParser.script_parser import ScriptParser
 # from script_parser import ScriptParser
 
 from mycroft.messagebus.message import Message
@@ -331,7 +331,9 @@ class CustomConversations(MycroftSkill):
         # LOG.info(file_path_to_check)
         if not self._script_file_exists(active_dict["script_filename"]):
             self.speak_dialog("NotFound", {"file_to_open": active_dict["script_filename"].replace('_', ' ')})
-        elif self._check_script_file(active_dict["script_filename"] + self.file_ext):
+
+        elif self._check_script_file(active_dict["script_filename"] + self.file_ext) or \
+                self._check_script_file(active_dict["script_filename"] + ".nct", False):
             # try:
             #     if self.use_cache:
             #         modified = datetime.datetime.utcfromtimestamp(
@@ -352,10 +354,13 @@ class CustomConversations(MycroftSkill):
             #     LOG.error(e)
             #     modified, last_updated = 2, 1  # Just make sure we load the file
             #
-            # # Check if the file has already been parsed and cached or if we need to parse it here
-            # if (last_updated and modified > last_updated) or not self.use_cache:
-            #     LOG.info(f'{active_dict["formatted_script"]} cache out of date')
-            #     self._load_to_cache(active_dict, file_to_run, user)
+
+            # TODO: Check for parser availability here DM
+            # Check if the file has already been parsed and cached or if we need to parse it here
+            if not self._check_script_file(active_dict["script_filename"] + self.file_ext):
+                LOG.info(f'{active_dict["formatted_script"]} not yet parsed!')
+                ScriptParser().parse_script_to_file(os.path.join(self.__location__, "script_txt",
+                                                                 active_dict["script_filename"] + ".nct"))
 
             # We have this in cache now, load values from there
             LOG.debug("Loading from Cache!")
@@ -454,7 +459,10 @@ class CustomConversations(MycroftSkill):
         """
         file_path_to_check = self.__location__ + "/script_txt/" + script_name + self.file_ext
         LOG.info(file_path_to_check)
-        return os.path.isfile(file_path_to_check)
+        if not os.path.isfile(file_path_to_check):
+            second_path_to_check = self.__location__ + "/script_txt/" + script_name + ".nct"
+            return os.path.isfile(second_path_to_check)
+        return True
 
     def _reset_values(self, user="local"):
         """
@@ -582,41 +590,42 @@ class CustomConversations(MycroftSkill):
         self.create_signal("CC_convoSuccess")  # TODO: convoFailure
         self.check_for_signal("CC_updating")
 
-    def _check_script_file(self, filename):
+    def _check_script_file(self, filename, compiled=True):
         """
         Checks if the passed script file is valid and returns True or False
-        :param filename:
+        :param filename: filename to check
         :return:
         """
-        try:
-            cache_data = self.get_cached_data(filename, os.path.join(self.__location__, "script_txt"))
-            # meta = {"cversion": self._version,
-            #         "compiled": round(time.time()),
-            #         "compiler": "Neon AI Script Parser",
-            #         "title": None,
-            #         "author": None,
-            #         "description": "",
-            #         "raw_file": "".join(raw_text)}
-            if cache_data[9].get("cversion"):
-                LOG.debug(f'compiler version={cache_data[9].get("cversion")}')
-                return True
-            else:
+        if compiled:
+            try:
+                cache_data = self.get_cached_data(filename, os.path.join(self.__location__, "script_txt"))
+                # meta = {"cversion": self._version,
+                #         "compiled": round(time.time()),
+                #         "compiler": "Neon AI Script Parser",
+                #         "title": None,
+                #         "author": None,
+                #         "description": "",
+                #         "raw_file": "".join(raw_text)}
+                if cache_data[9].get("cversion"):
+                    LOG.debug(f'compiler version={cache_data[9].get("cversion")}')
+                    return True
+                else:
+                    return False
+            except Exception as e:
+                LOG.error(e)
                 return False
-        except Exception as e:
-            LOG.error(e)
+        else:
+            # DEPRECIATED METHOD
+            with open(os.path.join(self.__location__, 'script_txt', filename)) as file:
+                for line in file:
+                    if str(line).startswith("Script: "):
+                        return True
+                    elif str(line).strip().startswith('#'):
+                        pass
+                    elif str(line).strip():
+                        return False
+            # Empty file
             return False
-
-        # DEPRECIATED METHOD
-        # with open(os.path.join(self.__location__, 'script_txt', filename)) as file:
-        #     for line in file:
-        #         if str(line).startswith("Script: "):
-        #             return True
-        #         elif str(line).strip().startswith('#'):
-        #             pass
-        #         elif str(line).strip():
-        #             return False
-        # Empty file
-        # return False
 
         # if "Script:" in open(os.path.join(f'{self.__location__}/script_txt', filename)).readline():
         #     return True
