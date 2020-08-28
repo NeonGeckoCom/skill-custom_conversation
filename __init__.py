@@ -117,7 +117,7 @@ class CustomConversations(MycroftSkill):
         self.substitute_wildcards = ("sub_key", "sub_values")
 
         # Commands that exist in a script before executable code
-        self.header_options = ("language", "script", "description", "author", "timeout", "claps", "synonym")
+        self.header_options = ("script", "description", "author", "timeout", "claps", "synonym")
         # self.start_executing =
         #     ("execute", "neon speak", "loop", "python", "if", "name speak", "email", "set", "speak")
 
@@ -393,6 +393,7 @@ class CustomConversations(MycroftSkill):
                 active_dict["goto_tags"] = cache[4]
                 active_dict["timeout"] = cache[5]
                 active_dict["timeout_action"] = cache[6]
+                active_dict["script_meta"] = cache[9]
             except Exception as e:
                 LOG.error(e)
                 self._reset_values(user)
@@ -2209,7 +2210,7 @@ class CustomConversations(MycroftSkill):
                     # Try handling as an absolute path
                     audio = os.path.expanduser(audio)
                     if not os.path.isfile(audio):
-                        script_title = active_dict["script_meta"]["title"]
+                        script_title = active_dict["script_meta"].get("title", active_dict["script_filename"])
                         dir_name = script_title.strip('"').lower().replace(" ", "_")
 
                         # Try handling as a relative path in the skill
