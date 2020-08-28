@@ -97,6 +97,7 @@ class CustomConversations(MycroftSkill):
         self.file_ext = ".ncs"
         self.text_location = f"{self.__location__}/script_txt"
         self.audio_location = f"{self.__location__}/script_audio"
+        self.transcript_location = f"{self.__location__}/script_transcript"
         self.tz = gettz(self.user_info_available["location"]["tz"])
         self.reload_skill = False  # This skill should not be reloaded or else active users break
         # self.pre_parser_options,
@@ -3023,6 +3024,7 @@ class CustomConversations(MycroftSkill):
             LOG.info(f'Script execute for {user}, pass: {utterances}')
             return False
         elif user in self.active_conversations and self.check_for_signal(f"{user}_CC_active", -1):
+            self.update_transcript(f'{datetime.datetime.now().isoformat()}, {user} said: {utterances}\n')
             LOG.info(f'Script input for {user} consume: {utterances}')
             consumed = self.check_if_script_response(message)
             LOG.info(f"consumed={consumed}")
@@ -3223,6 +3225,10 @@ class CustomConversations(MycroftSkill):
 
     def stop(self):
         pass
+
+    def update_transcript(self, utterance):
+        with open(os.path.join(self.transcript_location, 'transcript.txt'), 'a') as transcript:
+            transcript.write(utterance)
 
 
 def create_skill():
