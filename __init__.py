@@ -19,12 +19,12 @@
 import base64
 import os
 # import subprocess
+import shutil
 import time
 import json
 # import unicodedata
 import re
 from copy import deepcopy
-# import shutil
 
 # import requests
 from adapt.intent import IntentBuilder
@@ -137,8 +137,9 @@ class CustomConversations(MycroftSkill):
         # self.init_settings(default)
         self.speak_timeout = 5  # self.settings['speak_timeout']
         self.response_timeout = 10  # self.settings['response_timeout']
-        self.use_cache = self.settings['use_cache']
+        # self.use_cache = self.settings['use_cache']
         self.auto_update = self.settings['auto_update']
+        self.allow_update = self.settings["allow_update"]
         # self.server_bus = MessageBusClient(host="64.34.186.120")
 
     def initialize(self):
@@ -199,26 +200,29 @@ class CustomConversations(MycroftSkill):
     def handle_update_scripts(self, message):
         # if (self.check_for_signal("skip_wake_word", -1) and message.data.get("Neon")) \
         #         or not self.check_for_signal("skip_wake_word", -1) or self.check_for_signal("CORE_neonInUtterance"):
-        LOG.debug(message)
-        # if self.neon_in_request(message):
-        self.speak("Updating your conversation scripts.")
-        self.check_for_signal("CC_convoSuccess")
-        self.check_for_signal("CC_convoFailure")
-        self.create_signal("CC_updating")
-        self._update_scripts()
-        time.sleep(1)
-        while self.check_for_signal("CC_updating", 30):
+        if self.allow_update:
+            LOG.debug(message)
+            # if self.neon_in_request(message):
+            self.speak_dialog("update_started")
+            self.check_for_signal("CC_convoSuccess")
+            self.check_for_signal("CC_convoFailure")
+            self.create_signal("CC_updating")
+            self._update_scripts()
             time.sleep(1)
-        if self.check_for_signal("CC_convoSuccess"):
-            self.speak("Successfully updated conversation scripts.")  # TODO: To Dialog DM
-        elif self.check_for_signal("CC_convoFailure"):
-            self.speak("ERROR")  # TODO: To Dialog DM
-        # self.check_for_signal("CC_updating")
+            while self.check_for_signal("CC_updating", 30):
+                time.sleep(1)
+            if self.check_for_signal("CC_convoSuccess"):
+                self.speak("Successfully updated conversation scripts.")  # TODO: To Dialog DM
+            elif self.check_for_signal("CC_convoFailure"):
+                self.speak("ERROR")  # TODO: To Dialog DM
+            # self.check_for_signal("CC_updating")
+        else:
+            self.speak_dialog("update_disallowed")
 
     @intent_handler(IntentBuilder("TellAvailableScripts").require('tell').build())
     def handle_tell_available(self, message):
         available = [os.path.splitext(x)[0].replace("_", " ") for x in os.listdir(self.text_location)
-                     if os.path.isfile(os.path.join(self.text_location, x))]
+                     if os.path.isfile(os.path.join(self.text_location, x)) and x.endswith(".ncs")]
         LOG.info(available)
         if available:
             self.speak_dialog("available_script", {"available": f'{", ".join(available[:-1])}, and {available[-1]}'})
@@ -581,12 +585,61 @@ class CustomConversations(MycroftSkill):
         # LOG.debug(message.msg_type)
         # TODO: Check compile time per-script before overwrite? DM
         for script in message.data.keys():
-            if script.endswith(".txt"):
-                LOG.warning(f"text file received! {script}")
-            else:
-                with open(os.path.join(self.text_location, script), "wb") as out:
-                    out.write(base64.b64decode(message.data[script].encode("utf-8")))
+            try:
+                if script.endswith(".txt"):
+                    LOG.warning(f"text file received! {script}")
+                elif script.endswith("nct"):
+                    # File exists, check overwrite
+                    if os.path.isfile(os.path.join(self.text_location, script)):
+                        mod_time = round(os.path.getmtime(os.path.join(self.text_location, script)))
+                        create_time = self.settings.get("updates", {}).get(script, 0)
+
+                        # Backup any old versions
+                        if mod_time > create_time:
+                            timestamp = time.strftime('%Y-%m-%d--%H_%M')
+                            backup_name = f"{os.path.splitext(script)[0]}_{timestamp}{os.path.splitext(script)[1]}"
+                            shutil.move(os.path.join(self.text_location, script),
+                                        os.path.join(self.text_location, "backup", backup_name))
+                            LOG.debug(f"Local text modified, backed up {script} to {backup_name}")
+
+                        # Update new file and write out last update info
+                        with open(os.path.join(self.text_location, script), "wb") as out:
+                            out.write(base64.b64decode(message.data[script].encode("utf-8")))
+                        mtime = round(os.path.getmtime(os.path.join(self.text_location, script)))
+                        self.ngi_settings.update_yaml_file("updates", script, mtime, multiple=True)
+                    else:
+                        # Create new file and write out last update info
+                        with open(os.path.join(self.text_location, script), "wb") as out:
+                            out.write(base64.b64decode(message.data[script].encode("utf-8")))
+                        mtime = round(os.path.getmtime(os.path.join(self.text_location, script)))
+                        self.ngi_settings.update_yaml_file("updates", script, mtime, multiple=True)
+
+                elif script.endswith("ncs"):
+                    # TODO: Figure out how to compare contents as scripts are re-compiled pre-update every time DM
+                    # if os.path.isfile(os.path.join(self.text_location, script)):
+                    #     existing = self.get_cached_data(script, self.text_location)
+                    #     with open(os.path.join(self.cache_loc, script), "wb") as tmp:
+                    #         tmp.write(base64.b64decode(message.data[script].encode("utf-8")))
+                    #     new_data = self.get_cached_data(script)
+                    #     if new_data[9].get("compiled", 0) != existing[9].get("compiled", 0):
+                    #         timestamp = time.strftime('%Y-%m-%d--%H_%M')
+                    #         backup_name = f"{os.path.splitext(script)[0]}_{timestamp}_{os.path.splitext(script)[1]}"
+                    #         shutil.move(os.path.join(self.text_location, script),
+                    #                     os.path.join(self.text_location, "backup", backup_name))
+                    #     os.remove(os.path.join(self.cache_loc, script))
+
+                    with open(os.path.join(self.text_location, script), "wb") as out:
+                        out.write(base64.b64decode(message.data[script].encode("utf-8")))
+                else:
+                    LOG.warning(f"non-script received! {script}")
+            except Exception as e:
+                LOG.error(e)
+                LOG.error(f"Failed to parse {script}")
+
         LOG.debug("DONE!")
+        self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
+        self.bus.emit(Message('check.yml.updates',
+                              {"modified": ["ngi_skill_info"]}, {"origin": "custom-conversation.neon"}))
         self.create_signal("CC_convoSuccess")  # TODO: convoFailure
         self.check_for_signal("CC_updating")
 

@@ -1,4 +1,0 @@
-Script: Test Prosody
-Variable: varProsody = "rate='x-slow'"
-Name Speak : Robbie : "<speak>This is spoken</speak> Something unspoken"demonstration
-Name Speak : Robbie : "<prosody {varProsody}> User Name hi </prosody>"

@@ -1,8 +1,0 @@
-Script: Test Email
-Variable: body = "Test email body\nnewline"
-Variable: emailAddr = {user.email}
-if {emailAddr}:
-    Neon speak: "sending email to <speak>{emailAddr}"
-
-Email: My Email Title, body
-Exit
