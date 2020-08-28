@@ -913,7 +913,7 @@ class CustomConversations(MycroftSkill):
                                 else:
                                     parsed_text = text
                                 # parsed_text = normalize(parsed_text)  WYSIWYG, no normalization necessary
-                                LOG.debug(f"runtime_execute({command} {parsed_text})")
+                                LOG.debug(f"runtime_execute({command}|{parsed_text})")
                                 message.data["parser_data"] = line_to_evaluate.get("data")
                                 try:
                                     if message.data.get("parser_data"):
