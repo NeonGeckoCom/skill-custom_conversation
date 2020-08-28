@@ -16,26 +16,27 @@
 # Specialized conversational reconveyance options from Conversation Processing Intelligence Corp.
 # US Patents 2008-2020: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
 # China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
-
+import base64
 import os
-import subprocess
+# import subprocess
+import shutil
 import time
 import json
 # import unicodedata
 import re
 from copy import deepcopy
-import shutil
 
-import requests
+# import requests
 from adapt.intent import IntentBuilder
 from dateutil.tz import gettz
 
-# TODO: Change this back after publishing parser DM
+# from mycroft.messagebus import MessageBusClient
+# TODO: some conditional import or something if parser package is installed DM
 from .NeonScriptParser.script_parser import ScriptParser
 # from script_parser import ScriptParser
 
 from mycroft.messagebus.message import Message
-from mycroft.client.speech.coupons import Coupons
+# from mycroft.client.speech.coupons import Coupons
 from mycroft.skills.core import MycroftSkill, intent_handler
 from mycroft.util.log import LOG
 # from pprint import pprint
@@ -50,7 +51,8 @@ from NGI.utilities.chat_user_util import get_chat_nickname_from_filename as nick
 from NGI.utilities.utilHelper import scrape_page_for_links as scrape
 from NGI.utilities.parseUtils import clean_quotes
 from mycroft.util.parse import normalize
-from mycroft.util import play_wav
+from mycroft.util import play_wav  # , create_daemon
+
 
 # TIMEOUT = 8
 
@@ -92,7 +94,7 @@ class CustomConversations(MycroftSkill):
 
     def __init__(self):
         super(CustomConversations, self).__init__(name="CustomConversations")
-        self.file_ext = "ncs"
+        self.file_ext = ".ncs"
         self.text_location = f"{self.__location__}/script_txt"
         self.audio_location = f"{self.__location__}/script_audio"
         self.tz = gettz(self.user_info_available["location"]["tz"])
@@ -115,7 +117,7 @@ class CustomConversations(MycroftSkill):
         self.substitute_wildcards = ("sub_key", "sub_values")
 
         # Commands that exist in a script before executable code
-        self.header_options = ("language", "script", "description", "author", "timeout", "claps", "synonym")
+        self.header_options = ("script", "description", "author", "timeout", "claps", "synonym")
         # self.start_executing =
         #     ("execute", "neon speak", "loop", "python", "if", "name speak", "email", "set", "speak")
 
@@ -135,43 +137,14 @@ class CustomConversations(MycroftSkill):
         # self.init_settings(default)
         self.speak_timeout = 5  # self.settings['speak_timeout']
         self.response_timeout = 10  # self.settings['response_timeout']
-        self.use_cache = self.settings['use_cache']
+        # self.use_cache = self.settings['use_cache']
         self.auto_update = self.settings['auto_update']
+        self.allow_update = self.settings["allow_update"]
+        # self.server_bus = MessageBusClient(host="64.34.186.120")
 
     def initialize(self):
         self.make_active(-1)  # Make this skill active so that it never
-
-        # Many of these do nothing, can be used for pre-execution line validation or other pre-exec functions
-        # self.pre_parser_options = {
-        #     "language": self._parse_language_option,
-        #     "case": self._parse_case_option,
-        #     "script": self._parse_header_option,
-        #     "description": self._parse_header_option,
-        #     "author": self._parse_header_option,
-        #     "timeout": self._parse_header_option,
-        #     "execute": self._parse_execute_option,
-        #     "speak": self._parse_speak_option,
-        #     "neon speak": self._parse_speak_option,
-        #     "name speak": self._parse_speak_option,
-        #     "sub_values": self._parse_substitute_option,
-        #     "sub_key": self._parse_substitute_option,
-        #     "exit": self._parse_exit_option,
-        #     "variable": self._parse_variable_option,
-        #     "loop": self._parse_loop_option,
-        #     "synonym": self._parse_synonym_option,
-        #     "python": self._parse_python_option,
-        #     "claps": self._parse_clap_option,
-        #     "if": self._parse_if_option,
-        #     "else": self._parse_else_option,
-        #     "goto": self._parse_goto_option,
-        #     "tag": self._parse_goto_option,
-        #     "@": self._parse_goto_option,
-        #     "set": self._parse_set_option,
-        #     "reconvey": self._parse_reconvey_option,
-        #     "voice_input": self._parse_input_option,
-        #     "email": self._parse_email_option,
-        #     "run": self._parse_run_option
-        # }
+        # create_daemon(self.server_bus.run_forever())
 
         self.runtime_execution = {
             "variable": self._run_variable,
@@ -221,26 +194,35 @@ class CustomConversations(MycroftSkill):
         LOG.debug(">>> CC Skill Initialized! <<<")
 
         if self.auto_update:
-            self._update_conversations()
+            self._update_scripts()
 
     @intent_handler(IntentBuilder("UpdateScripts").require("UpdateScripts").optionally("Neon").build())
     def handle_update_scripts(self, message):
         # if (self.check_for_signal("skip_wake_word", -1) and message.data.get("Neon")) \
         #         or not self.check_for_signal("skip_wake_word", -1) or self.check_for_signal("CORE_neonInUtterance"):
-        LOG.debug(message)
-        # if self.neon_in_request(message):
-        self.speak("Updating your conversation scripts.")
-        self.check_for_signal("CC_convoSuccess")
-        self._update_conversations()
-        while not self.check_for_signal("CC_convoSuccess"):
+        if self.allow_update:
+            LOG.debug(message)
+            # if self.neon_in_request(message):
+            self.speak_dialog("update_started")
+            self.check_for_signal("CC_convoSuccess")
+            self.check_for_signal("CC_convoFailure")
+            self.create_signal("CC_updating")
+            self._update_scripts()
             time.sleep(1)
-        self.speak("Successfully updated conversation scripts.")
-        self.check_for_signal("CC_updating")
+            while self.check_for_signal("CC_updating", 30):
+                time.sleep(1)
+            if self.check_for_signal("CC_convoSuccess"):
+                self.speak("Successfully updated conversation scripts.")  # TODO: To Dialog DM
+            elif self.check_for_signal("CC_convoFailure"):
+                self.speak("ERROR")  # TODO: To Dialog DM
+            # self.check_for_signal("CC_updating")
+        else:
+            self.speak_dialog("update_disallowed")
 
     @intent_handler(IntentBuilder("TellAvailableScripts").require('tell').build())
     def handle_tell_available(self, message):
         available = [os.path.splitext(x)[0].replace("_", " ") for x in os.listdir(self.text_location)
-                     if os.path.isfile(os.path.join(self.text_location, x))]
+                     if os.path.isfile(os.path.join(self.text_location, x)) and x.endswith(".ncs")]
         LOG.info(available)
         if available:
             self.speak_dialog("available_script", {"available": f'{", ".join(available[:-1])}, and {available[-1]}'})
@@ -299,14 +281,17 @@ class CustomConversations(MycroftSkill):
                         os.makedirs(self.configuration_available["dirVars"]["tempDir"] + '/attachments/', exist_ok=True)
 
                     # Copy file to send
-                    att_path = self.configuration_available["dirVars"]["tempDir"] + f'/attachments/{script_name}_' + \
-                        email_addr + '_' + str(datetime.date.today()) + '_att.txt'
-                    LOG.debug(f"file_to_send: {file_to_send} | att_path: {att_path}")
-                    dest = shutil.copyfile(file_to_send, att_path)
-                    LOG.debug(f"file copied to {dest}")
+                    # att_path = self.configuration_available["dirVars"]["tempDir"] + f'/attachments/{script_name}_' + \
+                    #     email_addr + '_' + str(datetime.date.today()) + '_att.txt'
+                    # LOG.debug(f"file_to_send: {file_to_send} | att_path: {att_path}")
+                    # dest = shutil.copyfile(file_to_send, att_path)
+                    with open(file_to_send, "rb") as f:
+                        encoded = base64.b64encode(f.read()).decode("utf-8")
+                    attachments = {f"{script_name}.txt": encoded}
+                    # LOG.debug(f"file copied to {dest}")
                     title = f"Neon Script: {script_name.replace('_', ' ')}"
                     body = f"\nAttached is your requested Neon Script: {script_name}\n\n-Neon"
-                    self.send_email(title, body, email_addr=email_addr)
+                    self.send_email(title, body, email_addr=email_addr, attachments=attachments)
                     # self.bus.emit(Message("neon.email", {"title": title, "email": email_addr, "body": body}))
                     self.speak_dialog("email_sent", {"script": script_name, "email": email_addr})
                 else:
@@ -350,36 +335,43 @@ class CustomConversations(MycroftSkill):
         # LOG.info(file_path_to_check)
         if not self._script_file_exists(active_dict["script_filename"]):
             self.speak_dialog("NotFound", {"file_to_open": active_dict["script_filename"].replace('_', ' ')})
-        elif self._check_script_file(active_dict["script_filename"] + ".txt"):
-            try:
-                if self.use_cache:
-                    modified = datetime.datetime.utcfromtimestamp(
-                        os.path.getmtime(os.path.join(self.__location__, "script_txt/" +
-                                                      active_dict["script_filename"] + ".txt")))\
-                        .strftime('%Y-%m-%d %H:%M:%S.%f')
-                    # LOG.debug(modified)
-                    modified = datetime.datetime.strptime(modified, '%Y-%m-%d %H:%M:%S.%f')
-                    LOG.debug(modified)
 
-                    last_updated = datetime.datetime.strptime(self.settings.get("script_updates", {}).get(
-                                                              active_dict["script_filename"]), '%Y-%m-%d %H:%M:%S.%f')
-                    LOG.debug(last_updated)
-                    # LOG.info(delta)
-                else:
-                    modified, last_updated = 2, 1  # Doesn't matter, we'll reload either way
-            except Exception as e:
-                LOG.error(e)
-                modified, last_updated = 2, 1  # Just make sure we load the file
+        elif self._check_script_file(active_dict["script_filename"] + self.file_ext) or \
+                self._check_script_file(active_dict["script_filename"] + ".nct", False):
+            # try:
+            #     if self.use_cache:
+            #         modified = datetime.datetime.utcfromtimestamp(
+            #             os.path.getmtime(os.path.join(self.__location__, "script_txt/" +
+            #                                           active_dict["script_filename"] + ".txt")))\
+            #             .strftime('%Y-%m-%d %H:%M:%S.%f')
+            #         # LOG.debug(modified)
+            #         modified = datetime.datetime.strptime(modified, '%Y-%m-%d %H:%M:%S.%f')
+            #         LOG.debug(modified)
+            #
+            #         last_updated = datetime.datetime.strptime(self.settings.get("script_updates", {}).get(
+            #                                                   active_dict["script_filename"]), '%Y-%m-%d %H:%M:%S.%f')
+            #         LOG.debug(last_updated)
+            #         # LOG.info(delta)
+            #     else:
+            #         modified, last_updated = 2, 1  # Doesn't matter, we'll reload either way
+            # except Exception as e:
+            #     LOG.error(e)
+            #     modified, last_updated = 2, 1  # Just make sure we load the file
+            #
 
+            # TODO: Check for parser availability here DM
             # Check if the file has already been parsed and cached or if we need to parse it here
-            if (last_updated and modified > last_updated) or not self.use_cache:
-                LOG.info(f'{active_dict["formatted_script"]} cache out of date')
-                self._load_to_cache(active_dict, file_to_run, user)
+            if not self._check_script_file(active_dict["script_filename"] + self.file_ext):
+                LOG.info(f'{active_dict["formatted_script"]} not yet parsed!')
+                ScriptParser().parse_script_to_file(os.path.join(self.__location__, "script_txt",
+                                                                 active_dict["script_filename"] + ".nct"))
 
             # We have this in cache now, load values from there
             LOG.debug("Loading from Cache!")
             try:
-                cache = self.get_cached_data(f'scripts/{active_dict["script_filename"]}')
+                cache = self.get_cached_data(active_dict["script_filename"] + self.file_ext,
+                                             os.path.join(self.__location__, "script_txt"))
+                # TODO: Claps and Synonyms here! DM
                 LOG.info(json.dumps(cache, indent=4))
             except Exception as e:
                 LOG.error(e)
@@ -387,9 +379,10 @@ class CustomConversations(MycroftSkill):
                 cache = None
             if not cache or cache == {}:
                 LOG.warning(f'{active_dict["script_filename"]} empty in cache!')
-                self._load_to_cache(active_dict, file_to_run, user)
-                cache = self.get_cached_data(f'scripts/{active_dict["script_filename"]}')
-                LOG.info(json.dumps(cache, indent=4))
+                # TODO: Speak error! DM
+                # self._load_to_cache(active_dict, file_to_run, user)
+                # cache = self.get_cached_data(f'scripts/{active_dict["script_filename"]}')
+                # LOG.info(json.dumps(cache, indent=4))
 
             LOG.info(f'{active_dict["script_filename"]} loaded from cache')
             try:
@@ -400,11 +393,13 @@ class CustomConversations(MycroftSkill):
                 active_dict["goto_tags"] = cache[4]
                 active_dict["timeout"] = cache[5]
                 active_dict["timeout_action"] = cache[6]
+                active_dict["script_meta"] = cache[9]
             except Exception as e:
                 LOG.error(e)
                 self._reset_values(user)
-                active_dict = self.active_conversations[user]
-                active_dict = self._load_to_cache(active_dict, file_to_run, user)
+                # TODO: Speak error! DM
+                # active_dict = self.active_conversations[user]
+                # active_dict = self._load_to_cache(active_dict, file_to_run, user)
 
             # Check if script was found and loaded
             if active_dict:
@@ -467,9 +462,12 @@ class CustomConversations(MycroftSkill):
         :param script_name: script basename (script name with " " replaced with "_")
         :return: Boolean file exists
         """
-        file_path_to_check = self.__location__ + "/script_txt/" + script_name + ".txt"
+        file_path_to_check = self.__location__ + "/script_txt/" + script_name + self.file_ext
         LOG.info(file_path_to_check)
-        return os.path.isfile(file_path_to_check)
+        if not os.path.isfile(file_path_to_check):
+            second_path_to_check = self.__location__ + "/script_txt/" + script_name + ".nct"
+            return os.path.isfile(second_path_to_check)
+        return True
 
     def _reset_values(self, user="local"):
         """
@@ -513,191 +511,274 @@ class CustomConversations(MycroftSkill):
 
         self.clear_signals(f"{user}_CC")
 
-    def _update_conversations(self):
+    def _update_scripts(self):
         """
         Updates conversation files from SQL Database/Server
         """
         if self.server:
             try:
-                self.create_signal("CC_updating")
-                Coupons.get_scripts_from_ngi()
+                self.bus.emit('neon.update_scripts')
+                self.create_signal("UpdateConversationFiles")  # TODO: Not this, just emit from here! DM
+                while self.check_for_signal("CC_updating", 10):
+                    time.sleep(0.5)
             except Exception as e:
                 LOG.error(e)
                 self.check_for_signal("CC_updating")
         else:
-            os.chdir(self.configuration_available["dirVars"]["ngiDir"])
-            subprocess.Popen(['bash', '-c', ". ./functions.sh; getConversations; exit"])
-            timer_start = time.time()
-            while not self.check_for_signal("CC_convoSuccess", -1) and self.check_for_signal("CC_updating", -1) and \
-                    time.time() - timer_start < 10:
-                time.sleep(1)
-            filename = None
-            for file in [x for x in os.listdir(self.text_location)
-                         if os.path.isfile(os.path.join(self.text_location, x))]:
-                # LOG.debug(f"DM: script: {file}")
-                last_updated = None
-                try:
-                    LOG.debug(file)
-                    filename, file_ext = os.path.splitext(file)
-                    modified = datetime.datetime.utcfromtimestamp(
-                        os.path.getmtime(os.path.join(self.__location__, "script_txt/" + file
-                                                      ))).strftime('%Y-%m-%d %H:%M:%S.%f')
-                    modified = datetime.datetime.strptime(modified, '%Y-%m-%d %H:%M:%S.%f')
-                    # LOG.info(f"{modified}")
+            self.bus.once("neon.server.update_scripts.response", self._handle_updated_scripts)
+            self.bus.emit(Message("neon.client.update_scripts"))  # TODO: Consider adding context here DM
+            # os.chdir(self.configuration_available["dirVars"]["ngiDir"])
+            # subprocess.Popen(['bash', '-c', ". ./functions.sh; getConversations; exit"])
+            # timer_start = time.time()
+            # while not self.check_for_signal("CC_convoSuccess", -1) and self.check_for_signal("CC_updating", -1) and \
+            #         time.time() - timer_start < 10:
+            #     time.sleep(1)
+            # filename = None
+            # for file in [x for x in os.listdir(self.text_location)
+            #              if os.path.isfile(os.path.join(self.text_location, x))]:
+            #     # LOG.debug(f"DM: script: {file}")
+            #     last_updated = None
+            #     try:
+            #         LOG.debug(file)
+            #         filename, file_ext = os.path.splitext(file)
+            #         modified = datetime.datetime.utcfromtimestamp(
+            #             os.path.getmtime(os.path.join(self.__location__, "script_txt/" + file
+            #                                           ))).strftime('%Y-%m-%d %H:%M:%S.%f')
+            #         modified = datetime.datetime.strptime(modified, '%Y-%m-%d %H:%M:%S.%f')
+            #         # LOG.info(f"{modified}")
+            #
+            #         if self.settings.get("script_updates", {}).get(filename, None):
+            #             last_updated = datetime.datetime.strptime(self.settings["script_updates"]
+            #                                                       [filename], '%Y-%m-%d %H:%M:%S.%f')
+            #         # LOG.info(f"{modified}  {last_updated}")
+            #     except Exception as e:
+            #         LOG.error(e)
+            #         modified = None
+            #
+            #     # Update cache if script updated or not in cache dir
+            #     if filename and (not last_updated or last_updated < modified or
+            #                      not os.path.isfile(f'{self.configuration_available["dirVars"]["cacheDir"]}'
+            #                                         f'/scripts/{filename}')):
+            #         try:
+            #             if self._check_script_file(file):
+            #                 LOG.debug(f"Update cache for {filename}")
+            #                 self._reset_values("neon")
+            #                 self.active_conversations["neon"]["script_filename"] = filename
+            #                 _ = self._load_to_cache(self.active_conversations["neon"], filename, "neon", True)
+            #                 LOG.info(f"done loading {filename}")
+            #             else:
+            #                 # mv from dir/file to dir/invalid/file
+            #                 LOG.error(f"Problem with {file}")
+            #                 os.makedirs(os.path.join(f'{self.text_location}/invalid/'), exist_ok=True)
+            #                 shutil.move(os.path.join(self.text_location, file),
+            #                             os.path.join(f'{self.text_location}/invalid/', file))
+            #                 # self.speak_dialog("ProblemInFile", {"file_name": file})
+            #         except Exception as e:
+            #             # LOG.error(f"Error loading {filename}")
+            #             LOG.error(e)
+            #
+            # # Notify skills and core of changes after all are done
+            # # self.bus.emit(Message('check.yml.updates',
+            # #                       {"modified": ["ngi_local_conf"]}, {"origin": "custom-conversation.neon"}))
+            # LOG.info("Updated cc cache")
 
-                    if self.settings.get("script_updates", {}).get(filename, None):
-                        last_updated = datetime.datetime.strptime(self.settings["script_updates"]
-                                                                  [filename], '%Y-%m-%d %H:%M:%S.%f')
-                    # LOG.info(f"{modified}  {last_updated}")
-                except Exception as e:
-                    LOG.error(e)
-                    modified = None
+    def _handle_updated_scripts(self, message):
+        # LOG.debug(message.msg_type)
+        # TODO: Check compile time per-script before overwrite? DM
+        for script in message.data.keys():
+            try:
+                if script.endswith(".txt"):
+                    LOG.warning(f"text file received! {script}")
+                elif script.endswith("nct"):
+                    # File exists, check overwrite
+                    if os.path.isfile(os.path.join(self.text_location, script)):
+                        mod_time = round(os.path.getmtime(os.path.join(self.text_location, script)))
+                        create_time = self.settings.get("updates", {}).get(script, 0)
 
-                # Update cache if script updated or not in cache dir
-                if filename and (not last_updated or last_updated < modified or
-                                 not os.path.isfile(f'{self.configuration_available["dirVars"]["cacheDir"]}'
-                                                    f'/scripts/{filename}')):
-                    # TODO: Update this path ref. DM
-                    try:
-                        if self._check_script_file(file):
-                            LOG.debug(f"Update cache for {filename}")
-                            self._reset_values("neon")
-                            self.active_conversations["neon"]["script_filename"] = filename
-                            _ = self._load_to_cache(self.active_conversations["neon"], filename, "neon", True)
-                            LOG.info(f"done loading {filename}")
-                        else:
-                            # mv from dir/file to dir/invalid/file
-                            LOG.error(f"Problem with {file}")
-                            os.makedirs(os.path.join(f'{self.text_location}/invalid/'), exist_ok=True)
-                            shutil.move(os.path.join(self.text_location, file),
-                                        os.path.join(f'{self.text_location}/invalid/', file))
-                            # self.speak_dialog("ProblemInFile", {"file_name": file})
-                    except Exception as e:
-                        # LOG.error(f"Error loading {filename}")
-                        LOG.error(e)
+                        # Backup any old versions
+                        if mod_time > create_time:
+                            timestamp = time.strftime('%Y-%m-%d--%H_%M')
+                            backup_name = f"{os.path.splitext(script)[0]}_{timestamp}{os.path.splitext(script)[1]}"
+                            shutil.move(os.path.join(self.text_location, script),
+                                        os.path.join(self.text_location, "backup", backup_name))
+                            LOG.debug(f"Local text modified, backed up {script} to {backup_name}")
 
-            # Notify skills and core of changes after all are done
-            # self.bus.emit(Message('check.yml.updates',
-            #                       {"modified": ["ngi_local_conf"]}, {"origin": "custom-conversation.neon"}))
-            LOG.info("Updated cc cache")
+                        # Update new file and write out last update info
+                        with open(os.path.join(self.text_location, script), "wb") as out:
+                            out.write(base64.b64decode(message.data[script].encode("utf-8")))
+                        mtime = round(os.path.getmtime(os.path.join(self.text_location, script)))
+                        self.ngi_settings.update_yaml_file("updates", script, mtime, multiple=True)
+                    else:
+                        # Create new file and write out last update info
+                        with open(os.path.join(self.text_location, script), "wb") as out:
+                            out.write(base64.b64decode(message.data[script].encode("utf-8")))
+                        mtime = round(os.path.getmtime(os.path.join(self.text_location, script)))
+                        self.ngi_settings.update_yaml_file("updates", script, mtime, multiple=True)
 
-    def _check_script_file(self, filename):
+                elif script.endswith("ncs"):
+                    # TODO: Figure out how to compare contents as scripts are re-compiled pre-update every time DM
+                    # if os.path.isfile(os.path.join(self.text_location, script)):
+                    #     existing = self.get_cached_data(script, self.text_location)
+                    #     with open(os.path.join(self.cache_loc, script), "wb") as tmp:
+                    #         tmp.write(base64.b64decode(message.data[script].encode("utf-8")))
+                    #     new_data = self.get_cached_data(script)
+                    #     if new_data[9].get("compiled", 0) != existing[9].get("compiled", 0):
+                    #         timestamp = time.strftime('%Y-%m-%d--%H_%M')
+                    #         backup_name = f"{os.path.splitext(script)[0]}_{timestamp}_{os.path.splitext(script)[1]}"
+                    #         shutil.move(os.path.join(self.text_location, script),
+                    #                     os.path.join(self.text_location, "backup", backup_name))
+                    #     os.remove(os.path.join(self.cache_loc, script))
+
+                    with open(os.path.join(self.text_location, script), "wb") as out:
+                        out.write(base64.b64decode(message.data[script].encode("utf-8")))
+                else:
+                    LOG.warning(f"non-script received! {script}")
+            except Exception as e:
+                LOG.error(e)
+                LOG.error(f"Failed to parse {script}")
+
+        LOG.debug("DONE!")
+        self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
+        self.bus.emit(Message('check.yml.updates',
+                              {"modified": ["ngi_skill_info"]}, {"origin": "custom-conversation.neon"}))
+        self.create_signal("CC_convoSuccess")  # TODO: convoFailure
+        self.check_for_signal("CC_updating")
+
+    def _check_script_file(self, filename, compiled=True):
         """
         Checks if the passed script file is valid and returns True or False
-        :param filename:
+        :param filename: filename to check
         :return:
         """
-        with open(os.path.join(f'{self.__location__}/script_txt', filename)) as file:
-            for line in file:
-                if str(line).startswith("Script: "):
+        if compiled:
+            try:
+                cache_data = self.get_cached_data(filename, os.path.join(self.__location__, "script_txt"))
+                # meta = {"cversion": self._version,
+                #         "compiled": round(time.time()),
+                #         "compiler": "Neon AI Script Parser",
+                #         "title": None,
+                #         "author": None,
+                #         "description": "",
+                #         "raw_file": "".join(raw_text)}
+                if cache_data[9].get("cversion"):
+                    LOG.debug(f'compiler version={cache_data[9].get("cversion")}')
                     return True
-                elif str(line).strip().startswith('#'):
-                    pass
-                elif str(line).strip():
+                else:
                     return False
-        # Empty file
-        return False
+            except Exception as e:
+                LOG.error(e)
+                return False
+        else:
+            # DEPRECIATED METHOD
+            with open(os.path.join(self.__location__, 'script_txt', filename)) as file:
+                for line in file:
+                    if str(line).startswith("Script: "):
+                        return True
+                    elif str(line).strip().startswith('#'):
+                        pass
+                    elif str(line).strip():
+                        return False
+            # Empty file
+            return False
 
         # if "Script:" in open(os.path.join(f'{self.__location__}/script_txt', filename)).readline():
         #     return True
         # else:
         #     return False
 
-    def _load_to_cache(self, active_dict, file_to_run, user, preload_only=False):
-        """
-        Load a new or modified skill file and save to cache (and self.active_conversations if associated with a user);
-        called at script update or launch if script file is newer than cached version
-        :param active_dict: active_dict for user (or temp one if just pre-loading a file).
-                            Should contain script filename here (basename with no dir/ext)
-        :param file_to_run: parsed name of the skill file
-        :param user: user loading the skill file (or "Neon" if just pre-loading a file)
-        """
-
-        try:
-            # saving parsed to cache if hasn't been updated in a while or first time:
-            # LOG.info(f'{active_dict["formatted_script"]} saved to cache')
-            # to_save_cache = [active_dict["formatted_script"],
-            #                  active_dict["speaker_data"],
-            #                  active_dict["variables"],
-            #                  active_dict["loops_dict"],
-            #                  active_dict["goto_tags"],
-            #                  active_dict["timeout"],
-            #                  active_dict["timeout_action"]]
-
-            # TODO: Depreciate this block; this loads to cache and then we can read from it.
-            cache_data = ScriptParser().parse_script_to_dict(os.path.join(
-                self.__location__, "script_txt/" + active_dict["script_filename"] + ".txt"))
-
-            # parsed_dict = {"formatted_script": parsed_list[0],
-            #                "language": parsed_list[1],
-            #                "variables": parsed_list[2],
-            #                "loops": parsed_list[3],
-            #                "tags": parsed_list[4],
-            #                "timeout": parsed_list[5],
-            #                "timeout_action": parsed_list[6],
-            #                "synonyms": parsed_list[7],
-            #                "claps": parsed_list[8],
-            #                "meta": parsed_list[9]}
-
-            active_dict["formatted_script"] = cache_data["formatted_script"]
-            active_dict["speaker_data"] = cache_data["language"]
-            active_dict["variables"] = cache_data["variables"]
-            active_dict["loops_dict"] = cache_data["loops"]
-            active_dict["goto_tags"] = cache_data["tags"]
-            active_dict["timeout"] = cache_data["timeout"]
-            active_dict["timeout_action"] = cache_data["timeout_action"]
-            active_dict["script_meta"] = cache_data["meta"]
-            synonyms = cache_data["synonyms"]
-            claps = cache_data["claps"]
-            #######################################################################################################
-
-            cache_file = ScriptParser().parse_script_to_file(os.path.join(
-                self.__location__, "script_txt/" + active_dict["script_filename"] + ".txt"))
-            os.makedirs(os.path.join(self.configuration_available["dirVars"]["cacheDir"], "scripts"), exist_ok=True)
-            shutil.move(cache_file, os.path.join(self.lang_dict_loc, f'scripts/{active_dict["script_filename"]}'))
-            # self.update_cached_data(f'scripts/{active_dict["script_filename"]}', to_save_cache)
-
-            # Update yml values for script update time so cache can be used later
-            # LOG.info(self.configuration_available["devVars"]["ccUpdates"])
-            LOG.debug({active_dict["script_filename"]: str(datetime.datetime.utcnow())})
-            # self.configuration_available["devVars"]["ccUpdates"] = {} if not \
-            #     self.configuration_available["devVars"]["ccUpdates"] else \
-            #     self.configuration_available["devVars"]["ccUpdates"]
-            # to_add = {**self.configuration_available["devVars"]["ccUpdates"],
-            #           **{active_dict["script_filename"]: str(datetime.datetime.utcnow())}}
-            to_add = {**self.settings.get("script_updates", {}),
-                      **{active_dict["script_filename"]: str(datetime.datetime.utcnow())}}
-
-            # self.local_config.update_yaml_file(header='devVars', sub_header='ccUpdates', value=to_add)
-            # self.local_config.update_yaml_file("devVars", "ccUpdates", to_add, False, True)
-            LOG.debug(f"new synonyms: {to_add}")
-            self.ngi_settings.update_yaml_file("script_updates", value=to_add)
-            # if not preload_only:
-            #     self.bus.emit(Message('check.yml.updates',
-            #                           {"modified": ["ngi_local_conf"]}, {"origin": "custom-conversation.neon"}))
-
-            if synonyms and len(synonyms) > 0:
-                LOG.info(f'emit to synonyms.neon: {synonyms}')
-                run_command = f'run my {active_dict["script_filename"]} script'
-                synonym_message = Message("SS_new_syn", {"cmd_phrase": run_command,
-                                                         "cc_synonyms": synonyms},
-                                          {"origin": "custom-conversation.neon", "nick": user})
-                self.bus.emit(synonym_message)
-            if claps and len(claps.keys()) > 0:
-                pass
-                # TODO: Do something to handle claps DM
-
-        except KeyError as e:
-            LOG.error(e)
-            # self.local_config.update_yaml_file(header='devVars', sub_header='ccUpdates',
-            #                                    value={active_dict["script_filename"]:
-            #                                    str(datetime.datetime.utcnow())})
-
-        # Reset values if this was only a preload on skill update
-        if preload_only:
-            LOG.debug(f"Preload skill {file_to_run}")
-            self._reset_values("neon")
-        return active_dict
+    # def _load_to_cache(self, active_dict, file_to_run, user, preload_only=False):
+    #     """
+    #     Load a new or modified skill file and save to cache (and self.active_conversations if associated with a user);
+    #     called at script update or launch if script file is newer than cached version
+    #     :param active_dict: active_dict for user (or temp one if just pre-loading a file).
+    #                         Should contain script filename here (basename with no dir/ext)
+    #     :param file_to_run: parsed name of the skill file
+    #     :param user: user loading the skill file (or "Neon" if just pre-loading a file)
+    #     """
+    #
+    #     try:
+    #         # saving parsed to cache if hasn't been updated in a while or first time:
+    #         # LOG.info(f'{active_dict["formatted_script"]} saved to cache')
+    #         # to_save_cache = [active_dict["formatted_script"],
+    #         #                  active_dict["speaker_data"],
+    #         #                  active_dict["variables"],
+    #         #                  active_dict["loops_dict"],
+    #         #                  active_dict["goto_tags"],
+    #         #                  active_dict["timeout"],
+    #         #                  active_dict["timeout_action"]]
+    #
+    #         cache_data = ScriptParser().parse_script_to_dict(os.path.join(
+    #             self.__location__, "script_txt/" + active_dict["script_filename"] + ".txt"))
+    #
+    #         # parsed_dict = {"formatted_script": parsed_list[0],
+    #         #                "language": parsed_list[1],
+    #         #                "variables": parsed_list[2],
+    #         #                "loops": parsed_list[3],
+    #         #                "tags": parsed_list[4],
+    #         #                "timeout": parsed_list[5],
+    #         #                "timeout_action": parsed_list[6],
+    #         #                "synonyms": parsed_list[7],
+    #         #                "claps": parsed_list[8],
+    #         #                "meta": parsed_list[9]}
+    #
+    #         active_dict["formatted_script"] = cache_data["formatted_script"]
+    #         active_dict["speaker_data"] = cache_data["language"]
+    #         active_dict["variables"] = cache_data["variables"]
+    #         active_dict["loops_dict"] = cache_data["loops"]
+    #         active_dict["goto_tags"] = cache_data["tags"]
+    #         active_dict["timeout"] = cache_data["timeout"]
+    #         active_dict["timeout_action"] = cache_data["timeout_action"]
+    #         active_dict["script_meta"] = cache_data["meta"]
+    #         synonyms = cache_data["synonyms"]
+    #         claps = cache_data["claps"]
+    #         #######################################################################################################
+    #
+    #         cache_file = ScriptParser().parse_script_to_file(os.path.join(
+    #             self.__location__, "script_txt/" + active_dict["script_filename"] + ".txt"))
+    #         os.makedirs(os.path.join(self.configuration_available["dirVars"]["cacheDir"], "scripts"), exist_ok=True)
+    #         shutil.move(cache_file, os.path.join(self.cache_loc, f'scripts/{active_dict["script_filename"]}'))
+    #         # self.update_cached_data(f'scripts/{active_dict["script_filename"]}', to_save_cache)
+    #
+    #         # Update yml values for script update time so cache can be used later
+    #         # LOG.info(self.configuration_available["devVars"]["ccUpdates"])
+    #         LOG.debug({active_dict["script_filename"]: str(datetime.datetime.utcnow())})
+    #         # self.configuration_available["devVars"]["ccUpdates"] = {} if not \
+    #         #     self.configuration_available["devVars"]["ccUpdates"] else \
+    #         #     self.configuration_available["devVars"]["ccUpdates"]
+    #         # to_add = {**self.configuration_available["devVars"]["ccUpdates"],
+    #         #           **{active_dict["script_filename"]: str(datetime.datetime.utcnow())}}
+    #         to_add = {**self.settings.get("script_updates", {}),
+    #                   **{active_dict["script_filename"]: str(datetime.datetime.utcnow())}}
+    #
+    #         # self.local_config.update_yaml_file(header='devVars', sub_header='ccUpdates', value=to_add)
+    #         # self.local_config.update_yaml_file("devVars", "ccUpdates", to_add, False, True)
+    #         LOG.debug(f"new synonyms: {to_add}")
+    #         self.ngi_settings.update_yaml_file("script_updates", value=to_add)
+    #         # if not preload_only:
+    #         #     self.bus.emit(Message('check.yml.updates',
+    #         #                           {"modified": ["ngi_local_conf"]}, {"origin": "custom-conversation.neon"}))
+    #
+    #         if synonyms and len(synonyms) > 0:
+    #             LOG.info(f'emit to synonyms.neon: {synonyms}')
+    #             run_command = f'run my {active_dict["script_filename"]} script'
+    #             synonym_message = Message("SS_new_syn", {"cmd_phrase": run_command,
+    #                                                      "cc_synonyms": synonyms},
+    #                                       {"origin": "custom-conversation.neon", "nick": user})
+    #             self.bus.emit(synonym_message)
+    #         if claps and len(claps.keys()) > 0:
+    #             pass
+    #
+    #     except KeyError as e:
+    #         LOG.error(e)
+    #         # self.local_config.update_yaml_file(header='devVars', sub_header='ccUpdates',
+    #         #                                    value={active_dict["script_filename"]:
+    #         #                                    str(datetime.datetime.utcnow())})
+    #
+    #     # Reset values if this was only a preload on skill update
+    #     if preload_only:
+    #         LOG.debug(f"Preload skill {file_to_run}")
+    #         self._reset_values("neon")
+    #     return active_dict
 
     def _continue_script_execution(self, message, user="local"):
         """
@@ -832,7 +913,7 @@ class CustomConversations(MycroftSkill):
                                 else:
                                     parsed_text = text
                                 # parsed_text = normalize(parsed_text)  WYSIWYG, no normalization necessary
-                                LOG.debug(f"runtime_execute({command} {parsed_text})")
+                                LOG.debug(f"runtime_execute({command}|{parsed_text})")
                                 message.data["parser_data"] = line_to_evaluate.get("data")
                                 try:
                                     if message.data.get("parser_data"):
@@ -2129,7 +2210,7 @@ class CustomConversations(MycroftSkill):
                     # Try handling as an absolute path
                     audio = os.path.expanduser(audio)
                     if not os.path.isfile(audio):
-                        script_title = active_dict["script_meta"]["title"]
+                        script_title = active_dict["script_meta"].get("title", active_dict["script_filename"])
                         dir_name = script_title.strip('"').lower().replace(" ", "_")
 
                         # Try handling as a relative path in the skill
@@ -2315,7 +2396,8 @@ class CustomConversations(MycroftSkill):
             self._reset_values(user)
             new_dict = self.active_conversations[user]
             new_dict["script_filename"] = filename
-            new_dict = self._load_to_cache(new_dict, speak_name, user)
+            new_dict = self.get_cached_data(filename + self.file_ext, os.path.join(self.__location__, "script_txt"))
+            # new_dict = self._load_to_cache(new_dict, speak_name, user)
             new_dict["pending_scripts"].insert(0, old_dict)
             LOG.debug(f"DM: {new_dict}")
             self.create_signal(f"{user}_CC_active")
@@ -2900,7 +2982,7 @@ class CustomConversations(MycroftSkill):
                         message.context["cc_data"].get("signal_to_check", None):
                     LOG.debug("Active, about to check request")
                     # Check if this speak event is related to the last request
-                    if message.context["cc_data"]["request"] == active_dict["last_request"] and not \
+                    if message.context["cc_data"]["request"] == active_dict.get("last_request", "") and not \
                             self.check_for_signal(f"{user}_CC_inputNeeded", -1):
                         LOG.debug("Neon response found. Continuing script.")
                         self.active_conversations[user]["last_request"] = ""
@@ -3139,7 +3221,6 @@ class CustomConversations(MycroftSkill):
             self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
         elif status == "no title":
             self.speak_dialog("upload_failed", {"name": name, "reason": "no script title was found"}, message=message)
-
 
     def stop(self):
         pass

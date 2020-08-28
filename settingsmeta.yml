@@ -2,10 +2,10 @@ skillMetadata:
   sections:
     - name: Cache Settings
       fields:
-        - name: use_cache
+        - name: allow_update
           type: checkbox
-          label: Allow use of cached scripts (Flase forces reload on execution)
-          value: "false"
+          label: Allow update of scripts via intent (disable to prevent requests to update scripts)
+          value: "true"
         - name: auto_update
           type: checkbox
           label: Automatically update scripts from remote server
