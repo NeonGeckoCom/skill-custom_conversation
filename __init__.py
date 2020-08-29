@@ -517,7 +517,7 @@ class CustomConversations(MycroftSkill):
         """
         if self.server:
             try:
-                self.bus.emit('neon.update_scripts')
+                self.bus.emit(Message('neon.update_scripts'))
                 self.create_signal("UpdateConversationFiles")  # TODO: Not this, just emit from here! DM
                 while self.check_for_signal("CC_updating", 10):
                     time.sleep(0.5)
