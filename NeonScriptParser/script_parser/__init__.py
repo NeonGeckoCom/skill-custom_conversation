@@ -193,7 +193,7 @@ class ScriptParser:
         """
 
         cache_data = self._parse_script_file(input_path, meta)
-        output_name = f"{path.splitext(path.basename(input_path))[0]}.{self.file_ext}"
+        output_name = f'{cache_data[9].get("title").replace(" ", "_").replace("/", "_").lower()}.{self.file_ext}'
         if not output_path:
             output_dir = path.dirname(input_path)
             output_path = path.join(output_dir, output_name)
@@ -823,15 +823,16 @@ class ScriptParser:
                 phrase = line_data["text"]
             elif line_data["command"] == "name speak":
                 params = self._parse_multi_params(line_data["text"])
-                if len(params) > 1:
-                    name = params[0]
-                    phrase = params[1]
-                elif ":" in params[0]:
+                if ":" in params[0]:
                     LOG.warning("'Name Speak: Name: Phrase' syntax is depreciated,"
                                 " please use 'Name Speak: \"Name\", \"Phrase\"")
-                    name, phrase = params[0].split(':', 1)
+                    params = self._parse_multi_params(line_data["text"], ':')
+                    name, phrase = params
                     name = name.strip()
                     phrase = phrase.strip()
+                elif len(params) > 1:
+                    name = params[0]
+                    phrase = params[1]
                 else:
                     LOG.error("Name speak called with one param!")
                     name, phrase = None, None
