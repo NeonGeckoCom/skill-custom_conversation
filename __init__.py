@@ -919,7 +919,9 @@ class CustomConversations(MycroftSkill):
                                     parsed_text = text
                                 # parsed_text = normalize(parsed_text)  WYSIWYG, no normalization necessary
                                 LOG.debug(f"runtime_execute({command}|{parsed_text})")
-                                message.data["parser_data"] = line_to_evaluate.get("data")
+                                LOG.debug(line_to_evaluate)
+                                message.data["parser_data"] = deepcopy(line_to_evaluate.get("data"))
+                                LOG.debug(f'parser_data={message.data.get("parser_data")}')
                                 try:
                                     if message.data.get("parser_data"):
                                         for key, val in message.data.get("parser_data").items():
