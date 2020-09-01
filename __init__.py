@@ -645,7 +645,7 @@ class CustomConversations(MycroftSkill):
         LOG.debug("DONE!")
         self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
         self.bus.emit(Message('check.yml.updates',
-                              {"modified": ["ngi_skill_info"]}, {"origin": "custom-conversation.neon"}))
+                              {"modified": ["ngi_skill_conf"]}, {"origin": self.name}))
         self.create_signal("CC_convoSuccess")  # TODO: convoFailure
         self.check_for_signal("CC_updating")
 
