@@ -557,7 +557,7 @@ class ScriptParser:
             if ':' in line_data["text"] and "{" in line_data["text"].split(':')[0] and \
                     "}" in line_data["text"].split(':')[0]:  # Handle Variable: {name}: value
                 # TODO: Depreciate this syntax DM
-                LOG.error("This syntax has been depreciated, please remove all '{' and '}' from variable names")
+                LOG.warning("This syntax has been depreciated, please remove all '{' and '}' from variable names")
                 key = line_data["text"].rstrip().split('{')[1].split("}")[0]
                 line_data["text"] = line_data["text"].replace("{" + key + "}", key)
                 value = None
@@ -827,7 +827,11 @@ class ScriptParser:
                     LOG.warning("'Name Speak: Name: Phrase' syntax is depreciated,"
                                 " please use 'Name Speak: \"Name\", \"Phrase\"")
                     params = self._parse_multi_params(line_data["text"], ':')
-                    name, phrase = params
+                    if len(params) > 2:
+                        name = params[0]
+                        phrase = ":".join(params[1:])
+                    else:
+                        name, phrase = params
                     name = name.strip()
                     phrase = phrase.strip()
                 elif len(params) > 1:

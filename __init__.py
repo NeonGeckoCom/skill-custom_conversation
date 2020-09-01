@@ -333,6 +333,8 @@ class CustomConversations(MycroftSkill):
 
         # file_path_to_check = self.__location__ + "/script_txt/" + active_dict["script_filename"] + ".txt"
         # LOG.info(file_path_to_check)
+
+        # Check if compiled or text script exists
         if not self._script_file_exists(active_dict["script_filename"]):
             self.speak_dialog("NotFound", {"file_to_open": active_dict["script_filename"].replace('_', ' ')})
 
@@ -363,9 +365,12 @@ class CustomConversations(MycroftSkill):
             # Check if the file has already been parsed and cached or if we need to parse it here
             if not self._check_script_file(active_dict["script_filename"] + self.file_ext):
                 LOG.info(f'{active_dict["formatted_script"]} not yet parsed!')
-                ScriptParser().parse_script_to_file(os.path.join(self.__location__, "script_txt",
-                                                                 active_dict["script_filename"] + ".nct"))
-
+                output = ScriptParser().parse_script_to_file(os.path.join(self.__location__, "script_txt",
+                                                                          active_dict["script_filename"] + ".nct"))
+                # Update our active_dict in case internal title doesn't match filename
+                output_name = os.path.splitext(os.path.basename(output))[0]
+                LOG.info(f"Parsed to {output_name}")
+                active_dict["script_filename"] = output_name
             # We have this in cache now, load values from there
             LOG.debug("Loading from Cache!")
             try:
