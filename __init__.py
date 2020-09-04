@@ -231,9 +231,9 @@ class CustomConversations(MycroftSkill):
 
     @intent_handler(IntentBuilder("SetDefault").require('default'))
     def handle_set_default(self, message):
-        user = "local"
-        if self.server:
-            user = nick(message.context["flac_filename"])
+        user = self.get_utterance_user(message)
+        # if self.server:
+        #     user = nick(message.context["flac_filename"])
         if user not in self.active_conversations.keys():
             self._reset_values(user)
         utt = message.data.get("utterance")
@@ -254,9 +254,9 @@ class CustomConversations(MycroftSkill):
     @intent_handler(IntentBuilder("EmailScript").optionally('Neon').require('email').require('script'))
     def handle_email_file(self, message):
         if self.neon_in_request(message):
-            user = "local"
-            if self.server:
-                user = nick(message.context["flac_filename"])
+            user = self.get_utterance_user(message)
+            # if self.server:
+            #     user = nick(message.context["flac_filename"])
             if user not in self.active_conversations.keys():
                 self._reset_values(user)
             utt = message.data.get("utterance")
@@ -306,9 +306,9 @@ class CustomConversations(MycroftSkill):
         :param message: Message object
         :return:
         """
-        user = "local"
-        if self.server:
-            user = nick(message.context["flac_filename"])
+        user = self.get_utterance_user(message)
+        # if self.server:
+        #     user = nick(message.context["flac_filename"])
         if self.active_conversations.get(user, None):
             LOG.info("Exiting previously open skill file")
         self._reset_values(user)
@@ -2944,9 +2944,9 @@ class CustomConversations(MycroftSkill):
         Notify user they have not responded and script will exit
         :param message: message associated with last valid response
         """
-        user = "local"
-        if self.server:
-            user = nick(message.context["flac_filename"])
+        user = self.get_utterance_user(message)
+        # if self.server:
+        #     user = nick(message.context["flac_filename"])
         active_dict = self.active_conversations[user]
         LOG.debug(message)
 
@@ -2971,9 +2971,9 @@ class CustomConversations(MycroftSkill):
         """
         # LOG.debug(f"DM: check_speak: {message.data}")
         try:
-            user = "local"
-            if self.server:
-                user = nick(message.context["flac_filename"])
+            user = self.get_utterance_user(message)
+            # if self.server:
+            #     user = nick(message.context["flac_filename"])
             if user not in self.active_conversations.keys():
                 self._reset_values(user)
             active_dict = self.active_conversations[user]
@@ -3016,13 +3016,13 @@ class CustomConversations(MycroftSkill):
         #         active_dict["current"] = True
 
     def converse(self, utterances, lang="en-us", message=None):
-        user = "local"
+        user = self.get_utterance_user(message)
 
         # LOG.debug(f"DM: {message.data} | {message.context}")
         if not message or not message.context or not utterances:
             return False
-        if self.server:
-            user = nick(message.context["flac_filename"])
+        # if self.server:
+        #     user = nick(message.context["flac_filename"])
 
         if "stop" in str(utterances[0]).split():
             LOG.info(f'Stop request for {user}, pass: {utterances}')
@@ -3057,9 +3057,9 @@ class CustomConversations(MycroftSkill):
         :param message: message to evaluate
         """
         LOG.debug(f"check_if_script_response: {message.data}")
-        user = "local"
-        if self.server:
-            user = nick(message.context["flac_filename"])
+        user = self.get_utterance_user(message)
+        # if self.server:
+        #     user = nick(message.context["flac_filename"])
         if user not in self.active_conversations.keys():
             self._reset_values(user)
         active_dict = self.active_conversations[user]
