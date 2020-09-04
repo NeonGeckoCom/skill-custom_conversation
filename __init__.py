@@ -925,7 +925,8 @@ class CustomConversations(MycroftSkill):
                                 try:
                                     if message.data.get("parser_data"):
                                         for key, val in message.data.get("parser_data").items():
-                                            if val and isinstance(val, str) and "{" in val and "}" in val:
+                                            if val and isinstance(val, str) and "{" in val and "}" in val and \
+                                                    command != "variable":
                                                 message.data.get("parser_data")[key] = \
                                                     self._substitute_variables(user, val, message, False)
                                 except Exception as e:
@@ -1608,7 +1609,7 @@ class CustomConversations(MycroftSkill):
         """
         Substitute substrings in a string variable
         :param user: nick on klat server, else "local"
-        :param text: "else:"
+        :param text: sub_values script line
         :param message: incoming messagebus Message
         """
         LOG.debug(text)
@@ -2428,18 +2429,20 @@ class CustomConversations(MycroftSkill):
         parser_data = message.data.get("parser_data")
 
         LOG.debug(text)
-        if "=" in text:
+        LOG.debug(parser_data)
+
+        if parser_data:
+            key = parser_data.get("variable_name")
+            value = parser_data.get("variable_value")
+        elif "=" in text:
             key, value = text.split("=", 1)
         elif ":" in text:
             key, value = text.split(":", 1)
         else:
             key, value = None, text
 
-        if parser_data:
-            key = parser_data.get("variable_name")
-            value = parser_data.get("variable_value", value)
-
         if key:
+            LOG.debug(value)
             # Trim whitespace
             key = key.strip()
             if value:
@@ -2450,9 +2453,10 @@ class CustomConversations(MycroftSkill):
                 LOG.debug(f"looking for {opt} in {value}")
 
                 # If we find an option, process it and stop looking for more options
-                if opt in value:
+                if value.startswith(opt):
                     # LOG.debug(f"found {opt} in {value}")
                     if '{' in str(value):
+                        LOG.warning("This syntax is depreciated, please use '()' to wrap function arguments")
                         val = str(value).split('{')[1].split('}')[0]
                     elif '(' in str(value):
                         val = str(value).split('(')[1].split(')')[0]
@@ -2471,22 +2475,25 @@ class CustomConversations(MycroftSkill):
 
                     break
 
+            if not active_dict["variables"][key]:
+                active_dict["variables"][key] = []
+
+            LOG.debug(value)
             if isinstance(value, list):
                 if not any([i for i in value if ':' in i]):
                     # Standard list of values
                     LOG.debug(active_dict["variables"])
-                    active_dict["variables"][key] = value
+                    active_dict["variables"][key].extend(value)
                     LOG.debug(active_dict["variables"])
                 else:
                     # list of key/value pairs, parse to dict
                     LOG.debug(active_dict["variables"])
-                    active_dict["variables"][key] = \
-                        {i.split(": ")[0]: i.split(": ")[1] for i in value}
+                    active_dict["variables"][key].append({i.split(": ")[0]: i.split(": ")[1] for i in value})
                     LOG.debug(active_dict["variables"])
             elif isinstance(value, dict):
                 # Dict
                 LOG.debug(active_dict["variables"])
-                active_dict["variables"][key] = value
+                active_dict["variables"][key].append(value)
                 LOG.debug(active_dict["variables"])
             else:
                 # String/Int, parse to list
@@ -2495,7 +2502,7 @@ class CustomConversations(MycroftSkill):
                     value = value.replace(", ", ",").strip().split(",")
                 else:
                     value = [value.strip()]
-                active_dict["variables"][key] = value
+                active_dict["variables"][key].extend(value)
                 LOG.debug(active_dict["variables"])
         else:
             LOG.warning(f"Variable line with no value: {text}")
