@@ -47,6 +47,7 @@ from mycroft.util.log import LOG
 import random
 import difflib
 import datetime
+import time
 from NGI.utilities.chat_user_util import get_chat_nickname_from_filename as nick
 from NGI.utilities.utilHelper import scrape_page_for_links as scrape
 from NGI.utilities.parseUtils import clean_quotes
@@ -329,7 +330,12 @@ class CustomConversations(MycroftSkill):
         file_to_run = message.data.get('file_to_run')
         # LOG.info(file_to_run)
         active_dict["script_filename"] = file_to_run.rstrip().replace(" ", "_").replace("-", "_")
+        active_dict["script_start_time"] = int(time.time())
         LOG.info(active_dict["script_filename"])
+        self.update_transcript(f'RUNNING SCRIPT {active_dict["script_filename"]}\n',
+                               filename=active_dict["script_filename"],
+                               start_time=active_dict["script_start_time"]
+                               )
         # if self.formatted_file in
 
         # file_path_to_check = self.__location__ + "/script_txt/" + active_dict["script_filename"] + ".txt"
@@ -384,6 +390,7 @@ class CustomConversations(MycroftSkill):
                 # self._load_to_cache(active_dict, file_to_run, user)
                 # cache = self.get_cached_data(f'scripts/{active_dict["script_filename"]}')
                 # LOG.info(json.dumps(cache, indent=4))
+                # LOG.info(f'Checking for cache AP')
 
             LOG.info(f'{active_dict["script_filename"]} loaded from cache')
             try:
@@ -1186,6 +1193,18 @@ class CustomConversations(MycroftSkill):
             self.active_conversations[user]["last_request"] = text
             self.create_signal(signal)
             self.speak(text, message=to_speak)
+            user_input = message.data.get("utterances")
+            if user_input:
+                LOG.debug(f'{message.data.get("parser_data").keys()} AP')
+                self.update_transcript(
+                    f'{datetime.datetime.now().isoformat()}, {user} said: \"{user_input[0]}\" \n',
+                    filename=self.active_conversations[user]["script_filename"],
+                    start_time=self.active_conversations[user]["script_start_time"]
+                    )
+            self.update_transcript(f'{datetime.datetime.now().isoformat()}, Neon said: "{text}" \n',
+                                   filename=self.active_conversations[user]["script_filename"],
+                                   start_time=self.active_conversations[user]["script_start_time"]
+                                   )
             self.active_conversations[user]["current_index"] += 1
             # self._continue_script_execution(message, user)
 
@@ -1254,6 +1273,16 @@ class CustomConversations(MycroftSkill):
             self.active_conversations[user]["last_request"] = text
             self.create_signal(signal)
             self.speak(text, message=to_speak)
+            user_input = message.data.get("utterances")
+            if user_input:
+                self.update_transcript(f'{datetime.datetime.now().isoformat()}, {user} said: \"{user_input[0]}\" \n',
+                                       filename=self.active_conversations[user]["script_filename"],
+                                       start_time=self.active_conversations[user]["script_start_time"]
+                                       )
+            self.update_transcript(f'{datetime.datetime.now().isoformat()}, {speaker} said: "{text}" \n',
+                                   filename=self.active_conversations[user]["script_filename"],
+                                   start_time=self.active_conversations[user]["script_start_time"]
+                                   )
             self.active_conversations[user]["current_index"] += 1
             # self._continue_script_execution(message, user)
 
@@ -3229,6 +3258,10 @@ class CustomConversations(MycroftSkill):
 
     def update_transcript(self, utterance):
         with open(os.path.join(self.transcript_location, 'transcript.txt'), 'a') as transcript:
+            transcript.write(utterance)
+
+    def update_transcript(self, utterance, filename, start_time):
+        with open(os.path.join(self.transcript_location, f'{filename}_{start_time}.txt'), 'a') as transcript:
             transcript.write(utterance)
 
 
