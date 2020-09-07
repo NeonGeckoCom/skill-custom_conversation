@@ -3054,7 +3054,6 @@ class CustomConversations(MycroftSkill):
             LOG.info(f'Script execute for {user}, pass: {utterances}')
             return False
         elif user in self.active_conversations and self.check_for_signal(f"{user}_CC_active", -1):
-            self.update_transcript(f'{datetime.datetime.now().isoformat()}, {user} said: {utterances}\n')
             LOG.info(f'Script input for {user} consume: {utterances}')
             consumed = self.check_if_script_response(message)
             LOG.info(f"consumed={consumed}")
@@ -3255,10 +3254,6 @@ class CustomConversations(MycroftSkill):
 
     def stop(self):
         pass
-
-    def update_transcript(self, utterance):
-        with open(os.path.join(self.transcript_location, 'transcript.txt'), 'a') as transcript:
-            transcript.write(utterance)
 
     def update_transcript(self, utterance, filename, start_time):
         with open(os.path.join(self.transcript_location, f'{filename}_{start_time}.txt'), 'a') as transcript:
