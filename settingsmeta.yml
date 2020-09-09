@@ -10,3 +10,13 @@ skillMetadata:
           type: checkbox
           label: Automatically update scripts from remote server
           value: "true"
+    - name: Internal Settings
+      fields:
+        - name: updates
+          type: text
+          label: Script Update Times
+          value:
+        - name: last_updated
+          type: text
+          label: Last Update Time
+          value:
