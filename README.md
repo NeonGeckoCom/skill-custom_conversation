@@ -2,7 +2,6 @@
 # ![](https://0000.us/klatchat/app/files/neon_images/icons/neon_paw.png)Custom Conversations  
   
 # Summary  
-#Checking yet another GitHub repo by dev branch
   
 Create your own or use text script files shared by other users.   
   

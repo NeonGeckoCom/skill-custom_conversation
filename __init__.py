@@ -3256,6 +3256,12 @@ class CustomConversations(MycroftSkill):
         pass
 
     def update_transcript(self, utterance, filename, start_time):
+        """
+        Called to save user-neon conversation while a script is running
+        :param utterance: conversation line to be saved
+        :param filename: filename of a running script
+        :param start_time: time when script is considered to start running
+        """
         with open(os.path.join(self.transcript_location, f'{filename}_{start_time}.txt'), 'a') as transcript:
             transcript.write(utterance)
 
