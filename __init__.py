@@ -1638,7 +1638,8 @@ class CustomConversations(MycroftSkill):
                 else:
                     raw, replacement = pair.lower().strip().split(" ", 1)
                 LOG.debug(f"Replace {raw} with {replacement}")
-                if f"{raw}" in string_to_sub:
+                if f"{raw}" in string_to_sub.split():
+                    # TODO: Better methodology to prevent substring replacements DM
                     LOG.debug(f"found {raw}")
                     string_to_sub = string_to_sub.replace(f"{raw}", f"{replacement}")
                     # string_to_sub = string_to_sub.replace(f" {raw} ", f" {replacement} ")
