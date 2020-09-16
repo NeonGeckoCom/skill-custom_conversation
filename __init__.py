@@ -564,6 +564,7 @@ class CustomConversations(MycroftSkill):
                         mod_time = round(os.path.getmtime(os.path.join(self.text_location, script)))
                         if not self.settings.get("updates"):
                             create_time = 0
+                            self.ngi_settings.update_yaml_file("updates", value={}, final=True)
                         else:
                             create_time = self.settings.get("updates", {}).get(script, 0)
 
