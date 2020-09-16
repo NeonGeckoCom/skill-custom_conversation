@@ -567,10 +567,11 @@ class CustomConversations(MycroftSkill):
                         else:
                             create_time = self.settings.get("updates", {}).get(script, 0)
 
-                        # Backup any old versions
+                        # Backup any old versions if modified since last update from remote
                         if mod_time > create_time:
                             timestamp = time.strftime('%Y-%m-%d--%H_%M')
                             backup_name = f"{os.path.splitext(script)[0]}_{timestamp}{os.path.splitext(script)[1]}"
+                            os.makedirs(os.path.join(self.text_location, "backup"), exist_ok=True)
                             shutil.move(os.path.join(self.text_location, script),
                                         os.path.join(self.text_location, "backup", backup_name))
                             LOG.debug(f"Local text modified, backed up {script} to {backup_name}")
