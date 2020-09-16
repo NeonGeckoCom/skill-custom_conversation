@@ -337,6 +337,9 @@ class CustomConversations(MycroftSkill):
         active_dict["script_filename"] = file_to_run.rstrip().replace(" ", "_").replace("-", "_")
         active_dict["script_start_time"] = int(time.time())
         LOG.info(active_dict["script_filename"])
+
+        # Start transcript file
+        os.makedirs(self.transcript_location, exist_ok=True)
         self.update_transcript(f'RUNNING SCRIPT {active_dict["script_filename"]}\n',
                                filename=active_dict["script_filename"],
                                start_time=active_dict["script_start_time"]
@@ -514,6 +517,7 @@ class CustomConversations(MycroftSkill):
             "last_variable": None,      # Last variable read from the script (used to handle continuations)
             "synonym_command": None,    # Command to execute when a synonym is heard (run script)
             "synonyms": [],             # List of synonyms available to run the script
+            "script_start_time": None,  # Epoch time of script start
 
             # Runtime Variables
             "current_index": 0,         # Current formatted_script index being parsed or executed
