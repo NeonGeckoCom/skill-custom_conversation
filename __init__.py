@@ -100,6 +100,7 @@ class CustomConversations(MycroftSkill):
         self.audio_location = f"{self.__location__}/script_audio"
         self.transcript_location = f"{self.__location__}/script_transcript"
         self.tz = gettz(self.user_info_available["location"]["tz"])
+        self.update_message = False
         self.reload_skill = False  # This skill should not be reloaded or else active users break
         # self.pre_parser_options,
         self.runtime_execution, self.variable_functions = {}, {}
@@ -206,18 +207,22 @@ class CustomConversations(MycroftSkill):
             LOG.debug(message)
             # if self.neon_in_request(message):
             self.speak_dialog("update_started")
-            self.check_for_signal("CC_convoSuccess")
-            self.check_for_signal("CC_convoFailure")
-            self.create_signal("CC_updating")
-            self._update_scripts()
+            # self.check_for_signal("CC_convoSuccess")
+            # self.check_for_signal("CC_convoFailure")
+            # self.create_signal("CC_updating")
+            self.update_message = message
+            success = self._update_scripts()
             time.sleep(1)
-            while self.check_for_signal("CC_updating", 30):
-                time.sleep(1)
-            if self.check_for_signal("CC_convoSuccess"):
-                self.speak("Successfully updated conversation scripts.")  # TODO: To Dialog DM
-            elif self.check_for_signal("CC_convoFailure"):
-                self.speak("ERROR")  # TODO: To Dialog DM
-            # self.check_for_signal("CC_updating")
+            # while self.check_for_signal("CC_updating", 30):
+            #     time.sleep(1)
+            # if self.check_for_signal("CC_convoSuccess"):
+            if self.server:
+                if success:
+                    self.speak_dialog("update_success")
+                # elif self.check_for_signal("CC_convoFailure"):
+                else:
+                    self.speak_dialog("update_failed")
+                # self.check_for_signal("CC_updating")
         else:
             self.speak_dialog("update_disallowed")
 
@@ -530,70 +535,21 @@ class CustomConversations(MycroftSkill):
         """
         if self.server:
             try:
-                self.bus.emit(Message('neon.update_scripts'))
-                self.create_signal("UpdateConversationFiles")  # TODO: Not this, just emit from here! DM
-                while self.check_for_signal("CC_updating", 10):
-                    time.sleep(0.5)
+                status = self.bus.wait_for_response(Message('neon.update_scripts'))
+                LOG.info(status)
+                self.check_for_signal("CC_updating")
+                # self.create_signal("UpdateConversationFiles")
+                # while self.check_for_signal("CC_updating", 10):
+                #     time.sleep(0.5)
+                return status.get("success")
             except Exception as e:
                 LOG.error(e)
-                self.check_for_signal("CC_updating")
+                return False
+                # self.check_for_signal("CC_updating")
         else:
             self.bus.once("neon.server.update_scripts.response", self._handle_updated_scripts)
             self.bus.emit(Message("neon.client.update_scripts"))  # TODO: Consider adding context here DM
-            # os.chdir(self.configuration_available["dirVars"]["ngiDir"])
-            # subprocess.Popen(['bash', '-c', ". ./functions.sh; getConversations; exit"])
-            # timer_start = time.time()
-            # while not self.check_for_signal("CC_convoSuccess", -1) and self.check_for_signal("CC_updating", -1) and \
-            #         time.time() - timer_start < 10:
-            #     time.sleep(1)
-            # filename = None
-            # for file in [x for x in os.listdir(self.text_location)
-            #              if os.path.isfile(os.path.join(self.text_location, x))]:
-            #     # LOG.debug(f"DM: script: {file}")
-            #     last_updated = None
-            #     try:
-            #         LOG.debug(file)
-            #         filename, file_ext = os.path.splitext(file)
-            #         modified = datetime.datetime.utcfromtimestamp(
-            #             os.path.getmtime(os.path.join(self.__location__, "script_txt/" + file
-            #                                           ))).strftime('%Y-%m-%d %H:%M:%S.%f')
-            #         modified = datetime.datetime.strptime(modified, '%Y-%m-%d %H:%M:%S.%f')
-            #         # LOG.info(f"{modified}")
-            #
-            #         if self.settings.get("script_updates", {}).get(filename, None):
-            #             last_updated = datetime.datetime.strptime(self.settings["script_updates"]
-            #                                                       [filename], '%Y-%m-%d %H:%M:%S.%f')
-            #         # LOG.info(f"{modified}  {last_updated}")
-            #     except Exception as e:
-            #         LOG.error(e)
-            #         modified = None
-            #
-            #     # Update cache if script updated or not in cache dir
-            #     if filename and (not last_updated or last_updated < modified or
-            #                      not os.path.isfile(f'{self.configuration_available["dirVars"]["cacheDir"]}'
-            #                                         f'/scripts/{filename}')):
-            #         try:
-            #             if self._check_script_file(file):
-            #                 LOG.debug(f"Update cache for {filename}")
-            #                 self._reset_values("neon")
-            #                 self.active_conversations["neon"]["script_filename"] = filename
-            #                 _ = self._load_to_cache(self.active_conversations["neon"], filename, "neon", True)
-            #                 LOG.info(f"done loading {filename}")
-            #             else:
-            #                 # mv from dir/file to dir/invalid/file
-            #                 LOG.error(f"Problem with {file}")
-            #                 os.makedirs(os.path.join(f'{self.text_location}/invalid/'), exist_ok=True)
-            #                 shutil.move(os.path.join(self.text_location, file),
-            #                             os.path.join(f'{self.text_location}/invalid/', file))
-            #                 # self.speak_dialog("ProblemInFile", {"file_name": file})
-            #         except Exception as e:
-            #             # LOG.error(f"Error loading {filename}")
-            #             LOG.error(e)
-            #
-            # # Notify skills and core of changes after all are done
-            # # self.bus.emit(Message('check.yml.updates',
-            # #                       {"modified": ["ngi_local_conf"]}, {"origin": "custom-conversation.neon"}))
-            # LOG.info("Updated cc cache")
+            return None
 
     def _handle_updated_scripts(self, message):
         # LOG.debug(message.msg_type)
@@ -654,8 +610,15 @@ class CustomConversations(MycroftSkill):
         self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
         self.bus.emit(Message('check.yml.updates',
                               {"modified": ["ngi_skill_conf"]}, {"origin": self.name}))
-        self.create_signal("CC_convoSuccess")  # TODO: convoFailure
-        self.check_for_signal("CC_updating")
+        if self.update_message:
+            if message.data.get("success"):
+                self.speak_dialog("update_success", message=self.update_message)
+            else:
+                self.speak_dialog("update_failed", message=self.update_message)
+            self.update_message = None
+
+        # self.create_signal("CC_convoSuccess")
+        # self.check_for_signal("CC_updating")
 
     def _check_script_file(self, filename, compiled=True):
         """
