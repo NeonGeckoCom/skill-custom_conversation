@@ -562,7 +562,10 @@ class CustomConversations(MycroftSkill):
                     # File exists, check overwrite
                     if os.path.isfile(os.path.join(self.text_location, script)):
                         mod_time = round(os.path.getmtime(os.path.join(self.text_location, script)))
-                        create_time = self.settings.get("updates", {}).get(script, 0)
+                        if not self.settings.get("updates"):
+                            create_time = 0
+                        else:
+                            create_time = self.settings.get("updates", {}).get(script, 0)
 
                         # Backup any old versions
                         if mod_time > create_time:
