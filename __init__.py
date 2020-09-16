@@ -47,6 +47,7 @@ from mycroft.util.log import LOG
 import random
 import difflib
 import datetime
+import time
 from NGI.utilities.chat_user_util import get_chat_nickname_from_filename as nick
 from NGI.utilities.utilHelper import scrape_page_for_links as scrape
 from NGI.utilities.parseUtils import clean_quotes
@@ -97,7 +98,9 @@ class CustomConversations(MycroftSkill):
         self.file_ext = ".ncs"
         self.text_location = f"{self.__location__}/script_txt"
         self.audio_location = f"{self.__location__}/script_audio"
+        self.transcript_location = f"{self.__location__}/script_transcript"
         self.tz = gettz(self.user_info_available["location"]["tz"])
+        self.update_message = False
         self.reload_skill = False  # This skill should not be reloaded or else active users break
         # self.pre_parser_options,
         self.runtime_execution, self.variable_functions = {}, {}
@@ -204,18 +207,22 @@ class CustomConversations(MycroftSkill):
             LOG.debug(message)
             # if self.neon_in_request(message):
             self.speak_dialog("update_started")
-            self.check_for_signal("CC_convoSuccess")
-            self.check_for_signal("CC_convoFailure")
-            self.create_signal("CC_updating")
-            self._update_scripts()
+            # self.check_for_signal("CC_convoSuccess")
+            # self.check_for_signal("CC_convoFailure")
+            # self.create_signal("CC_updating")
+            self.update_message = message
+            success = self._update_scripts()
             time.sleep(1)
-            while self.check_for_signal("CC_updating", 30):
-                time.sleep(1)
-            if self.check_for_signal("CC_convoSuccess"):
-                self.speak("Successfully updated conversation scripts.")  # TODO: To Dialog DM
-            elif self.check_for_signal("CC_convoFailure"):
-                self.speak("ERROR")  # TODO: To Dialog DM
-            # self.check_for_signal("CC_updating")
+            # while self.check_for_signal("CC_updating", 30):
+            #     time.sleep(1)
+            # if self.check_for_signal("CC_convoSuccess"):
+            if self.server:
+                if success:
+                    self.speak_dialog("update_success")
+                # elif self.check_for_signal("CC_convoFailure"):
+                else:
+                    self.speak_dialog("update_failed")
+                # self.check_for_signal("CC_updating")
         else:
             self.speak_dialog("update_disallowed")
 
@@ -231,9 +238,9 @@ class CustomConversations(MycroftSkill):
 
     @intent_handler(IntentBuilder("SetDefault").require('default'))
     def handle_set_default(self, message):
-        user = "local"
-        if self.server:
-            user = nick(message.context["flac_filename"])
+        user = self.get_utterance_user(message)
+        # if self.server:
+        #     user = nick(message.context["flac_filename"])
         if user not in self.active_conversations.keys():
             self._reset_values(user)
         utt = message.data.get("utterance")
@@ -254,9 +261,9 @@ class CustomConversations(MycroftSkill):
     @intent_handler(IntentBuilder("EmailScript").optionally('Neon').require('email').require('script'))
     def handle_email_file(self, message):
         if self.neon_in_request(message):
-            user = "local"
-            if self.server:
-                user = nick(message.context["flac_filename"])
+            user = self.get_utterance_user(message)
+            # if self.server:
+            #     user = nick(message.context["flac_filename"])
             if user not in self.active_conversations.keys():
                 self._reset_values(user)
             utt = message.data.get("utterance")
@@ -306,9 +313,9 @@ class CustomConversations(MycroftSkill):
         :param message: Message object
         :return:
         """
-        user = "local"
-        if self.server:
-            user = nick(message.context["flac_filename"])
+        user = self.get_utterance_user(message)
+        # if self.server:
+        #     user = nick(message.context["flac_filename"])
         if self.active_conversations.get(user, None):
             LOG.info("Exiting previously open skill file")
         self._reset_values(user)
@@ -328,7 +335,15 @@ class CustomConversations(MycroftSkill):
         file_to_run = message.data.get('file_to_run')
         # LOG.info(file_to_run)
         active_dict["script_filename"] = file_to_run.rstrip().replace(" ", "_").replace("-", "_")
+        active_dict["script_start_time"] = int(time.time())
         LOG.info(active_dict["script_filename"])
+
+        # Start transcript file
+        os.makedirs(self.transcript_location, exist_ok=True)
+        self.update_transcript(f'RUNNING SCRIPT {active_dict["script_filename"]}\n',
+                               filename=active_dict["script_filename"],
+                               start_time=active_dict["script_start_time"]
+                               )
         # if self.formatted_file in
 
         # file_path_to_check = self.__location__ + "/script_txt/" + active_dict["script_filename"] + ".txt"
@@ -388,6 +403,7 @@ class CustomConversations(MycroftSkill):
                 # self._load_to_cache(active_dict, file_to_run, user)
                 # cache = self.get_cached_data(f'scripts/{active_dict["script_filename"]}')
                 # LOG.info(json.dumps(cache, indent=4))
+                # LOG.info(f'Checking for cache AP')
 
             LOG.info(f'{active_dict["script_filename"]} loaded from cache')
             try:
@@ -501,6 +517,7 @@ class CustomConversations(MycroftSkill):
             "last_variable": None,      # Last variable read from the script (used to handle continuations)
             "synonym_command": None,    # Command to execute when a synonym is heard (run script)
             "synonyms": [],             # List of synonyms available to run the script
+            "script_start_time": None,  # Epoch time of script start
 
             # Runtime Variables
             "current_index": 0,         # Current formatted_script index being parsed or executed
@@ -522,70 +539,21 @@ class CustomConversations(MycroftSkill):
         """
         if self.server:
             try:
-                self.bus.emit(Message('neon.update_scripts'))
-                self.create_signal("UpdateConversationFiles")  # TODO: Not this, just emit from here! DM
-                while self.check_for_signal("CC_updating", 10):
-                    time.sleep(0.5)
+                status = self.bus.wait_for_response(Message('neon.update_scripts'))
+                LOG.info(status)
+                self.check_for_signal("CC_updating")
+                # self.create_signal("UpdateConversationFiles")
+                # while self.check_for_signal("CC_updating", 10):
+                #     time.sleep(0.5)
+                return status.get("success")
             except Exception as e:
                 LOG.error(e)
-                self.check_for_signal("CC_updating")
+                return False
+                # self.check_for_signal("CC_updating")
         else:
             self.bus.once("neon.server.update_scripts.response", self._handle_updated_scripts)
             self.bus.emit(Message("neon.client.update_scripts"))  # TODO: Consider adding context here DM
-            # os.chdir(self.configuration_available["dirVars"]["ngiDir"])
-            # subprocess.Popen(['bash', '-c', ". ./functions.sh; getConversations; exit"])
-            # timer_start = time.time()
-            # while not self.check_for_signal("CC_convoSuccess", -1) and self.check_for_signal("CC_updating", -1) and \
-            #         time.time() - timer_start < 10:
-            #     time.sleep(1)
-            # filename = None
-            # for file in [x for x in os.listdir(self.text_location)
-            #              if os.path.isfile(os.path.join(self.text_location, x))]:
-            #     # LOG.debug(f"DM: script: {file}")
-            #     last_updated = None
-            #     try:
-            #         LOG.debug(file)
-            #         filename, file_ext = os.path.splitext(file)
-            #         modified = datetime.datetime.utcfromtimestamp(
-            #             os.path.getmtime(os.path.join(self.__location__, "script_txt/" + file
-            #                                           ))).strftime('%Y-%m-%d %H:%M:%S.%f')
-            #         modified = datetime.datetime.strptime(modified, '%Y-%m-%d %H:%M:%S.%f')
-            #         # LOG.info(f"{modified}")
-            #
-            #         if self.settings.get("script_updates", {}).get(filename, None):
-            #             last_updated = datetime.datetime.strptime(self.settings["script_updates"]
-            #                                                       [filename], '%Y-%m-%d %H:%M:%S.%f')
-            #         # LOG.info(f"{modified}  {last_updated}")
-            #     except Exception as e:
-            #         LOG.error(e)
-            #         modified = None
-            #
-            #     # Update cache if script updated or not in cache dir
-            #     if filename and (not last_updated or last_updated < modified or
-            #                      not os.path.isfile(f'{self.configuration_available["dirVars"]["cacheDir"]}'
-            #                                         f'/scripts/{filename}')):
-            #         try:
-            #             if self._check_script_file(file):
-            #                 LOG.debug(f"Update cache for {filename}")
-            #                 self._reset_values("neon")
-            #                 self.active_conversations["neon"]["script_filename"] = filename
-            #                 _ = self._load_to_cache(self.active_conversations["neon"], filename, "neon", True)
-            #                 LOG.info(f"done loading {filename}")
-            #             else:
-            #                 # mv from dir/file to dir/invalid/file
-            #                 LOG.error(f"Problem with {file}")
-            #                 os.makedirs(os.path.join(f'{self.text_location}/invalid/'), exist_ok=True)
-            #                 shutil.move(os.path.join(self.text_location, file),
-            #                             os.path.join(f'{self.text_location}/invalid/', file))
-            #                 # self.speak_dialog("ProblemInFile", {"file_name": file})
-            #         except Exception as e:
-            #             # LOG.error(f"Error loading {filename}")
-            #             LOG.error(e)
-            #
-            # # Notify skills and core of changes after all are done
-            # # self.bus.emit(Message('check.yml.updates',
-            # #                       {"modified": ["ngi_local_conf"]}, {"origin": "custom-conversation.neon"}))
-            # LOG.info("Updated cc cache")
+            return None
 
     def _handle_updated_scripts(self, message):
         # LOG.debug(message.msg_type)
@@ -598,12 +566,17 @@ class CustomConversations(MycroftSkill):
                     # File exists, check overwrite
                     if os.path.isfile(os.path.join(self.text_location, script)):
                         mod_time = round(os.path.getmtime(os.path.join(self.text_location, script)))
-                        create_time = self.settings.get("updates", {}).get(script, 0)
+                        if not self.settings.get("updates"):
+                            create_time = 0
+                            self.ngi_settings.update_yaml_file("updates", value={}, final=True)
+                        else:
+                            create_time = self.settings.get("updates", {}).get(script, 0)
 
-                        # Backup any old versions
+                        # Backup any old versions if modified since last update from remote
                         if mod_time > create_time:
                             timestamp = time.strftime('%Y-%m-%d--%H_%M')
                             backup_name = f"{os.path.splitext(script)[0]}_{timestamp}{os.path.splitext(script)[1]}"
+                            os.makedirs(os.path.join(self.text_location, "backup"), exist_ok=True)
                             shutil.move(os.path.join(self.text_location, script),
                                         os.path.join(self.text_location, "backup", backup_name))
                             LOG.debug(f"Local text modified, backed up {script} to {backup_name}")
@@ -645,9 +618,16 @@ class CustomConversations(MycroftSkill):
         LOG.debug("DONE!")
         self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
         self.bus.emit(Message('check.yml.updates',
-                              {"modified": ["ngi_skill_info"]}, {"origin": "custom-conversation.neon"}))
-        self.create_signal("CC_convoSuccess")  # TODO: convoFailure
-        self.check_for_signal("CC_updating")
+                              {"modified": ["ngi_skill_conf"]}, {"origin": self.name}))
+        if self.update_message:
+            if message.data.get("success"):
+                self.speak_dialog("update_success", message=self.update_message)
+            else:
+                self.speak_dialog("update_failed", message=self.update_message)
+            self.update_message = None
+
+        # self.create_signal("CC_convoSuccess")
+        # self.check_for_signal("CC_updating")
 
     def _check_script_file(self, filename, compiled=True):
         """
@@ -919,11 +899,14 @@ class CustomConversations(MycroftSkill):
                                     parsed_text = text
                                 # parsed_text = normalize(parsed_text)  WYSIWYG, no normalization necessary
                                 LOG.debug(f"runtime_execute({command}|{parsed_text})")
-                                message.data["parser_data"] = line_to_evaluate.get("data")
+                                LOG.debug(line_to_evaluate)
+                                message.data["parser_data"] = deepcopy(line_to_evaluate.get("data"))
+                                LOG.debug(f'parser_data={message.data.get("parser_data")}')
                                 try:
                                     if message.data.get("parser_data"):
                                         for key, val in message.data.get("parser_data").items():
-                                            if val and isinstance(val, str) and "{" in val and "}" in val:
+                                            if val and isinstance(val, str) and "{" in val and "}" in val and \
+                                                    command != "variable":
                                                 message.data.get("parser_data")[key] = \
                                                     self._substitute_variables(user, val, message, False)
                                 except Exception as e:
@@ -1190,6 +1173,18 @@ class CustomConversations(MycroftSkill):
             self.active_conversations[user]["last_request"] = text
             self.create_signal(signal)
             self.speak(text, message=to_speak)
+            user_input = message.data.get("utterances")
+            if user_input:
+                LOG.debug(f'{message.data.get("parser_data").keys()} AP')
+                self.update_transcript(
+                    f'{datetime.datetime.now().isoformat()}, {user} said: \"{user_input[0]}\" \n',
+                    filename=self.active_conversations[user]["script_filename"],
+                    start_time=self.active_conversations[user]["script_start_time"]
+                    )
+            self.update_transcript(f'{datetime.datetime.now().isoformat()}, Neon said: "{text}" \n',
+                                   filename=self.active_conversations[user]["script_filename"],
+                                   start_time=self.active_conversations[user]["script_start_time"]
+                                   )
             self.active_conversations[user]["current_index"] += 1
             # self._continue_script_execution(message, user)
 
@@ -1258,6 +1253,16 @@ class CustomConversations(MycroftSkill):
             self.active_conversations[user]["last_request"] = text
             self.create_signal(signal)
             self.speak(text, message=to_speak)
+            user_input = message.data.get("utterances")
+            if user_input:
+                self.update_transcript(f'{datetime.datetime.now().isoformat()}, {user} said: \"{user_input[0]}\" \n',
+                                       filename=self.active_conversations[user]["script_filename"],
+                                       start_time=self.active_conversations[user]["script_start_time"]
+                                       )
+            self.update_transcript(f'{datetime.datetime.now().isoformat()}, {speaker} said: "{text}" \n',
+                                   filename=self.active_conversations[user]["script_filename"],
+                                   start_time=self.active_conversations[user]["script_start_time"]
+                                   )
             self.active_conversations[user]["current_index"] += 1
             # self._continue_script_execution(message, user)
 
@@ -1606,7 +1611,7 @@ class CustomConversations(MycroftSkill):
         """
         Substitute substrings in a string variable
         :param user: nick on klat server, else "local"
-        :param text: "else:"
+        :param text: sub_values script line
         :param message: incoming messagebus Message
         """
         LOG.debug(text)
@@ -1635,7 +1640,8 @@ class CustomConversations(MycroftSkill):
                 else:
                     raw, replacement = pair.lower().strip().split(" ", 1)
                 LOG.debug(f"Replace {raw} with {replacement}")
-                if f"{raw}" in string_to_sub:
+                if f"{raw}" in string_to_sub.split():
+                    # TODO: Better methodology to prevent substring replacements DM
                     LOG.debug(f"found {raw}")
                     string_to_sub = string_to_sub.replace(f"{raw}", f"{replacement}")
                     # string_to_sub = string_to_sub.replace(f" {raw} ", f" {replacement} ")
@@ -2426,18 +2432,20 @@ class CustomConversations(MycroftSkill):
         parser_data = message.data.get("parser_data")
 
         LOG.debug(text)
-        if "=" in text:
+        LOG.debug(parser_data)
+
+        if parser_data:
+            key = parser_data.get("variable_name")
+            value = parser_data.get("variable_value")
+        elif "=" in text:
             key, value = text.split("=", 1)
         elif ":" in text:
             key, value = text.split(":", 1)
         else:
             key, value = None, text
 
-        if parser_data:
-            key = parser_data.get("variable_name")
-            value = parser_data.get("variable_value", value)
-
         if key:
+            LOG.debug(value)
             # Trim whitespace
             key = key.strip()
             if value:
@@ -2448,9 +2456,10 @@ class CustomConversations(MycroftSkill):
                 LOG.debug(f"looking for {opt} in {value}")
 
                 # If we find an option, process it and stop looking for more options
-                if opt in value:
+                if value.startswith(opt):
                     # LOG.debug(f"found {opt} in {value}")
                     if '{' in str(value):
+                        LOG.warning("This syntax is depreciated, please use '()' to wrap function arguments")
                         val = str(value).split('{')[1].split('}')[0]
                     elif '(' in str(value):
                         val = str(value).split('(')[1].split(')')[0]
@@ -2469,22 +2478,25 @@ class CustomConversations(MycroftSkill):
 
                     break
 
+            if not active_dict["variables"][key]:
+                active_dict["variables"][key] = []
+
+            LOG.debug(value)
             if isinstance(value, list):
                 if not any([i for i in value if ':' in i]):
                     # Standard list of values
                     LOG.debug(active_dict["variables"])
-                    active_dict["variables"][key] = value
+                    active_dict["variables"][key].extend(value)
                     LOG.debug(active_dict["variables"])
                 else:
                     # list of key/value pairs, parse to dict
                     LOG.debug(active_dict["variables"])
-                    active_dict["variables"][key] = \
-                        {i.split(": ")[0]: i.split(": ")[1] for i in value}
+                    active_dict["variables"][key].append({i.split(": ")[0]: i.split(": ")[1] for i in value})
                     LOG.debug(active_dict["variables"])
             elif isinstance(value, dict):
                 # Dict
                 LOG.debug(active_dict["variables"])
-                active_dict["variables"][key] = value
+                active_dict["variables"][key].append(value)
                 LOG.debug(active_dict["variables"])
             else:
                 # String/Int, parse to list
@@ -2493,7 +2505,7 @@ class CustomConversations(MycroftSkill):
                     value = value.replace(", ", ",").strip().split(",")
                 else:
                     value = [value.strip()]
-                active_dict["variables"][key] = value
+                active_dict["variables"][key].extend(value)
                 LOG.debug(active_dict["variables"])
         else:
             LOG.warning(f"Variable line with no value: {text}")
@@ -2942,9 +2954,9 @@ class CustomConversations(MycroftSkill):
         Notify user they have not responded and script will exit
         :param message: message associated with last valid response
         """
-        user = "local"
-        if self.server:
-            user = nick(message.context["flac_filename"])
+        user = self.get_utterance_user(message)
+        # if self.server:
+        #     user = nick(message.context["flac_filename"])
         active_dict = self.active_conversations[user]
         LOG.debug(message)
 
@@ -2969,9 +2981,9 @@ class CustomConversations(MycroftSkill):
         """
         # LOG.debug(f"DM: check_speak: {message.data}")
         try:
-            user = "local"
-            if self.server:
-                user = nick(message.context["flac_filename"])
+            user = self.get_utterance_user(message)
+            # if self.server:
+            #     user = nick(message.context["flac_filename"])
             if user not in self.active_conversations.keys():
                 self._reset_values(user)
             active_dict = self.active_conversations[user]
@@ -3014,13 +3026,13 @@ class CustomConversations(MycroftSkill):
         #         active_dict["current"] = True
 
     def converse(self, utterances, lang="en-us", message=None):
-        user = "local"
+        user = self.get_utterance_user(message)
 
         # LOG.debug(f"DM: {message.data} | {message.context}")
         if not message or not message.context or not utterances:
             return False
-        if self.server:
-            user = nick(message.context["flac_filename"])
+        # if self.server:
+        #     user = nick(message.context["flac_filename"])
 
         if "stop" in str(utterances[0]).split():
             LOG.info(f'Stop request for {user}, pass: {utterances}')
@@ -3055,9 +3067,9 @@ class CustomConversations(MycroftSkill):
         :param message: message to evaluate
         """
         LOG.debug(f"check_if_script_response: {message.data}")
-        user = "local"
-        if self.server:
-            user = nick(message.context["flac_filename"])
+        user = self.get_utterance_user(message)
+        # if self.server:
+        #     user = nick(message.context["flac_filename"])
         if user not in self.active_conversations.keys():
             self._reset_values(user)
         active_dict = self.active_conversations[user]
@@ -3229,6 +3241,16 @@ class CustomConversations(MycroftSkill):
 
     def stop(self):
         pass
+
+    def update_transcript(self, utterance, filename, start_time):
+        """
+        Called to save user-neon conversation while a script is running
+        :param utterance: conversation line to be saved
+        :param filename: filename of a running script
+        :param start_time: time when script is considered to start running
+        """
+        with open(os.path.join(self.transcript_location, f'{filename}_{start_time}.txt'), 'a') as transcript:
+            transcript.write(utterance)
 
 
 def create_skill():
