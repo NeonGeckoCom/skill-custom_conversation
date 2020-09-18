@@ -176,9 +176,10 @@ class CustomConversations(MycroftSkill):
             "select_one": self._variable_select_one,
             "voice_input": self._variable_voice_input,
             "table_scrape": self._variable_table_scrape_to_dict,
-            'random': self._variable_random_select,
-            'closest': self._variable_closest,
-            'profile': self._variable_profile,
+            "random": self._variable_random_select,
+            "closest": self._variable_closest,
+            "profile": self._variable_profile,
+            "skill": self._variable_skill
         }
 
         # Remove all listeners and clear signals before re-registering
@@ -2611,6 +2612,12 @@ class CustomConversations(MycroftSkill):
             self._run_exit(user, "", message)
 
     def _variable_random_select(self, key, user, message=None):
+        """
+        Called at script execution to return a formatted string of a random selection of variable options to be spoken.
+        :param key: variable name to lookup
+        :param user: nick on klat server, else "local"
+        :return: formatted string to be spoken
+        """
         LOG.debug(message)
         try:
             LOG.debug(f"{key}, {user}")
@@ -2750,6 +2757,22 @@ class CustomConversations(MycroftSkill):
         LOG.debug(result)
         return result
 
+    def _variable_skill(self, key, user, message=None):
+        """
+        Execute a skill and get the returned dialog dictionary
+        :param key: intent to execute, data key to extract
+        :param user: user profile requested
+        :return: yml value for requested key
+        """
+
+        intent, data_key = key.rsplit(",", 1)
+        intent = self.active_conversations[user]["variables"][intent][0]
+        LOG.debug(f"{intent}|{data_key}")
+        to_emit = self.build_message("skill_data", intent, message, None, self.active_conversations[user]["speaker_data"])
+        resp = self.bus.wait_for_response(to_emit, "skills:execute.response")
+        LOG.debug(f"{resp.msg_type} | {resp.data}")
+        return resp.data.get("meta", {}).get("data", {}).get(data_key)
+
     def _substitute_variables(self, user, line, message, do_wildcards=False):
         """
         Fills any variables into a line to evaluate
@@ -2777,6 +2800,13 @@ class CustomConversations(MycroftSkill):
         if '{' in line and '}' in line:
             variables = self.active_conversations[user]["variables"]
             LOG.debug(f"len(variables)={len(variables)}")
+
+            # remainder = line
+            # while "{" in remainder:
+            #     parsed, remainder = remainder.split("{", 1)
+            #     key, remainder = remainder.split("}", 1)
+            #     # TODO: Here we take 'key' and do the substitution or variable function DM
+
             # Iterate through words and look for a substitution
             for word in str(line).split():
                 # Handle a variable function
@@ -3037,7 +3067,7 @@ class CustomConversations(MycroftSkill):
         if "stop" in str(utterances[0]).split():
             LOG.info(f'Stop request for {user}, pass: {utterances}')
             return False
-        elif message.context["cc_data"].get("execute_utterance", False):
+        elif message.context["cc_data"].get("execute_from_script", False):
             LOG.info(f'Script execute for {user}, pass: {utterances}')
             return False
         elif user in self.active_conversations and self.check_for_signal(f"{user}_CC_active", -1):
