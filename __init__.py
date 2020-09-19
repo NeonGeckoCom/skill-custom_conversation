@@ -252,7 +252,8 @@ class CustomConversations(MycroftSkill):
         if script_name in available:
             LOG.debug("Good Request")
             if message.context["mobile"]:
-                self.speak(f"Updating your startup script to {script_name}")
+                # self.speak(f"Updating your startup script to {script_name}")
+                self.speak_dialog("startup_script", {"script_name": script_name}, private=True)
                 self.socket_io_emit("scripts_default", f"&name={script_name}", message.context["flac_filename"])
             # TODO: Non-Mobile startup script DM
         else:
@@ -2331,7 +2332,7 @@ class CustomConversations(MycroftSkill):
             .strip('"').replace("\\n", "\n")
 
         if not email_addr:
-            self.speak("No Email")
+            self.speak_dialog("no_email", private=True)
         else:
             self.send_email(title, body, email_addr=email_addr)
             # self.bus.emit(Message("neon.email", {"title": title, "email": email_addr, "body": body}))
