@@ -3286,14 +3286,14 @@ class CustomConversations(MycroftSkill):
         name = message.data.get("script_name")
         author = message.data.get("script_author")
         status = message.data.get("script_status")
-        LOG.info(f"Script upload by {author} | status={status}")
+        LOG.info(f"Script {name} upload by {author} | status={status}")
 
         if status == "exists":
             self.speak_dialog("upload_failed", {"name": name, "reason": "the filename already exists"}, message=message)
         elif status in ("created", "updated"):
             self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
             # Update config to track last updated time
-            self.ngi_settings.update_yaml_file("updates", name, time.time(), final=True)
+            self.ngi_settings.update_yaml_file("updates", message.data.get("file_basename"), time.time(), final=True)
         # elif status == "updated":
         #     self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
         elif status == "no title":
