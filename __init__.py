@@ -550,7 +550,7 @@ class CustomConversations(MycroftSkill):
                 status = self.bus.wait_for_response(Message('neon.update_scripts'))
                 LOG.info(status)
                 self.check_for_signal("CC_updating")
-                uploaded_script_path = status.get("path")
+                uploaded_script_path = status.data.get("path")
                 # if not self.settings.get("updates"):
                 #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
 
@@ -574,7 +574,7 @@ class CustomConversations(MycroftSkill):
                 # self.create_signal("UpdateConversationFiles")
                 # while self.check_for_signal("CC_updating", 10):
                 #     time.sleep(0.5)
-                return status.get("success")
+                return status.data.get("success")
             except Exception as e:
                 LOG.error(e)
                 return False
