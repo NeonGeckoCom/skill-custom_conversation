@@ -17,6 +17,7 @@
 # US Patents 2008-2020: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
 # China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
 import base64
+import glob
 import os
 # import subprocess
 import shutil
@@ -182,6 +183,10 @@ class CustomConversations(MycroftSkill):
             "skill": self._variable_skill
         }
 
+        # Catch invalid/uninitialized update key
+        if not self.settings.get("updates"):
+            self.ngi_settings.update_yaml_file("updates", value={}, final=True)
+
         # Remove all listeners and clear signals before re-registering
         try:
             # self.remove_event("cc_loop:utterance")
@@ -190,6 +195,7 @@ class CustomConversations(MycroftSkill):
             self.clear_signals("CC")
         except Exception as e:
             LOG.error(e)
+
         # Add event listeners
         self.add_event("neon.script_upload", self._handle_script_upload)
         # self.add_event("cc_loop:utterance", self.check_if_script_response)
@@ -544,6 +550,27 @@ class CustomConversations(MycroftSkill):
                 status = self.bus.wait_for_response(Message('neon.update_scripts'))
                 LOG.info(status)
                 self.check_for_signal("CC_updating")
+                uploaded_script_path = status.get("path")
+                # if not self.settings.get("updates"):
+                #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
+
+                if uploaded_script_path:
+                    for script in glob.glob(f'{uploaded_script_path}/*.{self.file_ext}'):
+                        try:
+                            # Iterate over compiled files and ignore Klat updated files
+                            if not self.settings["updates"].get(script):
+                                if os.path.isfile(os.path.join(uploaded_script_path, f"{script}.nct")):
+                                    shutil.copy(os.path.join(uploaded_script_path, f"{script}.nct"),
+                                                os.path.join(self.text_location, f"{script}.nct"))
+                                shutil.copy(os.path.join(uploaded_script_path, f"{script}.{self.file_ext}"),
+                                            os.path.join(self.text_location, f"{self.file_ext}.nct"))
+                            else:
+                                LOG.info(f"Ignoring Klat updated script: {script}")
+                        except Exception as e:
+                            LOG.error(e)
+                else:
+                    LOG.warning("Script update failure!")
+                    return False
                 # self.create_signal("UpdateConversationFiles")
                 # while self.check_for_signal("CC_updating", 10):
                 #     time.sleep(0.5)
@@ -568,11 +595,11 @@ class CustomConversations(MycroftSkill):
                     # File exists, check overwrite
                     if os.path.isfile(os.path.join(self.text_location, script)):
                         mod_time = round(os.path.getmtime(os.path.join(self.text_location, script)))
-                        if not self.settings.get("updates"):
-                            create_time = 0
-                            self.ngi_settings.update_yaml_file("updates", value={}, final=True)
-                        else:
-                            create_time = self.settings.get("updates", {}).get(script, 0)
+                        # if not self.settings.get("updates"):
+                        #     create_time = 0
+                        #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
+                        # else:
+                        create_time = self.settings["updates"].get(script, 0)
 
                         # Backup any old versions if modified since last update from remote
                         if mod_time > create_time:
@@ -3263,10 +3290,12 @@ class CustomConversations(MycroftSkill):
 
         if status == "exists":
             self.speak_dialog("upload_failed", {"name": name, "reason": "the filename already exists"}, message=message)
-        elif status == "created":
+        elif status in ("created", "updated"):
             self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
-        elif status == "updated":
-            self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
+            # Update config to track last updated time
+            self.ngi_settings.update_yaml_file("updates", name, time.time(), final=True)
+        # elif status == "updated":
+        #     self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
         elif status == "no title":
             self.speak_dialog("upload_failed", {"name": name, "reason": "no script title was found"}, message=message)
 
