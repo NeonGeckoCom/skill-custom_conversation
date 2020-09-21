@@ -3287,6 +3287,7 @@ class CustomConversations(MycroftSkill):
         author = message.data.get("script_author")
         status = message.data.get("script_status")
         LOG.info(f"Script {name} upload by {author} | status={status}")
+        LOG.debug(f"message.data={message.data}")
 
         if status == "exists":
             self.speak_dialog("upload_failed", {"name": name, "reason": "the filename already exists"}, message=message)
