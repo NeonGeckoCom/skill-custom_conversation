@@ -2476,16 +2476,19 @@ class CustomConversations(MycroftSkill):
 
         LOG.debug(text)
         LOG.debug(parser_data)
-
+        key, value = None, None
         if parser_data:
             key = parser_data.get("variable_name")
             value = parser_data.get("variable_value")
-        elif "=" in text:
-            key, value = text.split("=", 1)
-        elif ":" in text:
-            key, value = text.split(":", 1)
-        else:
-            key, value = None, text
+
+        if not value:
+            LOG.warning(f"No value parsed for line: {text}")
+            if "=" in text and "{" not in text.split("=")[0]:  # This is a work-around for table_scraped dicts
+                key, value = text.split("=", 1)
+            elif ":" in text:
+                key, value = text.split(":", 1)
+            # else:
+            #     key, value = None, text
 
         if key:
             LOG.debug(value)
@@ -2540,6 +2543,10 @@ class CustomConversations(MycroftSkill):
                 # Dict
                 LOG.debug(active_dict["variables"])
                 active_dict["variables"][key].append(value)
+                LOG.debug(active_dict["variables"])
+            elif value.startswith("{") and value.endswith("}"):
+                from ast import literal_eval
+                active_dict["variables"][key].append(literal_eval(value))
                 LOG.debug(active_dict["variables"])
             else:
                 # String/Int, parse to list
