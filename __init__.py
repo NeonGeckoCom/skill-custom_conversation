@@ -599,6 +599,9 @@ class CustomConversations(MycroftSkill):
 
     def _handle_updated_scripts(self, message):
         # LOG.debug(message.msg_type)
+        if not os.path.isdir(self.text_location):
+            os.makedirs(self.text_location)
+
         # TODO: Check compile time per-script before overwrite? DM
         for script in message.data.keys():
             try:
