@@ -1198,7 +1198,7 @@ class CustomConversations(MycroftSkill):
         """
         # Catch indented section start line
         text = clean_quotes(text)
-        if text.lower().endswith("speak:"):
+        if not text or text.lower().endswith("speak:"):
             self.active_conversations[user]["current_index"] += 1
             # LOG.debug(f"DM: Continue Script Execution Call")
             self._continue_script_execution(message, user)
