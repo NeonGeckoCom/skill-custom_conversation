@@ -558,7 +558,7 @@ class CustomConversations(MycroftSkill):
                 # if not self.settings.get("updates"):
                 #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
 
-                if uploaded_script_path:
+                if uploaded_script_path and status:
                     for script in os.listdir(uploaded_script_path):
                         shutil.copy(os.path.join(uploaded_script_path, script),
                                     os.path.join(self.text_location, script))
