@@ -562,25 +562,6 @@ class CustomConversations(MycroftSkill):
                     for script in os.listdir(uploaded_script_path):
                         shutil.copy(os.path.join(uploaded_script_path, script),
                                     os.path.join(self.text_location, script))
-                    #     try:
-                    #         # Iterate over compiled files and ignore Klat updated files
-                    #         if not self.settings["updates"].get(script):
-                    #             if os.path.isfile(os.path.join(uploaded_script_path, f"{script}.nct")):
-                    #                 shutil.copy(os.path.join(uploaded_script_path, f"{script}.nct"),
-                    #                             os.path.join(self.text_location, f"{script}.nct"))
-                    #             shutil.copy(os.path.join(uploaded_script_path, f"{script}.{self.file_ext}"),
-                    #                         os.path.join(self.text_location, f"{script}.{self.file_ext}"))
-                    #         else:
-                    #             from script_parser import ScriptParser
-                    #             parser = ScriptParser()
-                    #             meta = self.get_cached_data(f"{script}.{self.file_ext}", self.text_location)[9]
-                    #             if meta.get("cversion", "0") != parser.version:
-                    #                 # Parse this with the new parser and update our upload location
-                    #                 parser.parse_text_to_file(meta.get("raw_file"), meta=meta)
-                    #                 shutil.copy(os.path.join(self.text_location, f"{script}.{self.file_ext}"),
-                    #                             os.path.join(uploaded_script_path, f"{script}.{self.file_ext}"))
-                    #     except Exception as e:
-                    #         LOG.error(e)
                 else:
                     LOG.warning("Script update failure!")
                     return False
@@ -715,100 +696,6 @@ class CustomConversations(MycroftSkill):
         #     return True
         # else:
         #     return False
-
-    # def _load_to_cache(self, active_dict, file_to_run, user, preload_only=False):
-    #     """
-    #     Load a new or modified skill file and save to cache (and self.active_conversations if associated with a user);
-    #     called at script update or launch if script file is newer than cached version
-    #     :param active_dict: active_dict for user (or temp one if just pre-loading a file).
-    #                         Should contain script filename here (basename with no dir/ext)
-    #     :param file_to_run: parsed name of the skill file
-    #     :param user: user loading the skill file (or "Neon" if just pre-loading a file)
-    #     """
-    #
-    #     try:
-    #         # saving parsed to cache if hasn't been updated in a while or first time:
-    #         # LOG.info(f'{active_dict["formatted_script"]} saved to cache')
-    #         # to_save_cache = [active_dict["formatted_script"],
-    #         #                  active_dict["speaker_data"],
-    #         #                  active_dict["variables"],
-    #         #                  active_dict["loops_dict"],
-    #         #                  active_dict["goto_tags"],
-    #         #                  active_dict["timeout"],
-    #         #                  active_dict["timeout_action"]]
-    #
-    #         cache_data = ScriptParser().parse_script_to_dict(os.path.join(
-    #             self.__location__, "script_txt/" + active_dict["script_filename"] + ".txt"))
-    #
-    #         # parsed_dict = {"formatted_script": parsed_list[0],
-    #         #                "language": parsed_list[1],
-    #         #                "variables": parsed_list[2],
-    #         #                "loops": parsed_list[3],
-    #         #                "tags": parsed_list[4],
-    #         #                "timeout": parsed_list[5],
-    #         #                "timeout_action": parsed_list[6],
-    #         #                "synonyms": parsed_list[7],
-    #         #                "claps": parsed_list[8],
-    #         #                "meta": parsed_list[9]}
-    #
-    #         active_dict["formatted_script"] = cache_data["formatted_script"]
-    #         active_dict["speaker_data"] = cache_data["language"]
-    #         active_dict["variables"] = cache_data["variables"]
-    #         active_dict["loops_dict"] = cache_data["loops"]
-    #         active_dict["goto_tags"] = cache_data["tags"]
-    #         active_dict["timeout"] = cache_data["timeout"]
-    #         active_dict["timeout_action"] = cache_data["timeout_action"]
-    #         active_dict["script_meta"] = cache_data["meta"]
-    #         synonyms = cache_data["synonyms"]
-    #         claps = cache_data["claps"]
-    #         #######################################################################################################
-    #
-    #         cache_file = ScriptParser().parse_script_to_file(os.path.join(
-    #             self.__location__, "script_txt/" + active_dict["script_filename"] + ".txt"))
-    #         os.makedirs(os.path.join(self.configuration_available["dirVars"]["cacheDir"], "scripts"), exist_ok=True)
-    #         shutil.move(cache_file, os.path.join(self.cache_loc, f'scripts/{active_dict["script_filename"]}'))
-    #         # self.update_cached_data(f'scripts/{active_dict["script_filename"]}', to_save_cache)
-    #
-    #         # Update yml values for script update time so cache can be used later
-    #         # LOG.info(self.configuration_available["devVars"]["ccUpdates"])
-    #         LOG.debug({active_dict["script_filename"]: str(datetime.datetime.utcnow())})
-    #         # self.configuration_available["devVars"]["ccUpdates"] = {} if not \
-    #         #     self.configuration_available["devVars"]["ccUpdates"] else \
-    #         #     self.configuration_available["devVars"]["ccUpdates"]
-    #         # to_add = {**self.configuration_available["devVars"]["ccUpdates"],
-    #         #           **{active_dict["script_filename"]: str(datetime.datetime.utcnow())}}
-    #         to_add = {**self.settings.get("script_updates", {}),
-    #                   **{active_dict["script_filename"]: str(datetime.datetime.utcnow())}}
-    #
-    #         # self.local_config.update_yaml_file(header='devVars', sub_header='ccUpdates', value=to_add)
-    #         # self.local_config.update_yaml_file("devVars", "ccUpdates", to_add, False, True)
-    #         LOG.debug(f"new synonyms: {to_add}")
-    #         self.ngi_settings.update_yaml_file("script_updates", value=to_add)
-    #         # if not preload_only:
-    #         #     self.bus.emit(Message('check.yml.updates',
-    #         #                           {"modified": ["ngi_local_conf"]}, {"origin": "custom-conversation.neon"}))
-    #
-    #         if synonyms and len(synonyms) > 0:
-    #             LOG.info(f'emit to synonyms.neon: {synonyms}')
-    #             run_command = f'run my {active_dict["script_filename"]} script'
-    #             synonym_message = Message("SS_new_syn", {"cmd_phrase": run_command,
-    #                                                      "cc_synonyms": synonyms},
-    #                                       {"origin": "custom-conversation.neon", "nick": user})
-    #             self.bus.emit(synonym_message)
-    #         if claps and len(claps.keys()) > 0:
-    #             pass
-    #
-    #     except KeyError as e:
-    #         LOG.error(e)
-    #         # self.local_config.update_yaml_file(header='devVars', sub_header='ccUpdates',
-    #         #                                    value={active_dict["script_filename"]:
-    #         #                                    str(datetime.datetime.utcnow())})
-    #
-    #     # Reset values if this was only a preload on skill update
-    #     if preload_only:
-    #         LOG.debug(f"Preload skill {file_to_run}")
-    #         self._reset_values("neon")
-    #     return active_dict
 
     def _continue_script_execution(self, message, user="local"):
         """
@@ -947,6 +834,8 @@ class CustomConversations(MycroftSkill):
                                 LOG.debug(line_to_evaluate)
                                 message.data["parser_data"] = deepcopy(line_to_evaluate.get("data"))
                                 LOG.debug(f'parser_data={message.data.get("parser_data")}')
+
+                                # TODO: Annotate this DM
                                 try:
                                     if message.data.get("parser_data"):
                                         for key, val in message.data.get("parser_data").items():
@@ -956,8 +845,10 @@ class CustomConversations(MycroftSkill):
                                                     self._substitute_variables(user, val, message, False)
                                 except Exception as e:
                                     LOG.error(e)
+
+                                # Execute the line
                                 self.runtime_execution[command](user, parsed_text, message)
-                            # This is a variable assignment line
+                            # This is a variable assignment line TODO: Can we ever reach this? DM
                             elif command in self.variable_functions:
                                 # Parse out variable in line
                                 if '{' in text and '}' in text:
@@ -1021,6 +912,11 @@ class CustomConversations(MycroftSkill):
         :param text: string to execute
         :param message: incoming messagebus Message
         """
+
+        parsed_data = message.data.get("parser_data")
+        if parsed_data:
+            text = parsed_data.get("command")
+
         if text == "Execute:":
             self.active_conversations[user]["current_index"] += 1
             # LOG.debug(f"DM: Continue Script Execution Call")
@@ -1050,6 +946,12 @@ class CustomConversations(MycroftSkill):
         :param text: line containing loop name and condition (START/END/UNTIL)
         :param message: incoming messagebus Message
         """
+
+        parsed_data = message.data.get("parser_data")
+        if parsed_data:
+            # TODO: Add parsing and handle it here DM
+            pass
+
         LOG.debug(f"run_loop({text})")
         if ("END" in text) or ("UNTIL" in text):
             # This is the end of a loop, continue or go to start line
@@ -1109,12 +1011,14 @@ class CustomConversations(MycroftSkill):
         LOG.debug(text)
         active_dict = self.active_conversations[user]
 
-        # This is a line number
-        if str(text).isnumeric():
-            LOG.debug(f"{text} is a number")
+        parser_data = message.data.get("parser_data")
+        if parser_data and parser_data.get("destination"):
+            to_find = active_dict["goto_tags"][parser_data["destination"]]
+        elif str(text).isnumeric():
+            LOG.warning(f"No parsed destination! {text} is a number")
             to_find = int(text)
         else:
-            LOG.debug(f"{text} is a tag")
+            LOG.warning(f"No parsed destination! {text} is a tag")
             if text in active_dict["goto_tags"]:
                 to_find = int(active_dict["goto_tags"][text])
             else:
@@ -1150,6 +1054,7 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         """
 
+        # TODO: Use parser_data
         if text == "Python:":
             self.active_conversations[user]["current_index"] += 1
             # LOG.debug(f"DM: Continue Script Execution Call")
@@ -1199,8 +1104,13 @@ class CustomConversations(MycroftSkill):
         :param text: string to speak
         :param message: incoming messagebus Message
         """
-        # Catch indented section start line
-        text = clean_quotes(text)
+
+        parser_data = message.data.get("parser_data")
+        if parser_data:
+            text = clean_quotes(parser_data.get("phrase"))
+        else:
+            text = clean_quotes(text)
+
         if not text or text.lower().endswith("speak:"):
             self.active_conversations[user]["current_index"] += 1
             # LOG.debug(f"DM: Continue Script Execution Call")
@@ -1240,60 +1150,61 @@ class CustomConversations(MycroftSkill):
         :param text: string to speak
         :param message: incoming messagebus Message
         """
+
         # Catch indented section start line
         if text == "Name speak:":
             self.active_conversations[user]["current_index"] += 1
             # LOG.debug(f"DM: Continue Script Execution Call")
             self._continue_script_execution(message, user)
         else:
+            speaker_dict = self.active_conversations[user]["speaker_data"]
             if message.data.get("parser_data"):
                 parser_data = message.data.get("parser_data")
                 speaker = parser_data.get("name")
                 text = parser_data.get("phrase", text)
                 if '"' in text or "'" in text:
                     text = clean_quotes(text)
+                speaker_data = deepcopy(speaker_dict)
+                speaker_data["name"] = speaker
+                speaker_data["gender"] = parser_data.get("gender", speaker_dict.get("gender"))
+                speaker_data["language"] = parser_data.get("language", speaker_dict.get("language"))
+                LOG.debug(speaker_data)
             else:
+                LOG.warning("Couldn't parse speaker data!")
                 speaker, text = text.split(':', 1)
+                # Catch when multiple parameters are passed
+                if ',' in speaker:
+                    parts = speaker.split(',')
+                    LOG.debug(parts)
+                    gender = speaker_dict.get("gender")
+                    language = speaker_dict.get("language")
+                    name = speaker
+                    for part in parts:
+                        part = part.strip()
+                        LOG.debug(part)
+                        if part in ("male", "female"):
+                            gender = part
+                        elif len(part) == 5 and part[2] == '-':
+                            language = part
+                        else:
+                            name = part
+
+                    # Handle passed gender change without specified language
+                    if not language:
+                        language = self.preference_speech(message)["tts_language"]
+
+                    LOG.debug(f"{gender} {language} {name} {speaker}")
+
+                    speaker_data = {"name": name, "gender": gender, "language": language, "override_user": True}
+                else:
+                    speaker_data = speaker_dict
+
             LOG.debug(f"{speaker} Speak: {text}")
             signal = build_signal_name(user, text)
-            # for opt in self.variable_functions:
-            #     if opt in text:
-            #         key = str(text).split('{')[1].split('}')[0]
-            #         self.variable_functions[opt](key, user, message)
             text = str(text).strip().strip('"')
             to_speak = self.build_message("neon speak", text, message, signal,
-                                          speaker=self.active_conversations[user]["speaker_data"])
+                                          speaker=speaker_data)
             LOG.debug(speaker)
-            # Catch when multiple parameters are passed
-            if ',' in speaker:
-                parts = speaker.split(',')
-                LOG.debug(parts)
-                LOG.debug(to_speak.data["speaker"])
-                gender = to_speak.data["speaker"].get("gender")
-                language = to_speak.data["speaker"].get("language")
-                name = to_speak.data["speaker"].get("name")
-                for part in parts:
-                    part = part.strip()
-                    LOG.debug(part)
-                    if part in ("male", "female"):
-                        gender = part
-                    elif len(part) == 5 and part[2] == '-':
-                        language = part
-                    else:
-                        name = part
-
-                # Handle passed gender change without specified language
-                if not language:
-                    language = self.preference_speech(message)["tts_language"]
-
-                LOG.debug(f"{gender} {language} {name}")
-                to_speak.data["speaker"]["gender"] = gender
-                to_speak.data["speaker"]["language"] = language
-                to_speak.data["speaker"]["name"] = name
-                to_speak.data["speaker"]["voice"] = None
-            # Only one param, must be a name
-            else:
-                to_speak.data["speaker"]["name"] = speaker
             LOG.debug(to_speak.data)
             self.active_conversations[user]["last_request"] = text
             self.create_signal(signal)
@@ -1318,6 +1229,8 @@ class CustomConversations(MycroftSkill):
         :param text: case statement with variable condition
         :param message: incoming messagebus Message
         """
+
+        # TODO: parser_data DM
         LOG.debug(f"DM: run_case({text})")
         active_dict = self.active_conversations[user]
         try:
@@ -1426,6 +1339,7 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         """
 
+        # TODO: Parser Data has left/right or variable AND comparator (BOOL for variable) DM
         # LOG.debug(f"{text}")
         # active_dict = self.active_conversations[user]
 
@@ -2825,12 +2739,16 @@ class CustomConversations(MycroftSkill):
         :return: yml value for requested key
         """
 
-        intent, data_key = key.rsplit(",", 1)
-        intent = self.active_conversations[user]["variables"][intent][0]
+        LOG.debug(key)
+        intent, data_key = key.split(",", 1)
+        data_key = data_key.strip()
+        intent = self.active_conversations[user]["variables"].get(intent, [clean_quotes(intent)])[0]
         LOG.debug(f"{intent}|{data_key}")
-        to_emit = self.build_message("skill_data", intent, message, None, self.active_conversations[user]["speaker_data"])
+        to_emit = self.build_message("skill_data", intent, message, None,
+                                     self.active_conversations[user]["speaker_data"])
         resp = self.bus.wait_for_response(to_emit, "skills:execute.response")
         LOG.debug(f"{resp.msg_type} | {resp.data}")
+        LOG.debug(f'returning: {resp.data.get("meta", {}).get("data", {}).get(data_key)}')
         return resp.data.get("meta", {}).get("data", {}).get(data_key)
 
     def _substitute_variables(self, user, line, message, do_wildcards=False):
@@ -2856,177 +2774,176 @@ class CustomConversations(MycroftSkill):
         #     line = line.replace(' * ', " \{_wildcard_" + str(i) + '\} ')
         #     i += 1
 
-        # There is at least one variable substitution here
+        # There is at least one variable substitution here  TODO: Use parser_data for this
         if '{' in line and '}' in line or '(' in line and ')' in line:
             variables = self.active_conversations[user]["variables"]
             LOG.debug(f"len(variables)={len(variables)}")
 
-            # remainder = line
-            # while "{" in remainder:
-            #     parsed, remainder = remainder.split("{", 1)
-            #     key, remainder = remainder.split("}", 1)
-            #     # TODO: Here we take 'key' and do the substitution or variable function DM
-
+            tokens = []
+            remainder = line
+            while "{" in remainder:
+                parsed, remainder = remainder.split("{", 1)
+                key, remainder = remainder.split("}", 1)
+                tokens.append(parsed)
+                tokens.append("{" + key + "}")
+            tokens.append(remainder)
+            LOG.debug(tokens)
             # Iterate through words and look for a substitution
-            for word in str(line).split():
-                # Handle a variable function
-                if "(" in word and word.split("(")[0].strip() in self.variable_functions:
-                    cmd = word.split('(')[0].strip()
-                    key = word.split('(')[1].split(')')[0].strip()
-                    LOG.debug(f"{cmd} found in line for key={key}")
-                    result = self.variable_functions[cmd](key, user, message)
-                    LOG.debug(f"DM: replacing {word} with {result}")
-                    line = line.replace(word, str(result))
-                    # line = re.sub(str(cmd + "{" + key + "}"), str(result), str(line))
-                # Handle a variable substitution
-                if '{' in word and '}' in word:
-                    # # This is a simple substitution
-                    # if word.startswith('{') and word.endswith('}'):
-                    #     var = word.replace(':', '').lstrip('{').rstrip('}')
-                    #     LOG.debug(f"variable to replace is {var}")
-                    #     LOG.debug(f"replacing '{word}' with '{variables.get(var, '')}' in '{line}'")
-                    #
-                    #     # If variable is a list, use the first element
-                    #     if isinstance(variables.get(var, ""), list):
-                    #         line = re.sub(word, ",".join(variables.get(var)), line).replace('"', '')
-                    #     else:
-                    #         line = re.sub(word, variables.get(var, ""), line)
-
-                    # This is some functional replacement (depreciated syntax, should be "()")
-                    if word.split('{')[0].strip() in self.variable_functions:  # This syntax is depreciated
-                        LOG.warning(f"Depreciated syntax used in line: {line}")
-                        cmd = word.split('{')[0].strip()
-                        key = word.split('{')[1].split('}')[0].strip()
-                        LOG.debug(f"{cmd} found in line for key={key}")
+            for token in tokens:
+                # # Handle a variable function
+                # if "(" in word and word.split("(")[0].strip() in self.variable_functions:
+                #     cmd = word.split('(')[0].strip()
+                #     key = word.split('(')[1].split(')')[0].strip()
+                #     LOG.debug(f"{cmd} found in line for key={key}")
+                #     result = self.variable_functions[cmd](key, user, message)
+                #     LOG.debug(f"DM: replacing {word} with {result}")
+                #     line = line.replace(word, str(result))
+                #     # line = re.sub(str(cmd + "{" + key + "}"), str(result), str(line))
+                # # Handle a variable substitution
+                # if '{' in word and '}' in word:
+                #     # # This is a simple substitution
+                #     # if word.startswith('{') and word.endswith('}'):
+                #     #     var = word.replace(':', '').lstrip('{').rstrip('}')
+                #     #     LOG.debug(f"variable to replace is {var}")
+                #     #     LOG.debug(f"replacing '{word}' with '{variables.get(var, '')}' in '{line}'")
+                #     #
+                #     #     # If variable is a list, use the first element
+                #     #     if isinstance(variables.get(var, ""), list):
+                #     #         line = re.sub(word, ",".join(variables.get(var)), line).replace('"', '')
+                #     #     else:
+                #     #         line = re.sub(word, variables.get(var, ""), line)
+                #
+                #     # This is some functional replacement (depreciated syntax, should be "()")
+                #     if word.split('{')[0].strip() in self.variable_functions:  # This syntax is depreciated
+                #         LOG.warning(f"Depreciated syntax used in line: {line}")
+                #         cmd = word.split('{')[0].strip()
+                #         key = word.split('{')[1].split('}')[0].strip()
+                #         LOG.debug(f"{cmd} found in line for key={key}")
+                #         result = self.variable_functions[cmd](key, user, message)
+                #         LOG.debug(f"DM: replacing {word} with {result}")
+                #         line = line.replace(word, str(result))
+                #         # line = re.sub(str(cmd + "{" + key + "}"), str(result), str(line))
+                #     # This is an inline substitution
+                #     else:
+                #         prefix, to_parse = word.split('{', 1)
+                #         var, suffix = to_parse.split('}', 1)
+                if token.startswith('{') and token.endswith('}'):
+                    var = token.lstrip('{').rstrip('}')
+                # var = str(token.strip('\\'))  # This catches leftover '\' in variable names
+                #     if any(i for i in self.from_caffeine_wiz if i[0] in drink or drink in i[0]):
+                    LOG.debug(var)
+                    if any(x for x in self.variable_functions if x in var):  # Handle variable substitution
+                        LOG.debug(var)
+                        cmd, key = var.split("(", 1)
+                        key = key.rstrip(")")
+                        LOG.debug(cmd)
                         result = self.variable_functions[cmd](key, user, message)
-                        LOG.debug(f"DM: replacing {word} with {result}")
-                        line = line.replace(word, str(result))
-                        # line = re.sub(str(cmd + "{" + key + "}"), str(result), str(line))
-                    # This is an inline substitution
-                    else:
-                        prefix, to_parse = word.split('{', 1)
-                        var, suffix = to_parse.split('}', 1)
-                        var = str(var.strip('\\'))  # This catches leftover '\' in variable names
-                        if var.endswith(")"):  # Handle variable substitution
-                            cmd, key = var.split("(", 1)
-                            key = key.rstrip(")")
-                            result = self.variable_functions[cmd](key, user, message)
-                            LOG.debug(f"DM: replacing {var} with {result}")
-                            line = line.replace('{' + var + '}', str(result))
-                        else:  # Handle simple substitution
-                            LOG.debug(var)
 
-                            # Get variable value
-                            raw_val = [""]
-                            # Check if this variable is defined with a value in this script
-                            if '[' in var and ']' in var:
-                                var_name = var.split('[')[0]
+                        LOG.debug(f"replacing {token} with {result} in {line}")
+                        index = tokens.index(token)
+                        tokens.remove(token)
+                        tokens.insert(index, result)
+
+                    else:  # Handle simple substitution
+                        LOG.debug(var)
+
+                        # Get variable value
+                        raw_val = [""]
+                        # Check if this variable is defined with a value in this script
+                        if '[' in var and ']' in var:
+                            var_name = var.split('[')[0]
+                        else:
+                            var_name = var
+                        if var_name in variables.keys() and variables[var_name]:
+                            raw_val = variables[var_name]
+                        # Check if this variable is defined in a script that called this script
+                        else:
+                            for script in self.active_conversations[user]["pending_scripts"]:
+                                if var_name in script.get("variables", {}).keys():
+                                    raw_val = script["variables"][var_name]
+                                    break
+
+                        # Get a specific index from our raw value
+                        if '[' in var and ']' in var:
+                            # idx = var.split('[')[1].split(']')[0]
+                            # var = var.split('[')[0]
+                            var, indices = var.split('[', 1)
+                            idx = indices.split(']', 1)[0]  # Multiple indices could be handled in the remainder here
+                            LOG.debug(f"get {var}[{idx}] in {raw_val}")
+                            # Wildcard return all
+                            if idx == '*':
+                                val = ', '.join(raw_val)
+                            # Get value at requested index
+                            elif idx in range(0, len(raw_val)):
+                                val = variables.get(var, [''])[idx]
+                            # Catch index out of range and return the last value
                             else:
-                                var_name = var
-                            if var_name in variables.keys() and variables[var_name]:
-                                raw_val = variables[var_name]
-                            # Check if this variable is defined in a script that called this script
-                            else:
-                                for script in self.active_conversations[user]["pending_scripts"]:
-                                    if var_name in script.get("variables", {}).keys():
-                                        raw_val = script["variables"][var_name]
-                                        break
+                                val = variables.get(var, [''])[0]
+                            LOG.debug(val)
+                        # Just get the value and check it is a list and has at least one value
+                        else:
+                            val = raw_val
+                            LOG.debug(variables)
+                            LOG.debug(val)
+                            # LOG.debug(val[0])
+                            # Catch error
+                            if not isinstance(val, list):
+                                val = [val]
+                            if len(val) == 0:
+                                if var not in variables:
+                                    active_dict = self.active_conversations[user]
+                                    line_num = active_dict["formatted_script"][
+                                        active_dict["current_index"]]["line_number"]
+                                    self.speak_dialog("error_at_line",
+                                                      {"error": "undeclared variable",
+                                                                "line": line_num,
+                                                                "detail": line,
+                                                                "script": active_dict["script_filename"]})
+                                val = ""
+                            if isinstance(val[0], list):
+                                LOG.error(f"val is list of lists: {val}")
+                                val = val[0]
+                            # LOG.debug(variables)
 
-                            # Get a specific index from our raw value
-                            if '[' in var and ']' in var:
-                                # idx = var.split('[')[1].split(']')[0]
-                                # var = var.split('[')[0]
-                                var, indices = var.split('[', 1)
-                                idx = indices.split(']', 1)[0]  # Multiple indices could be handled in the remainder here
-                                LOG.debug(f"get {var}[{idx}] in {raw_val}")
-                                # Wildcard return all
-                                if idx == '*':
-                                    val = ', '.join(raw_val)
-                                # Get value at requested index
-                                elif idx in range(0, len(raw_val)):
-                                    val = variables.get(var, [''])[idx]
-                                # Catch index out of range and return the last value
-                                else:
-                                    val = variables.get(var, [''])[0]
-                                LOG.debug(val)
-                            # Just get the value and check it is a list and has at least one value
-                            else:
-                                val = raw_val
-                                LOG.debug(variables)
-                                LOG.debug(val)
-                                # LOG.debug(val[0])
-                                # Catch error
-                                if not isinstance(val, list):
-                                    val = [val]
-                                if len(val) == 0:
-                                    if var not in variables:
-                                        active_dict = self.active_conversations[user]
-                                        line_num = active_dict["formatted_script"][
-                                            active_dict["current_index"]]["line_number"]
-                                        self.speak_dialog("error_at_line",
-                                                          {"error": "undeclared variable",
-                                                                    "line": line_num,
-                                                                    "detail": line,
-                                                                    "script": active_dict["script_filename"]})
-                                    val = ""
-                                if isinstance(val[0], list):
-                                    LOG.error(f"val is list of lists: {val}")
-                                    val = val[0]
-                                # LOG.debug(variables)
+                        # If variable is a list (no index requested), use the first element
+                        if isinstance(val, list):
+                            # if len(val) > 1 and message.data["cc_data"].get("return_list", False):
+                            #     new_word = ",".join(variables.get(var))
+                            # else:
+                            new_word = str(val[0]).strip().strip('"')
+                        else:
+                            LOG.error(f"Value is string and should be list! {val}")
+                            new_word = str(val).strip().strip('"')
+                        # LOG.debug(new_word)
 
-                            # If variable is a list (no index requested), use the first element
-                            if isinstance(val, list):
-                                # if len(val) > 1 and message.data["cc_data"].get("return_list", False):
-                                #     new_word = ",".join(variables.get(var))
-                                # else:
-                                new_word = str(val[0]).strip().strip('"')
-                            else:
-                                LOG.error(f"Value is string and should be list! {val}")
-                                new_word = str(val).strip().strip('"')
-                            # LOG.debug(new_word)
+                        # Cleanup quotes in strings and lists
+                        new_word = new_word.lstrip('"').rstrip('"').replace('", "', ", ")
+                        # LOG.debug(new_word)
 
-                            # Cleanup quotes in strings and lists
-                            new_word = new_word.lstrip('"').rstrip('"').replace('", "', ", ")
-                            # LOG.debug(new_word)
+                        # new_word = f"{prefix}{new_word}{suffix}"
+                        # new_word = clean_quotes(new_word)
 
-                            new_word = f"{prefix}{new_word}{suffix}"
-                            new_word = clean_quotes(new_word)
+                        LOG.debug(f"replacing {token} with {new_word} in {line}")
+                        index = tokens.index(token)
+                        tokens.remove(token)
+                        tokens.insert(index, new_word)
+                        # LOG.debug(new_word)
+                        # new_word = variables.get(var, "")
+                        # LOG.debug(f"DM: {new_word}")
+                        # LOG.debug(f"{word} | {new_word} | {line}")
+                        # line = re.sub('\*', "__.__", line)
 
-                            LOG.debug(f"replacing {word} with {new_word} in {line}")
+                        # # Replace any regex characters before substitutions
+                        # for c in ('*', '[', ']', '{', '}', '\\n'):
+                        #     word = word.replace(c, '\\' + c)
+                        # # word = word.replace('*', "\*").replace('[', '\[').replace(']', '\]')\
+                        # #     .replace('{', '\{').replace('}', '\}')
+                        # # re.sub('\*', "__.__", re.sub("\[", '_', re.sub("\]", '_', word))).lstrip('{').rstrip('}')
+                        # LOG.debug(f"{word} | {new_word} | {line}")
+                        # line = re.sub(word, new_word, line)
+                        # LOG.debug(line)
 
-                            # LOG.debug(new_word)
-                            # new_word = variables.get(var, "")
-                            # LOG.debug(f"DM: {new_word}")
-                            # LOG.debug(f"{word} | {new_word} | {line}")
-                            # line = re.sub('\*', "__.__", line)
-
-                            # Replace any regex characters before substitutions
-                            for c in ('*', '[', ']', '{', '}', '\\n'):
-                                word = word.replace(c, '\\' + c)
-                            # word = word.replace('*', "\*").replace('[', '\[').replace(']', '\]')\
-                            #     .replace('{', '\{').replace('}', '\}')
-                            # re.sub('\*', "__.__", re.sub("\[", '_', re.sub("\]", '_', word))).lstrip('{').rstrip('}')
-                            LOG.debug(f"{word} | {new_word} | {line}")
-                            line = re.sub(word, new_word, line)
-                            LOG.debug(line)
-
-            # for var in dict(variables).keys():
-            #     try:
-            #         to_replace = '{' + var + '}'
-            #         LOG.debug(f"DM: Looking for {to_replace}")
-            #
-            #         # Simple replacement if variable is a string
-            #         if isinstance(variables[var], str):
-            #             LOG.debug(f"replacing '{to_replace}' with '{variables[var]}' in '{line}'")
-            #             line = re.sub(to_replace, variables[var], line)
-            #         # Determine what to substitute if we have a list of options
-            #         elif isinstance(variables[var], list):
-            #             for word in
-            #             pass
-            #         # elif type(variables[var]) == list():
-            #         #     LOG.debug(f"variables[var] is list: {variables[var]}")
-            #     except Exception as e:
-            #         LOG.error(e)
+            line = "".join(tokens)
             LOG.debug(f"DM after sub: {line}")
         LOG.debug(f">>>{line}")
         return line
