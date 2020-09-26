@@ -1160,7 +1160,7 @@ class CustomConversations(MycroftSkill):
             speaker_dict = self.active_conversations[user]["speaker_data"]
             if message.data.get("parser_data"):
                 parser_data = message.data.get("parser_data")
-                speaker = parser_data.get("name")
+                speaker = clean_quotes(parser_data.get("name"))  # TODO: Handle variable here DM
                 text = parser_data.get("phrase", text)
                 if '"' in text or "'" in text:
                     text = clean_quotes(text)
@@ -2168,8 +2168,8 @@ class CustomConversations(MycroftSkill):
         if message.data.get("parser_data"):
             parser_data = message.data.get("parser_data")
             to_reconvey = parser_data.get("reconvey_text")
-            name = parser_data.get("name", "Neon")
-            name = name.strip('"').strip("'")  # TODO: Handle variable here DM
+            name = clean_quotes(parser_data.get("name", "Neon"))
+            # name = clean_quotes(name)  # TODO: Handle variable here DM
             if '"' in to_reconvey or "'" in to_reconvey:
                 text = clean_quotes(to_reconvey)
             else:
@@ -2330,7 +2330,7 @@ class CustomConversations(MycroftSkill):
                 gender = "female"
 
         LOG.debug(line)
-        language = line[0].lower().strip('"').strip("'")
+        language = line[0].lower().strip('"').strip("'").rstrip(",")
         if language in self.configuration_available["ttsVoice"]:
             voice = self.configuration_available["ttsVoice"][language][gender]
             LOG.debug(voice)
