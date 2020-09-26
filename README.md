@@ -537,7 +537,10 @@ Variable: key_sub = "[sorry] for *" "Please don't apologize about *" "No need to
 sub_key(input, key_sub)
 
 ```
-### In-text options (Used for variable substitutions):
+### Functions (Used for variable assignment or inline text substitution):
+The following functions accept one or more arguments in parentheses and return values that can be assigned to a variable
+or, in some cases, a value that can be substituted within a quoted string.
+
 #### select_one
 Specifies that the value will have to be filled in by user's choice from the provided list of items before proceeding. 
 Used in [Neon speak](#neon-speak) statements to speak the available options for a variable.
@@ -575,8 +578,17 @@ Optimized for string processing.
 #### profile
 Lookup a value from a user profile to use in a speak or execute command.
 
-    profile(user.email)
+    Variable: email = profile(user.email)
 
+
+#### skill
+Call a skill and extract a some specific data from it. You must pass a valid skill intent 
+(same as you would to [Execute](#execute)), as well as a valid key from that intent's dialog data. In general, this option 
+should only be used if you maintain the required skill and script, as these parameters may change.
+
+    Neon Speak: "It is currently {skill("what is the weather", weather)}"
+    
+*Note: "weather" is defined in the weather skill dialog for this intent*
  
 # How to Use  
 
@@ -593,6 +605,3 @@ Use the [link](https://neongecko.com/ContactUs) or [submit an issue on GitHub](h
 # Credits  
   
 [reginaneon](https://github.com/reginaneon) [NeonDaniel](https://github.com/neondaniel) [neongeckocom](https://neongecko.com/)
-
-
-
