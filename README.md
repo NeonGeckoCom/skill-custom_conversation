@@ -42,9 +42,9 @@ YAML variable, and other information that Neon knows.
 For example:  
   
     Script: "Demo Hello World Input"
-    Variable: {input}: ""
+    Variable: input
     Neon speak: "Hello World. Say anything or exit"
-    voice_input{input}
+    voice_input(input)
     Neon speak: "you said {input}"
     Exit
     
@@ -52,6 +52,25 @@ Scripts are easily sharable between other users via the Neongecko Scripts Librar
 share with all the other Neon users.
 
 You can also find various demo scripts there if you need somewhere to start or something to reference.
+
+# Script Syntax
+Command syntax in general includes a Command and some command arguments, in the form:
+
+    Command: argument1, argument2
+    
+Multiple lines may be assigned to the same command if they are indented 4 spaces from the command declaration. An example
+of this with multiple spoken lines is:
+
+    Neon Speak: "This is the first line I will speak."
+        "I will also speak this line!"
+        
+Parentheses are used for some commands to accept parameters, for example voice_input:
+
+    voice_input(var_to_fill)
+    
+Braces are used to return variable values within a literal string, for example in a speak statement:
+
+    Neon Speak: "You said: {var_to_fill}"
 
 # Starting a Script File
 Scripts must begin with a `Script: ` line containing the script name and then any optional 
@@ -61,8 +80,10 @@ After this, you can continue with any of the other script commands. It is recomm
 [user input](#voice_input).
 
     Script: "Demo Weather Time Population"
-    Language: "en-au female"
-    Variable: {response}: ""
+    Description: "A Simple example script that can offer the weather, time, and population of different locations."
+    Author: Neongecko
+    Language: en-au, female
+    Variable: response
     Synonym: "WTP"
 
 
@@ -76,7 +97,7 @@ pl-pl, pt-br, pt-pt, ro-ro, ru-ru, es-es, es-mx, es-us, sv-se, tr-tr, cy-gb, cmn
 Any of the above language codes may also be used without the region code (i.e. "en" is equivalent to "en-us"). "male" or 
 "female" may also be specified either before or after the language code; the default gender is "female".
 
-    Language: "en-us female"
+    Language: en-us, female
 
 #### Description
 This is an optional short description of the script.
@@ -91,7 +112,7 @@ and can be a line number or tag.
 
 Go to the named tag "example" after 10 seconds of inactivity:
 ```
-Timeout: 10 example
+Timeout: 10, example
 ...
 @example
 # Code here will be executed after 10 seconds of inactivity
@@ -99,7 +120,7 @@ Timeout: 10 example
 
 Go to line 7 after 30 seconds of inactivity:
 ```
-Timeout: 30 7
+Timeout: 30, 7
 ...
 Neon speak: Are you still there?  # If this is line 7 of the script file, this is spoken after 30s of inactivity
 ```
@@ -107,7 +128,7 @@ Neon speak: Are you still there?  # If this is line 7 of the script file, this i
 #### Variable
 A variety of parameters to be used later in the script. Can be preset or empty. All variables will be saved as a list
 with the most recent value at index 0 and previous values appended. [table_scrape](#table_scrape) 
-will build a dictionary of named links as options. List variables
+will build a dictionary of named links as options and save that at the front of the list. Variables
 may occupy more than one line; subsequent lines should be indented from the `Variable:` line. Variables used for 
 [simple word substitutions](#sub_values) will contain pairs of strings where each pair is separated by a comma. 
 Variables used for [conversational responses](#sub_key) will contain multiple quoted string sets with each set 
@@ -115,9 +136,9 @@ separated by a comma.
 
 Simple Variable declarations:
 ```
-    Variable: {from_units} = ""
-    Variable: {conversions} = weight, volume, length, time, currency
-    Variable: {options} = table_scrape(https://www.neongecko.com/demos)
+    Variable: from_units
+    Variable: conversions = weight, volume, length, time, currency
+    Variable: options = table_scrape(https://www.neongecko.com/demos)
 ```
 Word Substitutions:
 ```
@@ -140,9 +161,9 @@ be added to the user's synonyms. After this, the synonym can be used to run the 
     Synonym: "T P W 2"
 
 #### Claps
-The number of claps that should be associated with starting the script (similar to [Synonyms](#synonym)).
+The number of claps that should be associated with a command while the script is active.
 
-    Claps: 2  
+    Claps: 2, "what time is it"  
 
 # Script Keywords and Spacing
 Neon scripts follow the Python convention of 4 spaces to indent subordinate lines. A line without a command will be considered
@@ -157,7 +178,7 @@ would be spoken:
 There are multiple keywords available and new ones are added frequently. The current list, starting with the core example above:
 
 #### Neon speak
-Literal string to be spoken by Neon. A single line to speak can be on the same line as `Neon speak:`. If multiple lines 
+Have Neon say something. A single line to speak can be on the same line as `Neon speak:`. If multiple lines 
 are to be spoken, they should follow `Neon speak:` and be indented. SSML is supported in `Neon speak` and `Name speak` 
 commands if they are supported by the selected TTS engine. Examples of ssml supported by Amazon Polly can be found 
 [here](https://docs.aws.amazon.com/polly/latest/dg/supportedtags.html).
@@ -173,7 +194,7 @@ Neon speak:
 ```
 
 #### Name speak
-Literal string to be spoken as a specified speaker. Name is required, gender and language may optionally be specified 
+Have Neon say something with the specified name. Name is required, gender and language may optionally be specified 
 as comma-separated parameters. If one of gender or language are specified, the other will use the user's profile setting 
 or script setting if available. SSML is supported in `Neon speak` and `Name speak` 
 commands if they are supported by the selected TTS engine. Examples of ssml supported by Amazon Polly can be found 
@@ -182,13 +203,13 @@ commands if they are supported by the selected TTS engine. Examples of ssml supp
 [here](https://docs.aws.amazon.com/polly/latest/dg/supportedtags.html).
 
 ```
-Name Speak: Nobody: "Or I can speak as someone else."
+Name Speak: Nobody, "Or I can speak as someone else."
 ```
 ```
-Name Speak: Slow Male, male: "<prosody volume="-2dB" rate="x-slow" pitch="x-low">I can be quiet, slow, and deep</prosody>"
+Name Speak: Slow Male, male, "<prosody volume="-2dB" rate="x-slow" pitch="x-low">I can be quiet, slow, and deep</prosody>"
 ```
 ```
-Name Speak: English Male, male, en-us: "<prosody volume="-2dB" rate="x-slow" pitch="x-low">I can be quiet, slow, and deep</prosody>"
+Name Speak: English Male, male, en-us, "<prosody volume="-2dB" rate="x-slow" pitch="x-low">I can be quiet, slow, and deep</prosody>"
 ```
 
 #### Reconvey
@@ -233,11 +254,11 @@ Execute: "What time is it in Athens"
 
 ```
 Execute:
-    "neon translate cherry to russian"
-    "neon tell me my language setting
-    "neon speak to me in english
-    "neon speak to me in Russian and French
-    "neon speak to me in english
+    "translate cherry to russian"
+    "tell me my language setting
+    "speak to me in english
+    "speak to me in Russian and French
+    "speak to me in english
 ```
 
 #### Tag
@@ -288,9 +309,9 @@ values in a list.
 *It is recommended that any voice_input follows a `Neon speak:` prompting the user to say something.*
 
 ```
-    Variable: {input}: ""
+    Variable: input
     Neon speak: "Hello World. Say anything or exit"
-    voice_input{input}
+    voice_input(input)
     Neon speak: "you said {input}"
 ```
 ```
@@ -298,14 +319,14 @@ values in a list.
         "Say 1 or World Times for world times"
         "Say 2 or World Weather for world weather"
         "Say 3 or World Populations for world populations"
-    voice_input{response}
+    voice_input(response)
     Case {response}:
 ```
 ```
-Variable: {selected}: ""
-Variable: {conversions}: weight, volume, length, time, currency
-Neon speak: "Say convert select_one{conversions} to convert or exit when done"
-voice_input{selected,conversions}
+Variable: selected
+Variable: conversions = weight, volume, length, time, currency
+Neon speak: "Say convert {select_one(conversions)} to convert or exit when done"
+voice_input(selected,conversions)
 ```
 
 #### If/Else
@@ -374,7 +395,7 @@ Neon speak:
     "Say A or Athens for Athens's time"
     "Say B or Bombay for Bombay's time"
     "Say S or Seattle for Seattle's time"
-voice_input{response}
+voice_input(response)
 Case {response}:
     "A or Athens"
         Execute: "What time is it in Athens"
@@ -425,7 +446,7 @@ LOOP WW
         "Say B or Bombay for the weather in Bombay"
         "Say S or Seattle for the weather in Seattle"
         "Say exit to exit"
-    voice_input{location}
+    voice_input(location)
     Case {location}:
         "A or Athens"
             Execute: "What is the weather in Athens"
@@ -446,7 +467,7 @@ LOOP WW
         "Say B or Bombay for the weather in Bombay"
         "Say S or Seattle for the weather in Seattle"
         "Say exit to exit"
-    voice_input{location}
+    voice_input(location)
     Case {location}:
         "A or Athens"
             Execute: "What is the weather in Athens"
@@ -459,13 +480,18 @@ LOOP WW UNTIL location == "b"
 
 #### Set
 You may set variables equal to other variable values or static values with the keyword `Set` anywhere in a script. This 
-can be useful to save a variable value before modifying the variable
+can be useful to save a variable value before modifying the variable.
 
         Set: user_speech = {input}
+        
+If this command is not indented from the previous line, it may be inferred
+
+        Neon Speak: "Setting variable"
+        user_speech = {input}
 
 #### Email
 You may draft and send an email to the user running a script if their email is available. The title may be a quoted literal 
-or a variable reference. The body must be a variable. Variables should not be placed inside braces.
+or a variable reference. The body may be a variable or a string literal.
 
     Email: "My Email Title", variable_body
 
@@ -488,7 +514,7 @@ Variable: input_sub = dont don't,
     wont won't,
     recollect remember
 ...
-sub_values{input, input_sub}
+sub_values(input, input_sub)
 ```
 
 #### sub_key
@@ -508,49 +534,61 @@ Variable: key_sub = "[sorry] for *" "Please don't apologize about *" "No need to
     "i remember when {1} said {2}" "Do I think of {1} or {2} often?",
     "*" "I don't understand. Please elaborate." " What do you mean by *?"
 ...
-sub_key{input, key_sub}
+sub_key(input, key_sub)
 
 ```
-### In-text options (Used for variable substitutions):
+### Functions (Used for variable assignment or inline text substitution):
+The following functions accept one or more arguments in parentheses and return values that can be assigned to a variable
+or, in some cases, a value that can be substituted within a quoted string.
+
 #### select_one
 Specifies that the value will have to be filled in by user's choice from the provided list of items before proceeding. 
 Used in [Neon speak](#neon-speak) statements to speak the available options for a variable.
 
-    Variable: {conversions}: weight, volume, length, time, currency  
+    Variable: conversions = weight, volume, length, time, currency  
     Neon speak:  
-    "Say convert select_one{conversions} to convert or exit when done"
+    "Say convert {select_one(conversions)} to convert or exit when done"
 
 #### table_scrape
 Uses beautiful soup to give back a readable and searchable dictionary of text/link pair of any HTML table element 
 on a provided web page. 
 
-    Variable: {options}: table_scrape(https://www.neongecko.com/demos)
+    Variable: options = table_scrape(https://www.neongecko.com/demos)
 
 #### random
 Returns random elements of the given list variable. If used to set a [variable](#variable), one value will be assigned; 
 in a [Neon speak](#neon-speak), 2-3 examples will be provided and spoken.
 ```
-Variable: {numbers}: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-Variable: {neon_num}: random{numbers}
+Variable: numbers = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+Variable: neon_num = random(numbers)
 ```
 ```
-    Variable: {options}: table_scrape(https://www.neongecko.com/demos)  
-    Variable: {chosen}: ""  
+    Variable: options = table_scrape(https://www.neongecko.com/demos)  
+    Variable: chosen
     Neon speak:  
-        "Please tell me what kind of help video you would like to see. You can say things like random{options}"
+        "Please tell me what kind of help video you would like to see. You can say things like {random(options)}"
 ```
 
 #### closest
 Returns the closest element of a list to the specified variable (generally used in combination with table scrape). 
 Optimized for string processing.
 
-    Execute: "av play closest{chosen,options}"
+    Execute: "av play {closest(chosen,options)}"
 
 #### profile
 Lookup a value from a user profile to use in a speak or execute command.
 
-    profile{user.email}
+    Variable: email = profile(user.email)
 
+
+#### skill
+Call a skill and extract a some specific data from it. You must pass a valid skill intent 
+(same as you would to [Execute](#execute)), as well as a valid key from that intent's dialog data. In general, this option 
+should only be used if you maintain the required skill and script, as these parameters may change.
+
+    Neon Speak: "It is currently {skill("what is the weather", weather)}"
+    
+*Note: "weather" is defined in the weather skill dialog for this intent*
  
 # How to Use  
 
@@ -566,7 +604,4 @@ Use the [link](https://neongecko.com/ContactUs) or [submit an issue on GitHub](h
   
 # Credits  
   
-reginaneon [neongeckocom](https://neongecko.com/)
-
-
-
+[reginaneon](https://github.com/reginaneon) [NeonDaniel](https://github.com/neondaniel) [neongeckocom](https://neongecko.com/)
