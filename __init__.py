@@ -18,45 +18,28 @@
 # China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
 
 import base64
-# import glob
 import os
-# import subprocess
 import shutil
-# import time
 import json
-# import unicodedata
 import re
-from copy import deepcopy
-
-# import requests
 import git
-from adapt.intent import IntentBuilder
-from dateutil.tz import gettz
-
-# from mycroft.messagebus import MessageBusClient
-from git import InvalidGitRepositoryError
-
-# from .NeonScriptParser.script_parser import ScriptParser
-# from script_parser import ScriptParser
-
-from mycroft.messagebus.message import Message
-# from mycroft.client.speech.coupons import Coupons
-from mycroft.skills.core import MycroftSkill, intent_handler
-from mycroft.util.log import LOG
-# from pprint import pprint
-# from bisect import bisect_left
-# from mycroft.device import device
-# from bs4 import BeautifulSoup
-# import requests
 import random
 import difflib
 import datetime
 import time
-# from NGI.utilities.chat_user_util import get_chat_nickname_from_filename as nick
+
+from copy import deepcopy
+from adapt.intent import IntentBuilder
+from dateutil.tz import gettz
+from git import InvalidGitRepositoryError
+
+from mycroft.messagebus.message import Message
+from mycroft.skills.core import MycroftSkill, intent_handler
+from mycroft.util.log import LOG
 from NGI.utilities.utilHelper import scrape_page_for_links as scrape
 from NGI.utilities.parseUtils import clean_quotes
 from mycroft.util.parse import normalize
-from mycroft.util import play_wav  # , create_daemon
+from mycroft.util import play_wav
 
 
 # TIMEOUT = 8
@@ -104,9 +87,8 @@ class CustomConversations(MycroftSkill):
         self.audio_location = f"{self.__location__}/script_audio"
         self.transcript_location = f"{self.__location__}/script_transcript"
         self.tz = gettz(self.user_info_available["location"]["tz"])
-        self.update_message = False
+        # self.update_message = False
         self.reload_skill = False  # This skill should not be reloaded or else active users break
-        # self.pre_parser_options,
         self.runtime_execution, self.variable_functions = {}, {}
         self.perspective_changes = {"am": "are",
                                     "your": "my",
@@ -125,8 +107,6 @@ class CustomConversations(MycroftSkill):
 
         # Commands that exist in a script before executable code
         self.header_options = ("script", "description", "author", "timeout", "claps", "synonym")
-        # self.start_executing =
-        #     ("execute", "neon speak", "loop", "python", "if", "name speak", "email", "set", "speak")
 
         # If statement comparators
         self.string_comparators = ("IN", "CONTAINS", "STARTSWITH", "ENDSWITH")
@@ -134,20 +114,10 @@ class CustomConversations(MycroftSkill):
         self.active_conversations = dict()
         self._reset_values("local")
 
-        # default = {
-        #     'speak_timeout': 5,
-        #     'response_timeout': 10,
-        #     'use_cache': True,
-        #     'auto_update': True,
-        #     'script_updates': {}
-        # }
-        # self.init_settings(default)
-        self.speak_timeout = 5  # self.settings['speak_timeout']
-        self.response_timeout = 10  # self.settings['response_timeout']
-        # self.use_cache = self.settings['use_cache']
+        self.speak_timeout = 5
+        self.response_timeout = 10
         self.auto_update = self.settings['auto_update']
         self.allow_update = self.settings["allow_update"]
-        # self.server_bus = MessageBusClient(host="64.34.186.120")
 
     def initialize(self):
         self.make_active(-1)  # Make this skill active so that it never
@@ -211,8 +181,6 @@ class CustomConversations(MycroftSkill):
 
     @intent_handler(IntentBuilder("UpdateScripts").require("UpdateScripts").optionally("Neon").build())
     def handle_update_scripts(self, message):
-        # if (self.check_for_signal("skip_wake_word", -1) and message.data.get("Neon")) \
-        #         or not self.check_for_signal("skip_wake_word", -1) or self.check_for_signal("CORE_neonInUtterance"):
         if self.allow_update:
             LOG.debug(message)
             # if self.neon_in_request(message):
@@ -220,7 +188,7 @@ class CustomConversations(MycroftSkill):
             # self.check_for_signal("CC_convoSuccess")
             # self.check_for_signal("CC_convoFailure")
             # self.create_signal("CC_updating")
-            self.update_message = message
+            # self.update_message = message
             success = self._update_scripts()
             time.sleep(1)
             # while self.check_for_signal("CC_updating", 30):
@@ -366,32 +334,12 @@ class CustomConversations(MycroftSkill):
 
         elif self._check_script_file(active_dict["script_filename"] + self.file_ext) or \
                 self._check_script_file(active_dict["script_filename"] + ".nct", False):
-            # try:
-            #     if self.use_cache:
-            #         modified = datetime.datetime.utcfromtimestamp(
-            #             os.path.getmtime(os.path.join(self.__location__, "script_txt/" +
-            #                                           active_dict["script_filename"] + ".txt")))\
-            #             .strftime('%Y-%m-%d %H:%M:%S.%f')
-            #         # LOG.debug(modified)
-            #         modified = datetime.datetime.strptime(modified, '%Y-%m-%d %H:%M:%S.%f')
-            #         LOG.debug(modified)
-            #
-            #         last_updated = datetime.datetime.strptime(self.settings.get("script_updates", {}).get(
-            #                                                   active_dict["script_filename"]), '%Y-%m-%d %H:%M:%S.%f')
-            #         LOG.debug(last_updated)
-            #         # LOG.info(delta)
-            #     else:
-            #         modified, last_updated = 2, 1  # Doesn't matter, we'll reload either way
-            # except Exception as e:
-            #     LOG.error(e)
-            #     modified, last_updated = 2, 1  # Just make sure we load the file
-            #
-
             # Check if the file has already been parsed and cached or if we need to parse it here
             if not self._check_script_file(active_dict["script_filename"] + self.file_ext):
                 LOG.info(f'{active_dict["formatted_script"]} not yet parsed!')
                 try:
-                    from .NeonScriptParser.script_parser import ScriptParser
+                    # Try to parse if we have the script parser available
+                    from script_parser import ScriptParser
                     output = ScriptParser().parse_script_to_file(os.path.join(self.__location__, "script_txt",
                                                                               active_dict["script_filename"] + ".nct"))
                     # Update our active_dict in case internal title doesn't match filename
@@ -399,7 +347,6 @@ class CustomConversations(MycroftSkill):
                     LOG.info(f"Parsed to {output_name}")
                     active_dict["script_filename"] = output_name
                 except Exception as e:
-                    # TODO: Speak error? No Parser availability! DM
                     LOG.error(e)
             # We have this in cache now, load values from there
             LOG.debug("Loading from Cache!")
@@ -412,13 +359,12 @@ class CustomConversations(MycroftSkill):
                 LOG.error(e)
                 # active_dict = self._load_to_cache(active_dict, file_to_run, user)
                 cache = None
-            if not cache or cache == {}:
-                LOG.warning(f'{active_dict["script_filename"]} empty in cache!')
-                # TODO: Speak error! DM
-                # self._load_to_cache(active_dict, file_to_run, user)
-                # cache = self.get_cached_data(f'scripts/{active_dict["script_filename"]}')
-                # LOG.info(json.dumps(cache, indent=4))
-                # LOG.info(f'Checking for cache AP')
+            # if not cache or cache == {}:
+            #     LOG.warning(f'{active_dict["script_filename"]} empty in cache!')
+            #     # self._load_to_cache(active_dict, file_to_run, user)
+            #     # cache = self.get_cached_data(f'scripts/{active_dict["script_filename"]}')
+            #     # LOG.info(json.dumps(cache, indent=4))
+            #     # LOG.info(f'Checking for cache AP')
 
             LOG.info(f'{active_dict["script_filename"]} loaded from cache')
             try:
