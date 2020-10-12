@@ -970,7 +970,7 @@ class CustomConversations(MycroftSkill):
 
         parser_data = message.data.get("parser_data")
         if parser_data and parser_data.get("destination"):
-            to_find = active_dict["goto_tags"][parser_data["destination"]]
+            to_find = active_dict["goto_tags"].get(parser_data["destination"], parser_data["destination"])
         elif str(text).isnumeric():
             LOG.warning(f"No parsed destination! {text} is a number")
             to_find = int(text)
@@ -984,6 +984,7 @@ class CustomConversations(MycroftSkill):
 
         # Iterate through formatted_script to find the correct line
         if to_find:
+            LOG.debug(f"Go To line: {to_find}")
             i = 0
             for line in active_dict["formatted_script"]:
                 if int(line["line_number"]) == to_find:
