@@ -16,44 +16,30 @@
 # Specialized conversational reconveyance options from Conversation Processing Intelligence Corp.
 # US Patents 2008-2020: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
 # China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
+
 import base64
-import glob
 import os
-# import subprocess
 import shutil
-import time
 import json
-# import unicodedata
 import re
-from copy import deepcopy
-
-# import requests
-from adapt.intent import IntentBuilder
-from dateutil.tz import gettz
-
-# from mycroft.messagebus import MessageBusClient
-# TODO: some conditional import or something if parser package is installed DM
-from .NeonScriptParser.script_parser import ScriptParser
-# from script_parser import ScriptParser
-
-from mycroft.messagebus.message import Message
-# from mycroft.client.speech.coupons import Coupons
-from mycroft.skills.core import MycroftSkill, intent_handler
-from mycroft.util.log import LOG
-# from pprint import pprint
-# from bisect import bisect_left
-# from mycroft.device import device
-# from bs4 import BeautifulSoup
-# import requests
+import git
 import random
 import difflib
 import datetime
 import time
-from NGI.utilities.chat_user_util import get_chat_nickname_from_filename as nick
+
+from copy import deepcopy
+from adapt.intent import IntentBuilder
+from dateutil.tz import gettz
+from git import InvalidGitRepositoryError
+
+from mycroft.messagebus.message import Message
+from mycroft.skills.core import MycroftSkill, intent_handler
+from mycroft.util.log import LOG
 from NGI.utilities.utilHelper import scrape_page_for_links as scrape
 from NGI.utilities.parseUtils import clean_quotes
 from mycroft.util.parse import normalize
-from mycroft.util import play_wav  # , create_daemon
+from mycroft.util import play_wav
 
 
 # TIMEOUT = 8
@@ -101,9 +87,8 @@ class CustomConversations(MycroftSkill):
         self.audio_location = f"{self.__location__}/script_audio"
         self.transcript_location = f"{self.__location__}/script_transcript"
         self.tz = gettz(self.user_info_available["location"]["tz"])
-        self.update_message = False
+        # self.update_message = False
         self.reload_skill = False  # This skill should not be reloaded or else active users break
-        # self.pre_parser_options,
         self.runtime_execution, self.variable_functions = {}, {}
         self.perspective_changes = {"am": "are",
                                     "your": "my",
@@ -122,8 +107,6 @@ class CustomConversations(MycroftSkill):
 
         # Commands that exist in a script before executable code
         self.header_options = ("script", "description", "author", "timeout", "claps", "synonym")
-        # self.start_executing =
-        #     ("execute", "neon speak", "loop", "python", "if", "name speak", "email", "set", "speak")
 
         # If statement comparators
         self.string_comparators = ("IN", "CONTAINS", "STARTSWITH", "ENDSWITH")
@@ -131,20 +114,10 @@ class CustomConversations(MycroftSkill):
         self.active_conversations = dict()
         self._reset_values("local")
 
-        # default = {
-        #     'speak_timeout': 5,
-        #     'response_timeout': 10,
-        #     'use_cache': True,
-        #     'auto_update': True,
-        #     'script_updates': {}
-        # }
-        # self.init_settings(default)
-        self.speak_timeout = 5  # self.settings['speak_timeout']
-        self.response_timeout = 10  # self.settings['response_timeout']
-        # self.use_cache = self.settings['use_cache']
+        self.speak_timeout = 5
+        self.response_timeout = 10
         self.auto_update = self.settings['auto_update']
         self.allow_update = self.settings["allow_update"]
-        # self.server_bus = MessageBusClient(host="64.34.186.120")
 
     def initialize(self):
         self.make_active(-1)  # Make this skill active so that it never
@@ -183,9 +156,9 @@ class CustomConversations(MycroftSkill):
             "skill": self._variable_skill
         }
 
-        # Catch invalid/uninitialized update key
-        if not self.settings.get("updates"):
-            self.ngi_settings.update_yaml_file("updates", value={}, final=True)
+        # # Catch invalid/uninitialized update key
+        # if not self.settings.get("updates"):
+        #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
 
         # Remove all listeners and clear signals before re-registering
         try:
@@ -208,8 +181,6 @@ class CustomConversations(MycroftSkill):
 
     @intent_handler(IntentBuilder("UpdateScripts").require("UpdateScripts").optionally("Neon").build())
     def handle_update_scripts(self, message):
-        # if (self.check_for_signal("skip_wake_word", -1) and message.data.get("Neon")) \
-        #         or not self.check_for_signal("skip_wake_word", -1) or self.check_for_signal("CORE_neonInUtterance"):
         if self.allow_update:
             LOG.debug(message)
             # if self.neon_in_request(message):
@@ -217,7 +188,7 @@ class CustomConversations(MycroftSkill):
             # self.check_for_signal("CC_convoSuccess")
             # self.check_for_signal("CC_convoFailure")
             # self.create_signal("CC_updating")
-            self.update_message = message
+            # self.update_message = message
             success = self._update_scripts()
             time.sleep(1)
             # while self.check_for_signal("CC_updating", 30):
@@ -363,32 +334,12 @@ class CustomConversations(MycroftSkill):
 
         elif self._check_script_file(active_dict["script_filename"] + self.file_ext) or \
                 self._check_script_file(active_dict["script_filename"] + ".nct", False):
-            # try:
-            #     if self.use_cache:
-            #         modified = datetime.datetime.utcfromtimestamp(
-            #             os.path.getmtime(os.path.join(self.__location__, "script_txt/" +
-            #                                           active_dict["script_filename"] + ".txt")))\
-            #             .strftime('%Y-%m-%d %H:%M:%S.%f')
-            #         # LOG.debug(modified)
-            #         modified = datetime.datetime.strptime(modified, '%Y-%m-%d %H:%M:%S.%f')
-            #         LOG.debug(modified)
-            #
-            #         last_updated = datetime.datetime.strptime(self.settings.get("script_updates", {}).get(
-            #                                                   active_dict["script_filename"]), '%Y-%m-%d %H:%M:%S.%f')
-            #         LOG.debug(last_updated)
-            #         # LOG.info(delta)
-            #     else:
-            #         modified, last_updated = 2, 1  # Doesn't matter, we'll reload either way
-            # except Exception as e:
-            #     LOG.error(e)
-            #     modified, last_updated = 2, 1  # Just make sure we load the file
-            #
-
             # Check if the file has already been parsed and cached or if we need to parse it here
             if not self._check_script_file(active_dict["script_filename"] + self.file_ext):
                 LOG.info(f'{active_dict["formatted_script"]} not yet parsed!')
                 try:
-                    from .NeonScriptParser.script_parser import ScriptParser
+                    # Try to parse if we have the script parser available
+                    from script_parser import ScriptParser
                     output = ScriptParser().parse_script_to_file(os.path.join(self.__location__, "script_txt",
                                                                               active_dict["script_filename"] + ".nct"))
                     # Update our active_dict in case internal title doesn't match filename
@@ -396,7 +347,6 @@ class CustomConversations(MycroftSkill):
                     LOG.info(f"Parsed to {output_name}")
                     active_dict["script_filename"] = output_name
                 except Exception as e:
-                    # TODO: Speak error? No Parser availability! DM
                     LOG.error(e)
             # We have this in cache now, load values from there
             LOG.debug("Loading from Cache!")
@@ -409,13 +359,12 @@ class CustomConversations(MycroftSkill):
                 LOG.error(e)
                 # active_dict = self._load_to_cache(active_dict, file_to_run, user)
                 cache = None
-            if not cache or cache == {}:
-                LOG.warning(f'{active_dict["script_filename"]} empty in cache!')
-                # TODO: Speak error! DM
-                # self._load_to_cache(active_dict, file_to_run, user)
-                # cache = self.get_cached_data(f'scripts/{active_dict["script_filename"]}')
-                # LOG.info(json.dumps(cache, indent=4))
-                # LOG.info(f'Checking for cache AP')
+            # if not cache or cache == {}:
+            #     LOG.warning(f'{active_dict["script_filename"]} empty in cache!')
+            #     # self._load_to_cache(active_dict, file_to_run, user)
+            #     # cache = self.get_cached_data(f'scripts/{active_dict["script_filename"]}')
+            #     # LOG.info(json.dumps(cache, indent=4))
+            #     # LOG.info(f'Checking for cache AP')
 
             LOG.info(f'{active_dict["script_filename"]} loaded from cache')
             try:
@@ -547,113 +496,144 @@ class CustomConversations(MycroftSkill):
 
     def _update_scripts(self):
         """
-        Updates conversation files from SQL Database/Server
+        Updates conversation files from Git
         """
-        if self.server:
+        try:
+            git_remote = self.settings["scripts_repo"]
+            branch = self.settings["scripts_branch"]
+
+            # Initialize Scripts repository
             try:
-                status = self.bus.wait_for_response(Message('neon.update_scripts'))
-                LOG.info(status)
-                self.check_for_signal("CC_updating")
-                uploaded_script_path = status.data.get("path")
-                # if not self.settings.get("updates"):
-                #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
+                repo = git.Repo(self.text_location)
+            except InvalidGitRepositoryError:
+                shutil.move(self.text_location, f"{self.text_location}_bak")
+                repo = git.Repo.clone_from("https://github.com/neongeckocom/neon-scripts", self.text_location)
 
-                if uploaded_script_path and status:
-                    for script in os.listdir(uploaded_script_path):
-                        shutil.copy(os.path.join(uploaded_script_path, script),
-                                    os.path.join(self.text_location, script))
-                else:
-                    LOG.warning("Script update failure!")
-                    return False
-                # self.create_signal("UpdateConversationFiles")
-                # while self.check_for_signal("CC_updating", 10):
-                #     time.sleep(0.5)
-                return status.data.get("success")
-            except Exception as e:
-                LOG.error(e)
-                return False
-                # self.check_for_signal("CC_updating")
-        else:
-            self.bus.once("neon.server.update_scripts.response", self._handle_updated_scripts)
-            self.bus.emit(Message("neon.client.update_scripts"))  # TODO: Consider adding context here DM
-            return None
+            urls = repo.remote("origin").urls
+            for url in urls:
+                # Check for configuration repo change
+                if url != git_remote:
+                    # TODO: Backup? DM
+                    LOG.debug("Update remote!")
+                    repo.delete_remote("origin")
+                    repo.create_remote("origin", git_remote)
+                    repo.git.reset("--hard")
+                    repo.remote("origin").pull(branch)
+                    repo.git.reset("--hard", f"origin/{branch}")
+            repo.remote("origin").pull(branch)
 
-    def _handle_updated_scripts(self, message):
-        # LOG.debug(message.msg_type)
-        if not os.path.isdir(self.text_location):
-            os.makedirs(self.text_location)
+            # Handle non-git scripts backup
+            if os.path.isdir(f"{self.text_location}_bak"):
+                shutil.move(f"{self.text_location}_bak", os.path.join(self.text_location, "backup", "old"))
 
-        # TODO: Check compile time per-script before overwrite? DM
-        for script in message.data.keys():
-            try:
-                if script.endswith(".txt"):
-                    LOG.warning(f"text file received! {script}")
-                elif script.endswith("nct"):
-                    # File exists, check overwrite
-                    if os.path.isfile(os.path.join(self.text_location, script)):
-                        mod_time = round(os.path.getmtime(os.path.join(self.text_location, script)))
-                        # if not self.settings.get("updates"):
-                        #     create_time = 0
-                        #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
-                        # else:
-                        create_time = self.settings["updates"].get(script, 0)
+            self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
+            return True
+        except Exception as e:
+            LOG.error(e)
+            return False
+        # if self.server:
+        #     try:
+        #         status = self.bus.wait_for_response(Message('neon.update_scripts'))
+        #         LOG.info(status)
+        #         self.check_for_signal("CC_updating")
+        #         uploaded_script_path = status.data.get("path")
+        #         # if not self.settings.get("updates"):
+        #         #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
+        #
+        #         if uploaded_script_path and status:
+        #             for script in os.listdir(uploaded_script_path):
+        #                 shutil.copy(os.path.join(uploaded_script_path, script),
+        #                             os.path.join(self.text_location, script))
+        #         else:
+        #             LOG.warning("Script update failure!")
+        #             return False
+        #         # self.create_signal("UpdateConversationFiles")
+        #         # while self.check_for_signal("CC_updating", 10):
+        #         #     time.sleep(0.5)
+        #         return status.data.get("success")
+        #     except Exception as e:
+        #         LOG.error(e)
+        #         return False
+        #         # self.check_for_signal("CC_updating")
+        # else:
+        #     self.bus.once("neon.server.update_scripts.response", self._handle_updated_scripts)
+        #     self.bus.emit(Message("neon.client.update_scripts"))
+        #     return None
 
-                        # Backup any old versions if modified since last update from remote
-                        if mod_time > create_time:
-                            timestamp = time.strftime('%Y-%m-%d--%H_%M')
-                            backup_name = f"{os.path.splitext(script)[0]}_{timestamp}{os.path.splitext(script)[1]}"
-                            os.makedirs(os.path.join(self.text_location, "backup"), exist_ok=True)
-                            shutil.move(os.path.join(self.text_location, script),
-                                        os.path.join(self.text_location, "backup", backup_name))
-                            LOG.debug(f"Local text modified, backed up {script} to {backup_name}")
-
-                        # Update new file and write out last update info
-                        with open(os.path.join(self.text_location, script), "wb") as out:
-                            out.write(base64.b64decode(message.data[script].encode("utf-8")))
-                        mtime = round(os.path.getmtime(os.path.join(self.text_location, script)))
-                        self.ngi_settings.update_yaml_file("updates", script, mtime, multiple=True)
-                    else:
-                        # Create new file and write out last update info
-                        with open(os.path.join(self.text_location, script), "wb") as out:
-                            out.write(base64.b64decode(message.data[script].encode("utf-8")))
-                        mtime = round(os.path.getmtime(os.path.join(self.text_location, script)))
-                        self.ngi_settings.update_yaml_file("updates", script, mtime, multiple=True)
-
-                elif script.endswith("ncs"):
-                    # TODO: Figure out how to compare contents as scripts are re-compiled pre-update every time DM
-                    # if os.path.isfile(os.path.join(self.text_location, script)):
-                    #     existing = self.get_cached_data(script, self.text_location)
-                    #     with open(os.path.join(self.cache_loc, script), "wb") as tmp:
-                    #         tmp.write(base64.b64decode(message.data[script].encode("utf-8")))
-                    #     new_data = self.get_cached_data(script)
-                    #     if new_data[9].get("compiled", 0) != existing[9].get("compiled", 0):
-                    #         timestamp = time.strftime('%Y-%m-%d--%H_%M')
-                    #         backup_name = f"{os.path.splitext(script)[0]}_{timestamp}_{os.path.splitext(script)[1]}"
-                    #         shutil.move(os.path.join(self.text_location, script),
-                    #                     os.path.join(self.text_location, "backup", backup_name))
-                    #     os.remove(os.path.join(self.cache_loc, script))
-
-                    with open(os.path.join(self.text_location, script), "wb") as out:
-                        out.write(base64.b64decode(message.data[script].encode("utf-8")))
-                else:
-                    LOG.warning(f"non-script received! {script}")
-            except Exception as e:
-                LOG.error(e)
-                LOG.error(f"Failed to parse {script}")
-
-        LOG.debug("DONE!")
-        self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
-        self.bus.emit(Message('check.yml.updates',
-                              {"modified": ["ngi_skill_conf"]}, {"origin": self.name}))
-        if self.update_message:
-            if message.data.get("success"):
-                self.speak_dialog("update_success", message=self.update_message)
-            else:
-                self.speak_dialog("update_failed", message=self.update_message)
-            self.update_message = None
-
-        # self.create_signal("CC_convoSuccess")
-        # self.check_for_signal("CC_updating")
+    # def _handle_updated_scripts(self, message):
+    #     # LOG.debug(message.msg_type)
+    #     if not os.path.isdir(self.text_location):
+    #         os.makedirs(self.text_location)
+    #
+    #     for script in message.data.keys():
+    #         try:
+    #             if script.endswith(".txt"):
+    #                 LOG.warning(f"text file received! {script}")
+    #             elif script.endswith("nct"):
+    #                 # File exists, check overwrite
+    #                 if os.path.isfile(os.path.join(self.text_location, script)):
+    #                     mod_time = round(os.path.getmtime(os.path.join(self.text_location, script)))
+    #                     # if not self.settings.get("updates"):
+    #                     #     create_time = 0
+    #                     #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
+    #                     # else:
+    #                     create_time = self.settings["updates"].get(script, 0)
+    #
+    #                     # Backup any old versions if modified since last update from remote
+    #                     if mod_time > create_time:
+    #                         timestamp = time.strftime('%Y-%m-%d--%H_%M')
+    #                         backup_name = f"{os.path.splitext(script)[0]}_{timestamp}{os.path.splitext(script)[1]}"
+    #                         os.makedirs(os.path.join(self.text_location, "backup"), exist_ok=True)
+    #                         shutil.move(os.path.join(self.text_location, script),
+    #                                     os.path.join(self.text_location, "backup", backup_name))
+    #                         LOG.debug(f"Local text modified, backed up {script} to {backup_name}")
+    #
+    #                     # Update new file and write out last update info
+    #                     with open(os.path.join(self.text_location, script), "wb") as out:
+    #                         out.write(base64.b64decode(message.data[script].encode("utf-8")))
+    #                     mtime = round(os.path.getmtime(os.path.join(self.text_location, script)))
+    #                     self.ngi_settings.update_yaml_file("updates", script, mtime, multiple=True)
+    #                 else:
+    #                     # Create new file and write out last update info
+    #                     with open(os.path.join(self.text_location, script), "wb") as out:
+    #                         out.write(base64.b64decode(message.data[script].encode("utf-8")))
+    #                     mtime = round(os.path.getmtime(os.path.join(self.text_location, script)))
+    #                     self.ngi_settings.update_yaml_file("updates", script, mtime, multiple=True)
+    #
+    #             elif script.endswith("ncs"):
+    #                 # if os.path.isfile(os.path.join(self.text_location, script)):
+    #                 #     existing = self.get_cached_data(script, self.text_location)
+    #                 #     with open(os.path.join(self.cache_loc, script), "wb") as tmp:
+    #                 #         tmp.write(base64.b64decode(message.data[script].encode("utf-8")))
+    #                 #     new_data = self.get_cached_data(script)
+    #                 #     if new_data[9].get("compiled", 0) != existing[9].get("compiled", 0):
+    #                 #         timestamp = time.strftime('%Y-%m-%d--%H_%M')
+    #                 #         backup_name = f"{os.path.splitext(script)[0]}_{timestamp}_{os.path.splitext(script)[1]}"
+    #                 #         shutil.move(os.path.join(self.text_location, script),
+    #                 #                     os.path.join(self.text_location, "backup", backup_name))
+    #                 #     os.remove(os.path.join(self.cache_loc, script))
+    #
+    #                 with open(os.path.join(self.text_location, script), "wb") as out:
+    #                     out.write(base64.b64decode(message.data[script].encode("utf-8")))
+    #             else:
+    #                 LOG.warning(f"non-script received! {script}")
+    #         except Exception as e:
+    #             LOG.error(e)
+    #             LOG.error(f"Failed to parse {script}")
+    #
+    #     LOG.debug("DONE!")
+    #     self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
+    #     self.bus.emit(Message('check.yml.updates',
+    #                           {"modified": ["ngi_skill_conf"]}, {"origin": self.name}))
+    #     if self.update_message:
+    #         if message.data.get("success"):
+    #             self.speak_dialog("update_success", message=self.update_message)
+    #         else:
+    #             self.speak_dialog("update_failed", message=self.update_message)
+    #         self.update_message = None
+    #
+    #     # self.create_signal("CC_convoSuccess")
+    #     # self.check_for_signal("CC_updating")
 
     def _check_script_file(self, filename, compiled=True):
         """
@@ -794,30 +774,6 @@ class CustomConversations(MycroftSkill):
                                                 left, right = text.split(f" !{comparator} ", 1)
                                                 break  # Only one comparator should be in a line
 
-                                        # if "in" in text.lower().split():
-                                        #     text = re.sub(" in ", " IN ", text)
-                                        #     LOG.debug(text)
-                                        #     left, right = text.split(" IN ")
-                                        #     # if "[" not in right:
-                                        #     #     LOG.debug(f"updating right={right}")
-                                        #     #     right = re.sub("}", "[*]}", right)
-                                        #     #     LOG.debug(f"updating right={right}")
-                                        #     #     text = " IN ".join([left, right])
-                                        #     # LOG.debug(text)
-                                        # elif "!in" in text.lower().split():
-                                        #     text = re.sub(" !in ", " !IN ", text)
-                                        #     LOG.debug(text)
-                                        #     left, right = text.split(" !IN ")
-                                        #     # if "[" not in right:
-                                        #     #     LOG.debug(f"updating right={right}")
-                                        #     #     right = re.sub("}", "[*]}", right)
-                                        #     #     LOG.debug(f"updating right={right}")
-                                        #     #     text = " IN ".join([left, right])
-                                        #     # LOG.debug(text)
-                                        # elif "contains" in text.lower().split():
-                                        #     text = re.sub(" contains ", " CONTAINS ", text)
-                                        #     LOG.debug(text)
-
                                         # Make sure right value is a list for IN/!IN
                                         if left and right and "[" not in right:
                                             LOG.debug(f"updating right={right}")
@@ -841,6 +797,7 @@ class CustomConversations(MycroftSkill):
                                         for key, val in message.data.get("parser_data").items():
                                             if val and isinstance(val, str) and "{" in val and "}" in val and \
                                                     command != "variable":
+                                                LOG.debug(f"variables in: {val}")
                                                 message.data.get("parser_data")[key] = \
                                                     self._substitute_variables(user, val, message, False)
                                 except Exception as e:
@@ -1013,7 +970,7 @@ class CustomConversations(MycroftSkill):
 
         parser_data = message.data.get("parser_data")
         if parser_data and parser_data.get("destination"):
-            to_find = active_dict["goto_tags"][parser_data["destination"]]
+            to_find = active_dict["goto_tags"].get(parser_data["destination"], parser_data["destination"])
         elif str(text).isnumeric():
             LOG.warning(f"No parsed destination! {text} is a number")
             to_find = int(text)
@@ -1027,6 +984,7 @@ class CustomConversations(MycroftSkill):
 
         # Iterate through formatted_script to find the correct line
         if to_find:
+            LOG.debug(f"Go To line: {to_find}")
             i = 0
             for line in active_dict["formatted_script"]:
                 if int(line["line_number"]) == to_find:
@@ -1230,27 +1188,28 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         """
 
-        # TODO: parser_data DM
         LOG.debug(f"DM: run_case({text})")
         active_dict = self.active_conversations[user]
-        try:
-            # var_to_check = str(text).split('{')[1].split('}')[0]
-            if ' ' in text:
-                val_to_check = str(text).split(' ')[1].replace(':', '').strip()
-            else:
-                val_to_check = str(text).strip()
-            # LOG.debug(f"DM: checking case with value of {val_to_check}")
-            indent_of_case = active_dict["formatted_script"][active_dict["current_index"]]["indent"]
-            # LOG.debug(f"DM: case indent={indent_of_case}")
-            line_index_to_check = active_dict["current_index"] + 1
-            LOG.debug(f'val: {val_to_check}, indent: {indent_of_case}, index: {line_index_to_check}')
-        except Exception as e:
-            LOG.error(e)
-            active_dict["current_index"] -= 1
-            line_index_to_check = None
-            indent_of_case = None
-            val_to_check = None
-            self._run_exit(user, text, message)
+        parser_data = message.data.get("parser_data")
+        if parser_data:
+            val_to_check = parser_data.get("variable")
+        else:
+            try:
+                if ' ' in text:
+                    val_to_check = str(text).split(' ')[1].replace(':', '').strip()
+                else:
+                    val_to_check = str(text).strip()
+            except Exception as e:
+                LOG.error(e)
+                active_dict["current_index"] -= 1
+                val_to_check = None
+                self._run_exit(user, text, message)
+
+        # LOG.debug(f"DM: checking case with value of {val_to_check}")
+        indent_of_case = active_dict["formatted_script"][active_dict["current_index"]]["indent"]
+        # LOG.debug(f"DM: case indent={indent_of_case}")
+        line_index_to_check = active_dict["current_index"] + 1
+        LOG.debug(f'val: {val_to_check}, indent: {indent_of_case}, index: {line_index_to_check}')
 
         # Iterate through following script lines
         if line_index_to_check and val_to_check:
@@ -1339,184 +1298,249 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         """
 
-        # TODO: Parser Data has left/right or variable AND comparator (BOOL for variable) DM
-        # LOG.debug(f"{text}")
+        LOG.debug(f"{text}")
         # active_dict = self.active_conversations[user]
-
-        to_evaluate = str(text).replace(':', '').replace('"', '').split()[1:]
-        expression = " ".join(to_evaluate).strip()
-        execute_if = True
-        try:
-            # If no argument left, return was None and statement is necessarily False
-            if len(to_evaluate) == 0:
-                execute_if = False
-
-            # If no comparator, check passed variable value
-            elif len(to_evaluate) == 1:
-                LOG.debug(f"DM: No comparator, variable only: {to_evaluate[0]}")
-                if to_evaluate[0] and str(to_evaluate[0]).lower() in ("0", "false", "none", "null", "", "no"):
+        parsed = message.data.get("parser_data")
+        if parsed:
+            comparator = parsed.get("comparator")
+            if comparator == "BOOL":
+                variable = parsed.get("variable")  # If comparator == "BOOL"
+                LOG.debug(variable)
+                if variable:
+                    execute_if = True
+                else:
                     execute_if = False
-
-            # This is some comparison, evaluate it
             else:
-                comparator = None
-                LOG.debug(f"DM: Evaluate comparison here: {to_evaluate}")
-                # comparator = to_evaluate[1]
-                comparators = self.string_comparators + self.math_comparators
-                # for i in ("==", "!=", ">", "<", "IN", "!IN", "CONTAINS"):
+                left = parsed.get("left")
+                right = parsed.get("right")
+                if isinstance(left, str):
+                    left = clean_quotes(left).strip()
+                if isinstance(right, str):
+                    right = clean_quotes(right).strip()
 
-                # Split equation into components
-                for i in comparators:
-                    if i in to_evaluate:
-                        comparator = i.strip()
-                        break
-                    elif f"!{i}" in to_evaluate:
-                        comparator = f"!{i.strip()}"
-                        break
-                LOG.debug(comparator)
-                LOG.debug(expression)
-                left_value, right_value = expression.split(comparator)
-                left_value = str(re.sub(", ", ",", left_value)).strip().lower().split(',')
-                right_value = str(re.sub(", ", ",", right_value)).strip().lower().split(',')
-                # left_value = str(left_value).strip()
-                # right_value = str(right_value).strip()
-                # This was temporary, fixed in _substitute_variables
-                # left_value = active_dict["variables"][left_value.strip().lstrip('{').rstrip('}')][0]
-                # right_value = active_dict["variables"][right_value.strip().lstrip('{').rstrip('}')]
+                if left.isnumeric():
+                    left = int(left)
+                if right.isnumeric():
+                    right = int(right)
 
-                LOG.debug(left_value)
-                LOG.debug(right_value)
-
-                LOG.debug(left_value[0].strip())
-                LOG.debug(right_value[0].strip())
-
-                try:
-                    if left_value[0].strip().isnumeric():
-                        left_as_int = int(left_value[0].strip())
-                        right_as_int = int(right_value[0].strip())
-                    else:
-                        left_as_int = left_value[0].strip()
-                        right_as_int = right_value[0].strip()
-                except Exception as e:
-                    LOG.info(e)
-                    left_as_int = left_value[0].strip()
-                    right_as_int = right_value[0].strip()
-
+                execute_if = True
+                LOG.debug(f"Checking: {left} {comparator} {right}")
                 if not comparator:
-                    LOG.warning(f"no valid comparator found in {to_evaluate}")
+                    LOG.warning(f"no valid comparator found in {text}")
                     execute_if = False
-                elif comparator == "==" and left_value[0].strip() != right_value[0].strip():
+                elif comparator == "==" and left != right:
                     LOG.debug(f"not equal, go to else")
                     execute_if = False
-                elif comparator == "!=" and left_value[0].strip() == right_value[0].strip():
+                elif comparator == "!=" and left == right:
                     LOG.debug(f"equal, go to else")
                     execute_if = False
-                elif comparator == ">" and left_as_int <= right_as_int:
+                elif comparator == ">" and left <= right:
                     LOG.debug(f"less than or equal, go to else")
                     execute_if = False
-                elif comparator == "<" and left_as_int >= right_as_int:
+                elif comparator == "<" and left >= right:
                     LOG.debug(f"greater than or equal, go to else")
                     execute_if = False
-                elif comparator == ">=" and left_as_int < right_as_int:
+                elif comparator == ">=" and left < right:
                     LOG.debug(f"less than, go to else")
                     execute_if = False
-                elif comparator == "<=" and left_as_int > right_as_int:
+                elif comparator == "<=" and left > right:
                     LOG.debug(f"greater than, go to else")
                     execute_if = False
 
                 # String/List comparators are handled here
                 elif any(x for x in self.string_comparators if x in comparator):
-                    # Catch error where right_value is a string
-                    if isinstance(right_value, str) and ',' in right_value:
-                        right_value = str(re.sub(", ", ",", right_value)).split(',')
-                        LOG.warning(f"right_value was a string! now={right_value}")
-                    elif isinstance(right_value, str):
-                        right_value = [right_value]
-                        LOG.warning(f"right_value was a string! now={right_value}")
+                    # Catch error where right is a string
+                    if isinstance(right, str) and ',' in right:
+                        right = str(re.sub(", ", ",", right)).split(',')
+                        LOG.warning(f"right was a string! now={right}")
+                    elif isinstance(right, str):
+                        right = [right]
+                        LOG.warning(f"right was a string! now={right}")
 
-                    if comparator == "IN" and str(left_value[0].strip()) not in right_value:
+                    if comparator == "IN" and str(left) not in right:
                         LOG.debug(f"not in, go to else")
                         execute_if = False
-                    elif comparator == "!IN" and str(left_value[0].strip()) in right_value:
+                    elif comparator == "!IN" and str(left) in right:
                         LOG.debug(f"in, go to else")
                         execute_if = False
                     elif comparator.endswith("CONTAINS"):  # Handle CONTAINS/!CONTAINS
-                        LOG.debug(f"left={left_value}")
-                        LOG.debug(f"right={right_value}")
+                        LOG.debug(f"left={left}")
+                        LOG.debug(f"right={right}")
                         contains = False
-                        # Iterate over right_value items to find a match
-                        for opt in right_value:
-                            if f" {opt} " in f" {left_value[0]} ":
-                                LOG.info(f"Found {opt} in {left_value[0]}")
+                        # Iterate over right items to find a match
+                        for opt in right:
+                            if f" {opt} " in f" {left} ":
+                                LOG.info(f"Found {opt} in {left}")
                                 contains = True
                                 break
                         if contains and comparator.startswith("!") or not contains:
                             execute_if = False
                     elif comparator.endswith("STARTSWITH"):
-                        LOG.debug(f"left={left_value}")
-                        LOG.debug(f"right={right_value}")
+                        LOG.debug(f"left={left}")
+                        LOG.debug(f"right={right}")
                         startswith = False
-                        # Iterate over right_value items to find a match
-                        for opt in right_value:
-                            if left_value[0].startswith(opt):
-                                LOG.info(f"{left_value[0]} starts with {opt}")
+                        # Iterate over right items to find a match
+                        for opt in right:
+                            if left.startswith(opt):
+                                LOG.info(f"{left} starts with {opt}")
                                 startswith = True
                                 break
                         if startswith and comparator.startswith("!") or not startswith:
                             execute_if = False
                     elif comparator.endswith("ENDSWITH"):
-                        LOG.debug(f"left={left_value}")
-                        LOG.debug(f"right={right_value}")
+                        LOG.debug(f"left={left}")
+                        LOG.debug(f"right={right}")
                         endswith = False
-                        # Iterate over right_value items to find a match
-                        for opt in right_value:
-                            if left_value[0].endswith(opt):
-                                LOG.info(f"{left_value[0]} ends with {opt}")
+                        # Iterate over right items to find a match
+                        for opt in right:
+                            if left.endswith(opt):
+                                LOG.info(f"{left} ends with {opt}")
                                 endswith = True
                                 break
                         if endswith and comparator.startswith("!") or not endswith:
                             execute_if = False
-
-                # elif comparator == "IN":
-                #     # This is depreciated, variables will always be lists
-                #     if isinstance(right_value, str) and ',' in right_value:
-                #         right_value = str(re.sub(", ", ",", right_value)).split(',')
-                #         LOG.debug(f" check if {left_value} in {right_value}")
-                #     # Check if left (string) in right (list)
-                #     if str(left_value[0].strip()) not in right_value:
-                #         LOG.debug(f"not in, go to else")
-                #         execute_if = False
-                # # else true
-                # elif comparator == "!IN":
-                #     # This is depreciated, variables will always be lists
-                #     if isinstance(right_value, str) and ',' in right_value:
-                #         right_value = str(re.sub(", ", ",", right_value)).split(',')
-                #         LOG.debug(f" check if {left_value} in {right_value}")
-                #     # Check if left (string) in right (list)
-                #     if str(left_value[0].strip()) in right_value:
-                #         LOG.debug(f"in, go to else")
-                #         execute_if = False
-                # elif comparator == "CONTAINS":
-                #     execute_if = False
-                #     # Format right value into list
-                #     if isinstance(right_value, str):
-                #         if ',' in right_value:
-                #             right_value = str(re.sub(", ", ",", right_value)).split(',')
-                #             LOG.debug(f" check if {left_value} contains {right_value}")
-                #         else:
-                #             right_value = [right_value]
-                #     LOG.debug(f"left={left_value}")
-                #     LOG.debug(f"right={right_value}")
-                #     # Iterate over right_value items to find a match
-                #     for opt in right_value:
-                #         if f" {opt} " in f" {left_value[0]} ":
-                #             LOG.info(f"Found {opt} in {left_value[0]}")
-                #             execute_if = True
-                #             break
                 else:
                     LOG.debug(f"Statement is True")
-        except Exception as e:
-            LOG.error(e)
+
+        else:
+            # TODO: DEPRECIATED DM
+            to_evaluate = str(text).replace(':', '').replace('"', '').split()[1:]
+            expression = " ".join(to_evaluate).strip()
+            execute_if = True
+            try:
+                # If no argument left, return was None and statement is necessarily False
+                if len(to_evaluate) == 0:
+                    execute_if = False
+
+                # If no comparator, check passed variable value
+                elif len(to_evaluate) == 1:
+                    LOG.debug(f"DM: No comparator, variable only: {to_evaluate[0]}")
+                    if to_evaluate[0] and str(to_evaluate[0]).lower() in ("0", "false", "none", "null", "", "no"):
+                        execute_if = False
+
+                # This is some comparison, evaluate it
+                else:
+                    comparator = None
+                    LOG.debug(f"DM: Evaluate comparison here: {to_evaluate}")
+                    # comparator = to_evaluate[1]
+                    comparators = self.string_comparators + self.math_comparators
+                    # for i in ("==", "!=", ">", "<", "IN", "!IN", "CONTAINS"):
+
+                    # Split equation into components
+                    for i in comparators:
+                        if i in to_evaluate:
+                            comparator = i.strip()
+                            break
+                        elif f"!{i}" in to_evaluate:
+                            comparator = f"!{i.strip()}"
+                            break
+                    LOG.debug(comparator)
+                    LOG.debug(expression)
+                    left_value, right_value = expression.split(comparator)
+                    left_value = str(re.sub(", ", ",", left_value)).strip().lower().split(',')
+                    right_value = str(re.sub(", ", ",", right_value)).strip().lower().split(',')
+                    # left_value = str(left_value).strip()
+                    # right_value = str(right_value).strip()
+                    # This was temporary, fixed in _substitute_variables
+                    # left_value = active_dict["variables"][left_value.strip().lstrip('{').rstrip('}')][0]
+                    # right_value = active_dict["variables"][right_value.strip().lstrip('{').rstrip('}')]
+
+                    LOG.debug(left_value)
+                    LOG.debug(right_value)
+
+                    LOG.debug(left_value[0].strip())
+                    LOG.debug(right_value[0].strip())
+
+                    try:
+                        if left_value[0].strip().isnumeric():
+                            left_as_int = int(left_value[0].strip())
+                            right_as_int = int(right_value[0].strip())
+                        else:
+                            left_as_int = left_value[0].strip()
+                            right_as_int = right_value[0].strip()
+                    except Exception as e:
+                        LOG.info(e)
+                        left_as_int = left_value[0].strip()
+                        right_as_int = right_value[0].strip()
+
+                    if not comparator:
+                        LOG.warning(f"no valid comparator found in {to_evaluate}")
+                        execute_if = False
+                    elif comparator == "==" and left_value[0].strip() != right_value[0].strip():
+                        LOG.debug(f"not equal, go to else")
+                        execute_if = False
+                    elif comparator == "!=" and left_value[0].strip() == right_value[0].strip():
+                        LOG.debug(f"equal, go to else")
+                        execute_if = False
+                    elif comparator == ">" and left_as_int <= right_as_int:
+                        LOG.debug(f"less than or equal, go to else")
+                        execute_if = False
+                    elif comparator == "<" and left_as_int >= right_as_int:
+                        LOG.debug(f"greater than or equal, go to else")
+                        execute_if = False
+                    elif comparator == ">=" and left_as_int < right_as_int:
+                        LOG.debug(f"less than, go to else")
+                        execute_if = False
+                    elif comparator == "<=" and left_as_int > right_as_int:
+                        LOG.debug(f"greater than, go to else")
+                        execute_if = False
+
+                    # String/List comparators are handled here
+                    elif any(x for x in self.string_comparators if x in comparator):
+                        # Catch error where right_value is a string
+                        if isinstance(right_value, str) and ',' in right_value:
+                            right_value = str(re.sub(", ", ",", right_value)).split(',')
+                            LOG.warning(f"right_value was a string! now={right_value}")
+                        elif isinstance(right_value, str):
+                            right_value = [right_value]
+                            LOG.warning(f"right_value was a string! now={right_value}")
+
+                        if comparator == "IN" and str(left_value[0].strip()) not in right_value:
+                            LOG.debug(f"not in, go to else")
+                            execute_if = False
+                        elif comparator == "!IN" and str(left_value[0].strip()) in right_value:
+                            LOG.debug(f"in, go to else")
+                            execute_if = False
+                        elif comparator.endswith("CONTAINS"):  # Handle CONTAINS/!CONTAINS
+                            LOG.debug(f"left={left_value}")
+                            LOG.debug(f"right={right_value}")
+                            contains = False
+                            # Iterate over right_value items to find a match
+                            for opt in right_value:
+                                if f" {opt} " in f" {left_value[0]} ":
+                                    LOG.info(f"Found {opt} in {left_value[0]}")
+                                    contains = True
+                                    break
+                            if contains and comparator.startswith("!") or not contains:
+                                execute_if = False
+                        elif comparator.endswith("STARTSWITH"):
+                            LOG.debug(f"left={left_value}")
+                            LOG.debug(f"right={right_value}")
+                            startswith = False
+                            # Iterate over right_value items to find a match
+                            for opt in right_value:
+                                if left_value[0].startswith(opt):
+                                    LOG.info(f"{left_value[0]} starts with {opt}")
+                                    startswith = True
+                                    break
+                            if startswith and comparator.startswith("!") or not startswith:
+                                execute_if = False
+                        elif comparator.endswith("ENDSWITH"):
+                            LOG.debug(f"left={left_value}")
+                            LOG.debug(f"right={right_value}")
+                            endswith = False
+                            # Iterate over right_value items to find a match
+                            for opt in right_value:
+                                if left_value[0].endswith(opt):
+                                    LOG.info(f"{left_value[0]} ends with {opt}")
+                                    endswith = True
+                                    break
+                            if endswith and comparator.startswith("!") or not endswith:
+                                execute_if = False
+                    else:
+                        LOG.debug(f"Statement is True")
+            except Exception as e:
+                LOG.error(e)
 
         # Update next index and save current indent
         active_dict = self.active_conversations[user]
@@ -2096,10 +2120,15 @@ class CustomConversations(MycroftSkill):
             self._reset_values(user)
         active_dict = self.active_conversations[user]
 
-        # Determine variables and values
-        var, val = text.split('=', 1)
-        var = var.strip().lstrip('{').rstrip('}')
-        val = val.strip()
+        parser_data = message.data.get("parser_data")
+        if parser_data:
+            var = parser_data.get("variable").strip()
+            val = parser_data.get("value").strip()
+        else:
+            # Determine variables and values
+            var, val = text.split('=', 1)
+            var = var.strip().lstrip('{').rstrip('}')
+            val = val.strip()
         to_update = active_dict["variables"].get(var, None)
 
         # Parse new val into a list
@@ -2169,7 +2198,7 @@ class CustomConversations(MycroftSkill):
             parser_data = message.data.get("parser_data")
             to_reconvey = parser_data.get("reconvey_text")
             name = clean_quotes(parser_data.get("name", "Neon"))
-            # name = clean_quotes(name)  # TODO: Handle variable here DM
+            # name = clean_quotes(name)  # TODO: Handle name as variable here DM
             if '"' in to_reconvey or "'" in to_reconvey:
                 text = clean_quotes(to_reconvey)
             else:
@@ -2248,7 +2277,7 @@ class CustomConversations(MycroftSkill):
             else:
 
                 # Skills will not block while speaking, so wait here to make sure reconveyed audio doesn't overlap
-                while self.check_for_signal("CORE_isSpeaking", -1):
+                while self.check_for_signal("CORE_isSpeaking", 60):
                     time.sleep(0.2)
 
                 # Handle server audio file references
@@ -2282,17 +2311,30 @@ class CustomConversations(MycroftSkill):
         active_dict = self.active_conversations[user]
 
         email_addr = self.preference_user(message).get("email")
-        title_var, body_var = content.split(",")
-        LOG.debug(f"title={title_var.strip()}, body={body_var.strip()}")
-        LOG.debug(active_dict["variables"])
-        title = active_dict["variables"].get(title_var.strip(), [title_var])[0].strip('"')
-        body = active_dict["variables"].get(body_var.strip(), ["Body variable was not defined."])[0]\
-            .strip('"').replace("\\n", "\n")
+
+        parser_data = message.data.get("parser_data")
+        if parser_data:
+            title = parser_data.get("subject")
+            body = parser_data.get("body")
+        else:
+            title_var, body_var = content.split(",")
+            LOG.debug(f"title={title_var}, body={body_var}")
+            LOG.debug(active_dict["variables"])
+            if title_var.startswith('"') or title_var.startswith("'"):
+                title = title_var.strip('"').strip("'")
+            else:
+                title = active_dict["variables"].get(title_var.strip(), [title_var])[0].strip('"')
+            if body_var.startswith('"') or body_var.startswith("'"):
+                body = body_var.strip('"').strip("'")
+            else:
+                body = active_dict["variables"].get(body_var.strip(), ["Body variable was not defined."])[0]\
+                    .strip('"').replace("\\n", "\n")
 
         if not email_addr:
             self.speak_dialog("no_email", private=True)
         else:
-            self.send_email(title, body, email_addr=email_addr)
+            LOG.debug(f"sending: {title}")
+            self.send_email(title, body, message, email_addr)
             # self.bus.emit(Message("neon.email", {"title": title, "email": email_addr, "body": body}))
 
         active_dict["current_index"] += 1
@@ -2506,7 +2548,7 @@ class CustomConversations(MycroftSkill):
         # LOG.debug(var_options)
         active_dict = self.active_conversations[user]
         active_dict["variable_to_fill"] = var_to_fill
-        LOG.debug(active_dict["variables"])
+        # LOG.debug(active_dict["variables"])
         # LOG.debug(json.dumps(active_dict, indent=4))
 
     def _variable_select_one(self, key, user, message=None):
@@ -2603,7 +2645,16 @@ class CustomConversations(MycroftSkill):
             # except Exception as e:
             #     LOG.error(e)
             LOG.debug(f'DM: {type(active_dict["variables"][key][0])}')
-            if isinstance(active_dict["variables"][key][0], list):
+            if isinstance(active_dict["variables"][key][0], str):
+                try:
+                    random_items = random.sample(active_dict["variables"][key], 3)
+                    LOG.debug(random_items)
+                    return f'{random_items[0]}, {random_items[1]}, or {random_items[2]}'
+                except ValueError:
+                    return f'{active_dict["variables"][key][0][0]} or {active_dict["variables"][key][0][1]}'
+
+            elif isinstance(active_dict["variables"][key][0], list):
+                LOG.warning(f'{key}={active_dict["variables"][key][0]}')
                 try:
                     random_items = random.sample(active_dict["variables"][key][0], 3)
                     LOG.debug(random_items)
@@ -2611,7 +2662,7 @@ class CustomConversations(MycroftSkill):
                 except ValueError:
                     return f'{active_dict["variables"][key][0][0]} or {active_dict["variables"][key][0][1]}'
 
-            if isinstance(active_dict["variables"][key][0], dict):
+            elif isinstance(active_dict["variables"][key][0], dict):
                 LOG.debug(active_dict["variables"][key][0])
                 LOG.debug(list(active_dict["variables"][key][0].keys()))
                 try:
@@ -2760,6 +2811,7 @@ class CustomConversations(MycroftSkill):
         :return: line with all variables substituted
         """
 
+        line = line.strip()
         LOG.debug(f"_sub_vars: {line}")
         # Handle wildcard substitutions (may include trailing punctuation)
         if do_wildcards:
@@ -2767,17 +2819,41 @@ class CustomConversations(MycroftSkill):
             i = 1
             for word in line.split():
                 if "*" in word:
-                    replacement = word.replace('*', "\\{_wildcard_" + str(i) + '\\}', 1)
+                    replacement = word.replace('*', "{_wildcard_" + str(i) + '}', 1)
                     line = line.replace(word, replacement, 1)
                     i += 1
+            line = f'"{line}"'
         # while "*" in line.split():
         #     line = line.replace(' * ', " \{_wildcard_" + str(i) + '\} ')
         #     i += 1
 
-        # There is at least one variable substitution here  TODO: Use parser_data for this
-        if '{' in line and '}' in line or '(' in line and ')' in line:
-            variables = self.active_conversations[user]["variables"]
-            LOG.debug(f"len(variables)={len(variables)}")
+        tokens = [line]
+        variables = self.active_conversations[user]["variables"]
+        LOG.debug(f"len(variables)={len(variables)}")
+        join_char = ""
+        # TODO: Use parser_data for this? DM
+        if not (line.startswith('"') and line.endswith('"')) and not (line.startswith("'") and line.endswith("'")):
+            # This is a non-literal line, check for any variable functions
+            tokens = []
+            remainder = line
+            join_char = " "
+            while " " in remainder:
+                token, remainder = remainder.split(" ", 1)
+                if "(" in token and ")" not in token:
+                    to_add, remainder = remainder.split(")", 1)
+                    token = f"{token}{to_add})"
+                if (token in variables.keys() or token.split('(')[0] in self.variable_functions.keys()) \
+                        and not token.startswith('{') and ('=' not in remainder or '==' in remainder):
+                    token = '{' + token + '}'
+                tokens.append(token)
+            if (remainder in variables.keys() or remainder.split('(')[0] in self.variable_functions.keys()) \
+                    and not remainder.startswith('{'):
+                remainder = '{' + remainder + '}'
+            tokens.append(remainder)
+
+            LOG.debug(tokens)
+        elif '{' in line and '}' in line:  # or '(' in line and ')' in line:
+            # This is a quoted string with variable substitution
 
             tokens = []
             remainder = line
@@ -2788,163 +2864,164 @@ class CustomConversations(MycroftSkill):
                 tokens.append("{" + key + "}")
             tokens.append(remainder)
             LOG.debug(tokens)
-            # Iterate through words and look for a substitution
-            for token in tokens:
-                # # Handle a variable function
-                # if "(" in word and word.split("(")[0].strip() in self.variable_functions:
-                #     cmd = word.split('(')[0].strip()
-                #     key = word.split('(')[1].split(')')[0].strip()
-                #     LOG.debug(f"{cmd} found in line for key={key}")
-                #     result = self.variable_functions[cmd](key, user, message)
-                #     LOG.debug(f"DM: replacing {word} with {result}")
-                #     line = line.replace(word, str(result))
-                #     # line = re.sub(str(cmd + "{" + key + "}"), str(result), str(line))
-                # # Handle a variable substitution
-                # if '{' in word and '}' in word:
-                #     # # This is a simple substitution
-                #     # if word.startswith('{') and word.endswith('}'):
-                #     #     var = word.replace(':', '').lstrip('{').rstrip('}')
-                #     #     LOG.debug(f"variable to replace is {var}")
-                #     #     LOG.debug(f"replacing '{word}' with '{variables.get(var, '')}' in '{line}'")
-                #     #
-                #     #     # If variable is a list, use the first element
-                #     #     if isinstance(variables.get(var, ""), list):
-                #     #         line = re.sub(word, ",".join(variables.get(var)), line).replace('"', '')
-                #     #     else:
-                #     #         line = re.sub(word, variables.get(var, ""), line)
-                #
-                #     # This is some functional replacement (depreciated syntax, should be "()")
-                #     if word.split('{')[0].strip() in self.variable_functions:  # This syntax is depreciated
-                #         LOG.warning(f"Depreciated syntax used in line: {line}")
-                #         cmd = word.split('{')[0].strip()
-                #         key = word.split('{')[1].split('}')[0].strip()
-                #         LOG.debug(f"{cmd} found in line for key={key}")
-                #         result = self.variable_functions[cmd](key, user, message)
-                #         LOG.debug(f"DM: replacing {word} with {result}")
-                #         line = line.replace(word, str(result))
-                #         # line = re.sub(str(cmd + "{" + key + "}"), str(result), str(line))
-                #     # This is an inline substitution
-                #     else:
-                #         prefix, to_parse = word.split('{', 1)
-                #         var, suffix = to_parse.split('}', 1)
-                if token.startswith('{') and token.endswith('}'):
-                    var = token.lstrip('{').rstrip('}')
-                # var = str(token.strip('\\'))  # This catches leftover '\' in variable names
-                #     if any(i for i in self.from_caffeine_wiz if i[0] in drink or drink in i[0]):
+
+        # Iterate through words and look for a substitution
+        for token in tokens:
+            # # Handle a variable function
+            # if "(" in word and word.split("(")[0].strip() in self.variable_functions:
+            #     cmd = word.split('(')[0].strip()
+            #     key = word.split('(')[1].split(')')[0].strip()
+            #     LOG.debug(f"{cmd} found in line for key={key}")
+            #     result = self.variable_functions[cmd](key, user, message)
+            #     LOG.debug(f"DM: replacing {word} with {result}")
+            #     line = line.replace(word, str(result))
+            #     # line = re.sub(str(cmd + "{" + key + "}"), str(result), str(line))
+            # # Handle a variable substitution
+            # if '{' in word and '}' in word:
+            #     # # This is a simple substitution
+            #     # if word.startswith('{') and word.endswith('}'):
+            #     #     var = word.replace(':', '').lstrip('{').rstrip('}')
+            #     #     LOG.debug(f"variable to replace is {var}")
+            #     #     LOG.debug(f"replacing '{word}' with '{variables.get(var, '')}' in '{line}'")
+            #     #
+            #     #     # If variable is a list, use the first element
+            #     #     if isinstance(variables.get(var, ""), list):
+            #     #         line = re.sub(word, ",".join(variables.get(var)), line).replace('"', '')
+            #     #     else:
+            #     #         line = re.sub(word, variables.get(var, ""), line)
+            #
+            #     # This is some functional replacement (depreciated syntax, should be "()")
+            #     if word.split('{')[0].strip() in self.variable_functions:  # This syntax is depreciated
+            #         LOG.warning(f"Depreciated syntax used in line: {line}")
+            #         cmd = word.split('{')[0].strip()
+            #         key = word.split('{')[1].split('}')[0].strip()
+            #         LOG.debug(f"{cmd} found in line for key={key}")
+            #         result = self.variable_functions[cmd](key, user, message)
+            #         LOG.debug(f"DM: replacing {word} with {result}")
+            #         line = line.replace(word, str(result))
+            #         # line = re.sub(str(cmd + "{" + key + "}"), str(result), str(line))
+            #     # This is an inline substitution
+            #     else:
+            #         prefix, to_parse = word.split('{', 1)
+            #         var, suffix = to_parse.split('}', 1)
+            if token.startswith('{') and token.endswith('}'):
+                var = token.lstrip('{').rstrip('}')
+            # var = str(token.strip('\\'))  # This catches leftover '\' in variable names
+            #     if any(i for i in self.from_caffeine_wiz if i[0] in drink or drink in i[0]):
+                LOG.debug(var)
+                if any(x for x in self.variable_functions if x in var):  # Handle variable substitution
                     LOG.debug(var)
-                    if any(x for x in self.variable_functions if x in var):  # Handle variable substitution
-                        LOG.debug(var)
-                        cmd, key = var.split("(", 1)
-                        key = key.rstrip(")")
-                        LOG.debug(cmd)
-                        result = self.variable_functions[cmd](key, user, message)
+                    cmd, key = var.split("(", 1)
+                    key = key.rstrip(")")
+                    LOG.debug(cmd)
+                    result = self.variable_functions[cmd](key, user, message)
 
-                        LOG.debug(f"replacing {token} with {result} in {line}")
-                        index = tokens.index(token)
-                        tokens.remove(token)
-                        tokens.insert(index, result)
+                    LOG.debug(f"replacing {token} with {result} in {line}")
+                    index = tokens.index(token)
+                    tokens.remove(token)
+                    tokens.insert(index, str(result))
 
-                    else:  # Handle simple substitution
-                        LOG.debug(var)
+                else:  # Handle simple substitution
+                    LOG.debug(var)
 
-                        # Get variable value
-                        raw_val = [""]
-                        # Check if this variable is defined with a value in this script
-                        if '[' in var and ']' in var:
-                            var_name = var.split('[')[0]
+                    # Get variable value
+                    raw_val = [""]
+                    # Check if this variable is defined with a value in this script
+                    if '[' in var and ']' in var:
+                        var_name = var.split('[')[0]
+                    else:
+                        var_name = var
+                    if var_name in variables.keys() and variables[var_name]:
+                        raw_val = variables[var_name]
+                    # Check if this variable is defined in a script that called this script
+                    else:
+                        for script in self.active_conversations[user]["pending_scripts"]:
+                            if var_name in script.get("variables", {}).keys():
+                                raw_val = script["variables"][var_name]
+                                break
+
+                    # Get a specific index from our raw value
+                    if '[' in var and ']' in var:
+                        # idx = var.split('[')[1].split(']')[0]
+                        # var = var.split('[')[0]
+                        var, indices = var.split('[', 1)
+                        idx = indices.split(']', 1)[0]  # Multiple indices could be handled in the remainder here
+                        LOG.debug(f"get {var}[{idx}] in {raw_val}")
+                        # Wildcard return all
+                        if idx == '*':
+                            val = ', '.join(raw_val)
+                        # Get value at requested index
+                        elif idx in range(0, len(raw_val)):
+                            val = variables.get(var, [''])[idx]
+                        # Catch index out of range and return the last value
                         else:
-                            var_name = var
-                        if var_name in variables.keys() and variables[var_name]:
-                            raw_val = variables[var_name]
-                        # Check if this variable is defined in a script that called this script
-                        else:
-                            for script in self.active_conversations[user]["pending_scripts"]:
-                                if var_name in script.get("variables", {}).keys():
-                                    raw_val = script["variables"][var_name]
-                                    break
+                            val = variables.get(var, [''])[0]
+                        LOG.debug(val)
+                    # Just get the value and check it is a list and has at least one value
+                    else:
+                        val = raw_val
+                        # LOG.debug(variables)
+                        LOG.debug(val)
+                        # LOG.debug(val[0])
+                        # Catch error
+                        if not isinstance(val, list):
+                            val = [val]
+                        if len(val) == 0:
+                            if var not in variables:
+                                active_dict = self.active_conversations[user]
+                                line_num = active_dict["formatted_script"][
+                                    active_dict["current_index"]]["line_number"]
+                                self.speak_dialog("error_at_line",
+                                                  {"error": "undeclared variable",
+                                                            "line": line_num,
+                                                            "detail": line,
+                                                            "script": active_dict["script_filename"]})
+                            val = ""
+                        if isinstance(val[0], list):
+                            LOG.error(f"val is list of lists: {val}")
+                            val = val[0]
+                        # LOG.debug(variables)
 
-                        # Get a specific index from our raw value
-                        if '[' in var and ']' in var:
-                            # idx = var.split('[')[1].split(']')[0]
-                            # var = var.split('[')[0]
-                            var, indices = var.split('[', 1)
-                            idx = indices.split(']', 1)[0]  # Multiple indices could be handled in the remainder here
-                            LOG.debug(f"get {var}[{idx}] in {raw_val}")
-                            # Wildcard return all
-                            if idx == '*':
-                                val = ', '.join(raw_val)
-                            # Get value at requested index
-                            elif idx in range(0, len(raw_val)):
-                                val = variables.get(var, [''])[idx]
-                            # Catch index out of range and return the last value
-                            else:
-                                val = variables.get(var, [''])[0]
-                            LOG.debug(val)
-                        # Just get the value and check it is a list and has at least one value
-                        else:
-                            val = raw_val
-                            LOG.debug(variables)
-                            LOG.debug(val)
-                            # LOG.debug(val[0])
-                            # Catch error
-                            if not isinstance(val, list):
-                                val = [val]
-                            if len(val) == 0:
-                                if var not in variables:
-                                    active_dict = self.active_conversations[user]
-                                    line_num = active_dict["formatted_script"][
-                                        active_dict["current_index"]]["line_number"]
-                                    self.speak_dialog("error_at_line",
-                                                      {"error": "undeclared variable",
-                                                                "line": line_num,
-                                                                "detail": line,
-                                                                "script": active_dict["script_filename"]})
-                                val = ""
-                            if isinstance(val[0], list):
-                                LOG.error(f"val is list of lists: {val}")
-                                val = val[0]
-                            # LOG.debug(variables)
+                    # If variable is a list (no index requested), use the first element
+                    if isinstance(val, list):
+                        # if len(val) > 1 and message.data["cc_data"].get("return_list", False):
+                        #     new_word = ",".join(variables.get(var))
+                        # else:
+                        new_word = str(val[0]).strip().strip('"')
+                    else:
+                        LOG.error(f"Value is string and should be list! {val}")
+                        new_word = str(val).strip().strip('"')
+                    # LOG.debug(new_word)
 
-                        # If variable is a list (no index requested), use the first element
-                        if isinstance(val, list):
-                            # if len(val) > 1 and message.data["cc_data"].get("return_list", False):
-                            #     new_word = ",".join(variables.get(var))
-                            # else:
-                            new_word = str(val[0]).strip().strip('"')
-                        else:
-                            LOG.error(f"Value is string and should be list! {val}")
-                            new_word = str(val).strip().strip('"')
-                        # LOG.debug(new_word)
+                    # Cleanup quotes in strings and lists
+                    new_word = new_word.lstrip('"').rstrip('"').replace('", "', ", ")
+                    # LOG.debug(new_word)
 
-                        # Cleanup quotes in strings and lists
-                        new_word = new_word.lstrip('"').rstrip('"').replace('", "', ", ")
-                        # LOG.debug(new_word)
+                    # new_word = f"{prefix}{new_word}{suffix}"
+                    # new_word = clean_quotes(new_word)
 
-                        # new_word = f"{prefix}{new_word}{suffix}"
-                        # new_word = clean_quotes(new_word)
+                    LOG.debug(f"replacing {token} with {new_word} in {line}")
+                    index = tokens.index(token)
+                    tokens.remove(token)
+                    tokens.insert(index, new_word)
+                    # LOG.debug(new_word)
+                    # new_word = variables.get(var, "")
+                    # LOG.debug(f"DM: {new_word}")
+                    # LOG.debug(f"{word} | {new_word} | {line}")
+                    # line = re.sub('\*', "__.__", line)
 
-                        LOG.debug(f"replacing {token} with {new_word} in {line}")
-                        index = tokens.index(token)
-                        tokens.remove(token)
-                        tokens.insert(index, new_word)
-                        # LOG.debug(new_word)
-                        # new_word = variables.get(var, "")
-                        # LOG.debug(f"DM: {new_word}")
-                        # LOG.debug(f"{word} | {new_word} | {line}")
-                        # line = re.sub('\*', "__.__", line)
+                    # # Replace any regex characters before substitutions
+                    # for c in ('*', '[', ']', '{', '}', '\\n'):
+                    #     word = word.replace(c, '\\' + c)
+                    # # word = word.replace('*', "\*").replace('[', '\[').replace(']', '\]')\
+                    # #     .replace('{', '\{').replace('}', '\}')
+                    # # re.sub('\*', "__.__", re.sub("\[", '_', re.sub("\]", '_', word))).lstrip('{').rstrip('}')
+                    # LOG.debug(f"{word} | {new_word} | {line}")
+                    # line = re.sub(word, new_word, line)
+                    # LOG.debug(line)
 
-                        # # Replace any regex characters before substitutions
-                        # for c in ('*', '[', ']', '{', '}', '\\n'):
-                        #     word = word.replace(c, '\\' + c)
-                        # # word = word.replace('*', "\*").replace('[', '\[').replace(']', '\]')\
-                        # #     .replace('{', '\{').replace('}', '\}')
-                        # # re.sub('\*', "__.__", re.sub("\[", '_', re.sub("\]", '_', word))).lstrip('{').rstrip('}')
-                        # LOG.debug(f"{word} | {new_word} | {line}")
-                        # line = re.sub(word, new_word, line)
-                        # LOG.debug(line)
-
-            line = "".join(tokens)
-            LOG.debug(f"DM after sub: {line}")
+            line = join_char.join(tokens)
+            LOG.debug(f"interim: {line}")
         LOG.debug(f">>>{line}")
         return line
 
@@ -3253,7 +3330,7 @@ class CustomConversations(MycroftSkill):
         elif status in ("created", "updated"):
             self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
             # Update config to track last updated time
-            self.ngi_settings.update_yaml_file("updates", message.data.get("file_basename"), time.time(), final=True)
+            # self.ngi_settings.update_yaml_file("updates", message.data.get("file_basename"), time.time(), final=True)
         # elif status == "updated":
         #     self.speak_dialog("upload_success", {"name": name, "state": status}, message=message)
         elif status == "no title":

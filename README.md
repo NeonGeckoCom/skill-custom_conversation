@@ -17,21 +17,22 @@ Skill, which works using the custom text parsing implementation, provides the fu
 
 Scripts update automatically when Neon is started; you can start a script by saying:
     
-    Neon run my <script name> skill file
+- Run my (script name) skill file
     
 If the script has any synonyms specified, you may also use a synonym to start the script.
 
 If the script has any defined [tags](#tag), you can start the script at the tag by saying:
     
-    Neon run my <script name> skill file at <tag name>
+- Run my (script name) skill file at (tag name)
 
 You may also update scripts:
 
-    Neon update my scripts
+- Update my scripts
 
 You can request an emailed copy of a script:
     
-    Neon email me my <script name> script
+- Email me my (script name) script
+
 # What are scripts?  
 Scripts are user-constructed text files that contain various Neon commands. 
 Using a few simple keywords, described below in the detail, you can specify exactly what Neon should say, do, repeat, 

@@ -1,21 +1,25 @@
 skillMetadata:
   sections:
-    - name: Cache Settings
+    - name: Update Settings
       fields:
+        - name: scripts_repo
+          type: text
+          label: Repository url to update scripts from
+          value: https://github.com/NeonGeckoCom/neon-scripts
+        - name: scripts_branch
+          type: text
+          label: Repository branch to update scripts from
+          value: master
         - name: allow_update
           type: checkbox
           label: Allow update of scripts via intent (disable to prevent requests to update scripts)
           value: "true"
         - name: auto_update
           type: checkbox
-          label: Automatically update scripts from remote server
+          label: Automatically update scripts from git remote
           value: "true"
     - name: Internal Settings
       fields:
-        - name: updates
-          type: text
-          label: Script Update Times
-          value:
         - name: last_updated
           type: text
           label: Last Update Time
