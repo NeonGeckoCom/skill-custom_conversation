@@ -112,6 +112,7 @@ class CustomConversations(MycroftSkill):
         self.string_comparators = ("IN", "CONTAINS", "STARTSWITH", "ENDSWITH")
         self.math_comparators = ("==", "!=", ">", "<", ">=", "<=")
         self.active_conversations = dict()
+        self.awaiting_input = list()
         self._reset_values("local")
 
         self.speak_timeout = 5
@@ -689,7 +690,8 @@ class CustomConversations(MycroftSkill):
             active_dict = self.active_conversations[user]
 
             # Catch when we are waiting for input
-            if not self.check_for_signal(f"{user}_CC_inputNeeded", -1):
+            # if not self.check_for_signal(f"{user}_CC_inputNeeded", -1):
+            if user not in self.awaiting_input:
                 LOG.debug(f'Continuing script from index {active_dict["current_index"]}')
 
                 # Continue only if there is an active script for the user
@@ -1230,7 +1232,8 @@ class CustomConversations(MycroftSkill):
                         line_index_to_check += 1
                     # This is a valid case option, check if we should go here
                     else:
-                        case_to_check = str(line_to_evaluate["text"]).lower().strip('"')
+                        case_to_check = str(line_to_evaluate["text"]).lower().rstrip('\n').strip('"')
+                        # TODO: Parse above in parser DM
                         LOG.debug(f'Checking case: {case_to_check}')
                         # Parse valid options to match case
                         options = [case_to_check]
@@ -2531,8 +2534,9 @@ class CustomConversations(MycroftSkill):
         """
         # LOG.debug(f"DM: {key}, {user}")
         LOG.debug(message)
-        self.create_signal(f"{user}_CC_inputNeeded")
-        LOG.debug(f"Created {user}_CC_inputNeeded")
+        # self.create_signal(f"{user}_CC_inputNeeded")
+        # LOG.debug(f"Created {user}_CC_inputNeeded")
+        self.awaiting_input.append(user)
         LOG.info(f"Voice input needed for {user} to assign {var_to_fill}")
         if not var_to_fill:
             LOG.warning(f"Requested voice_input with null variable!")
@@ -3057,7 +3061,9 @@ class CustomConversations(MycroftSkill):
         # Check that user is actively running a script
         if active_dict["script_filename"]:
             if active_dict["timeout_action"]:
-                self.check_for_signal(f"{user}_CC_inputNeeded")
+                if user in self.awaiting_input:
+                    self.awaiting_input.remove(user)
+                # self.check_for_signal(f"{user}_CC_inputNeeded")
                 self._run_goto(user, active_dict["timeout_action"], message)
             else:
                 self.speak_dialog("TimeoutExit", {"duration": active_dict["timeout"]}, message=message, private=True,
@@ -3093,8 +3099,8 @@ class CustomConversations(MycroftSkill):
                         message.context["cc_data"].get("signal_to_check", None):
                     LOG.debug("Active, about to check request")
                     # Check if this speak event is related to the last request
-                    if message.context["cc_data"]["request"] == active_dict.get("last_request", "") and not \
-                            self.check_for_signal(f"{user}_CC_inputNeeded", -1):
+                    if message.context["cc_data"]["request"] == active_dict.get("last_request", "") and \
+                            user not in self.awaiting_input:
                         LOG.debug("Neon response found. Continuing script.")
                         self.active_conversations[user]["last_request"] = ""
                         timeout = time.time() + self.speak_timeout
@@ -3191,8 +3197,10 @@ class CustomConversations(MycroftSkill):
                     # goto_line = None
                     goto_idx = None
                     goto_ind = active_dict["current_index"]
-                    self.check_for_signal(f"{user}_CC_inputNeeded")
-                    LOG.debug(f"DM: Cleared {user}_CC_inputNeeded")
+                    if user in self.awaiting_input:
+                        self.awaiting_input.remove(user)
+                    # self.check_for_signal(f"{user}_CC_inputNeeded")
+                    # LOG.debug(f"DM: Cleared {user}_CC_inputNeeded")
 
                     # Iterate through loops to find active loop
                     for loop in active_dict["loops_dict"]:
@@ -3232,10 +3240,12 @@ class CustomConversations(MycroftSkill):
                     LOG.error(e)
                     self.runtime_execution["exit"](user, "exit", message)
                 return True
-            # Handle variable assignment
-            elif self.check_for_signal(f"{user}_CC_inputNeeded"):
-                LOG.debug(f"Cleared {user}_CC_inputNeeded")
-
+            # Handle variable assignment  TODO: This not working?
+            elif user in self.awaiting_input:
+                self.awaiting_input.remove(user)
+            # elif self.check_for_signal(f"{user}_CC_inputNeeded"):
+            #     LOG.debug(f"Cleared {user}_CC_inputNeeded")
+                LOG.debug(f"Remove {user} from awaiting_input")
                 LOG.debug(f'variables={active_dict["variables"]}')
                 LOG.debug(f'variable_to_fill={active_dict["variable_to_fill"]}')
                 assigned_value = None
@@ -3303,8 +3313,10 @@ class CustomConversations(MycroftSkill):
                     self._continue_script_execution(message, user)
                     return True
                 else:
-                    self.create_signal(f"{user}_CC_inputNeeded")
-                    LOG.debug(f"DM: Created {user}_CC_inputNeeded")
+                    self.awaiting_input.append(user)
+                    LOG.debug(f"{user} awaiting input")
+                    # self.create_signal(f"{user}_CC_inputNeeded")
+                    # LOG.debug(f"DM: Created {user}_CC_inputNeeded")
 
                     return False
             # Else, consume the utterance
