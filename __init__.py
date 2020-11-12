@@ -197,10 +197,10 @@ class CustomConversations(MycroftSkill):
             # if self.check_for_signal("CC_convoSuccess"):
             if self.server:
                 if success:
-                    self.speak_dialog("update_success")
+                    self.speak_dialog("update_success", message=message)
                 # elif self.check_for_signal("CC_convoFailure"):
                 else:
-                    self.speak_dialog("update_failed")
+                    self.speak_dialog("update_failed", message=message)
                 # self.check_for_signal("CC_updating")
         else:
             self.speak_dialog("update_disallowed")
@@ -505,6 +505,8 @@ class CustomConversations(MycroftSkill):
 
             # Initialize Scripts repository
             try:
+                if not os.path.isdir(self.text_location):
+                    os.makedirs(self.text_location)
                 repo = git.Repo(self.text_location)
             except InvalidGitRepositoryError:
                 shutil.move(self.text_location, f"{self.text_location}_bak")
@@ -532,109 +534,6 @@ class CustomConversations(MycroftSkill):
         except Exception as e:
             LOG.error(e)
             return False
-        # if self.server:
-        #     try:
-        #         status = self.bus.wait_for_response(Message('neon.update_scripts'))
-        #         LOG.info(status)
-        #         self.check_for_signal("CC_updating")
-        #         uploaded_script_path = status.data.get("path")
-        #         # if not self.settings.get("updates"):
-        #         #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
-        #
-        #         if uploaded_script_path and status:
-        #             for script in os.listdir(uploaded_script_path):
-        #                 shutil.copy(os.path.join(uploaded_script_path, script),
-        #                             os.path.join(self.text_location, script))
-        #         else:
-        #             LOG.warning("Script update failure!")
-        #             return False
-        #         # self.create_signal("UpdateConversationFiles")
-        #         # while self.check_for_signal("CC_updating", 10):
-        #         #     time.sleep(0.5)
-        #         return status.data.get("success")
-        #     except Exception as e:
-        #         LOG.error(e)
-        #         return False
-        #         # self.check_for_signal("CC_updating")
-        # else:
-        #     self.bus.once("neon.server.update_scripts.response", self._handle_updated_scripts)
-        #     self.bus.emit(Message("neon.client.update_scripts"))
-        #     return None
-
-    # def _handle_updated_scripts(self, message):
-    #     # LOG.debug(message.msg_type)
-    #     if not os.path.isdir(self.text_location):
-    #         os.makedirs(self.text_location)
-    #
-    #     for script in message.data.keys():
-    #         try:
-    #             if script.endswith(".txt"):
-    #                 LOG.warning(f"text file received! {script}")
-    #             elif script.endswith("nct"):
-    #                 # File exists, check overwrite
-    #                 if os.path.isfile(os.path.join(self.text_location, script)):
-    #                     mod_time = round(os.path.getmtime(os.path.join(self.text_location, script)))
-    #                     # if not self.settings.get("updates"):
-    #                     #     create_time = 0
-    #                     #     self.ngi_settings.update_yaml_file("updates", value={}, final=True)
-    #                     # else:
-    #                     create_time = self.settings["updates"].get(script, 0)
-    #
-    #                     # Backup any old versions if modified since last update from remote
-    #                     if mod_time > create_time:
-    #                         timestamp = time.strftime('%Y-%m-%d--%H_%M')
-    #                         backup_name = f"{os.path.splitext(script)[0]}_{timestamp}{os.path.splitext(script)[1]}"
-    #                         os.makedirs(os.path.join(self.text_location, "backup"), exist_ok=True)
-    #                         shutil.move(os.path.join(self.text_location, script),
-    #                                     os.path.join(self.text_location, "backup", backup_name))
-    #                         LOG.debug(f"Local text modified, backed up {script} to {backup_name}")
-    #
-    #                     # Update new file and write out last update info
-    #                     with open(os.path.join(self.text_location, script), "wb") as out:
-    #                         out.write(base64.b64decode(message.data[script].encode("utf-8")))
-    #                     mtime = round(os.path.getmtime(os.path.join(self.text_location, script)))
-    #                     self.ngi_settings.update_yaml_file("updates", script, mtime, multiple=True)
-    #                 else:
-    #                     # Create new file and write out last update info
-    #                     with open(os.path.join(self.text_location, script), "wb") as out:
-    #                         out.write(base64.b64decode(message.data[script].encode("utf-8")))
-    #                     mtime = round(os.path.getmtime(os.path.join(self.text_location, script)))
-    #                     self.ngi_settings.update_yaml_file("updates", script, mtime, multiple=True)
-    #
-    #             elif script.endswith("ncs"):
-    #                 # if os.path.isfile(os.path.join(self.text_location, script)):
-    #                 #     existing = self.get_cached_data(script, self.text_location)
-    #                 #     with open(os.path.join(self.cache_loc, script), "wb") as tmp:
-    #                 #         tmp.write(base64.b64decode(message.data[script].encode("utf-8")))
-    #                 #     new_data = self.get_cached_data(script)
-    #                 #     if new_data[9].get("compiled", 0) != existing[9].get("compiled", 0):
-    #                 #         timestamp = time.strftime('%Y-%m-%d--%H_%M')
-    #                 #         backup_name = f"{os.path.splitext(script)[0]}_{timestamp}_{os.path.splitext(script)[1]}"
-    #                 #         shutil.move(os.path.join(self.text_location, script),
-    #                 #                     os.path.join(self.text_location, "backup", backup_name))
-    #                 #     os.remove(os.path.join(self.cache_loc, script))
-    #
-    #                 with open(os.path.join(self.text_location, script), "wb") as out:
-    #                     out.write(base64.b64decode(message.data[script].encode("utf-8")))
-    #             else:
-    #                 LOG.warning(f"non-script received! {script}")
-    #         except Exception as e:
-    #             LOG.error(e)
-    #             LOG.error(f"Failed to parse {script}")
-    #
-    #     LOG.debug("DONE!")
-    #     self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
-    #     self.bus.emit(Message('check.yml.updates',
-    #                           {"modified": ["ngi_skill_conf"]}, {"origin": self.name}))
-    #     if self.update_message:
-    #         if message.data.get("success"):
-    #             self.speak_dialog("update_success", message=self.update_message)
-    #         else:
-    #             self.speak_dialog("update_failed", message=self.update_message)
-    #         self.update_message = None
-    #
-    #     # self.create_signal("CC_convoSuccess")
-    #     # self.check_for_signal("CC_updating")
 
     def _check_script_file(self, filename, compiled=True):
         """
