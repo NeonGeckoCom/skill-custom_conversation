@@ -746,6 +746,7 @@ class CustomConversations(MycroftSkill):
                                 self._continue_script_execution(message, user)
         except Exception as e:
             LOG.error(e)
+            LOG.error(line_to_evaluate)
             try:
                 line = line_to_evaluate.get("line_number")
                 script = active_dict.get("script_filename")
