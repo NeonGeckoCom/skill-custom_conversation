@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
 #
-# Copyright 2008-2020 Neongecko.com Inc. | All Rights Reserved
+# Copyright 2008-2021 Neongecko.com Inc. | All Rights Reserved
 #
 # Notice of License - Duplicating this Notice of License near the start of any file containing
 # a derivative of this software is a condition of license for this software.
@@ -14,7 +14,7 @@
 # Authors: Guy Daniels, Daniel McKnight, Regina Bloomstine, Elon Gasper, Richard Leeds
 #
 # Specialized conversational reconveyance options from Conversation Processing Intelligence Corp.
-# US Patents 2008-2020: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
+# US Patents 2008-2021: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
 # China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
 
 import base64
@@ -36,8 +36,10 @@ from git import InvalidGitRepositoryError
 from mycroft.messagebus.message import Message
 from mycroft.skills.core import MycroftSkill, intent_handler
 from mycroft.util.log import LOG
-from NGI.utilities.utilHelper import scrape_page_for_links as scrape
-from NGI.utilities.parseUtils import clean_quotes
+# from NGI.utilities.utilHelper import scrape_page_for_links as scrape
+from neon_utils.web_utils import scrape_page_for_links as scrape
+from neon_utils.parse_utils import clean_quotes
+# from NGI.utilities.parseUtils import clean_quotes
 from mycroft.util.parse import normalize
 from mycroft.util import play_wav
 

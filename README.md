@@ -1,19 +1,19 @@
 
-# ![](https://0000.us/klatchat/app/files/neon_images/icons/neon_paw.png)Custom Conversations  
+# <img src='https://0000.us/klatchat/app/files/neon_images/icons/neon_skill.png' card_color="#FF8600" width="50" style="vertical-align:bottom">Custom Conversations  
   
-# Summary  
+## Summary  
   
 Create your own or use text script files shared by other users.   
   
-# Requirements  
+## Requirements  
   
 No special required packages for this skill.  
   
-# Description  
+## Description  
   
 Skill, which works using the custom text parsing implementation, provides the functionality to create, share, modify, and use any script files obtained from the shared library.  
 
-# How to Use
+## Examples
 
 Scripts update automatically when Neon is started; you can start a script by saying:
     
@@ -591,7 +591,7 @@ should only be used if you maintain the required skill and script, as these para
     
 *Note: "weather" is defined in the weather skill dialog for this intent*
  
-# How to Use  
+## Examples  
 
 Scripts can be downloaded from Neongecko's library or drafted and added to the script_txt folder in the skill directory.
 The demo skill files (found in the library at neongecko.net) and descriptions above provide a summary and examples 
@@ -599,10 +599,10 @@ of the available functionality and formatting requirements.
 
 
   
-# Contact Support  
+## Contact Support  
   
 Use the [link](https://neongecko.com/ContactUs) or [submit an issue on GitHub](https://help.github.com/en/articles/creating-an-issue)  
   
-# Credits  
+## Credits  
   
 [reginaneon](https://github.com/reginaneon) [NeonDaniel](https://github.com/neondaniel) [neongeckocom](https://neongecko.com/)
