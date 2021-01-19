@@ -36,8 +36,10 @@ from git import InvalidGitRepositoryError
 from mycroft.messagebus.message import Message
 from mycroft.skills.core import MycroftSkill, intent_handler
 from mycroft.util.log import LOG
-from NGI.utilities.utilHelper import scrape_page_for_links as scrape
-from NGI.utilities.parseUtils import clean_quotes
+# from NGI.utilities.utilHelper import scrape_page_for_links as scrape
+from neon_utils.web_utils import scrape_page_for_links as scrape
+from neon_utils.parse_utils import clean_quotes
+# from NGI.utilities.parseUtils import clean_quotes
 from mycroft.util.parse import normalize
 from mycroft.util import play_wav
 
