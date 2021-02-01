@@ -89,12 +89,20 @@ class CustomConversations(MycroftSkill):
         if skill_needs_patching(self):
             stub_missing_parameters(self)
 
+        if self.neon_core:
+            self.tz = gettz(self.user_info_available["location"]["tz"])
+            self.auto_update = self.settings['auto_update']
+            self.allow_update = self.settings["allow_update"]
+        else:
+            self.tz = gettz(self.location_timezone)
+            self.auto_update = False
+            self.allow_update = False
+
         self.file_ext = ".ncs"
         self.text_location = f"{self.__location__}/script_txt"
         self.audio_location = f"{self.__location__}/script_audio"
         self.transcript_location = f"{self.__location__}/script_transcript"
-        # self.tz = gettz(self.user_info_available["location"]["tz"])
-        self.tz = gettz(self.location_timezone)
+
         # self.update_message = False
         self.reload_skill = False  # This skill should not be reloaded or else active users break
         self.runtime_execution, self.variable_functions = {}, {}
@@ -125,15 +133,6 @@ class CustomConversations(MycroftSkill):
 
         self.speak_timeout = 5
         self.response_timeout = 10
-        self.auto_update = False
-        self.allow_update = False
-
-        # if self.settings["skillMetadata"]["sections"]["fields"]["allow_update"] == "true":
-        #     self.allow_update = True
-        # if self.settings["skillMetadata"]["sections"]["fields"]["auto_update"] == "true":
-        #     self.auto_update = True
-        # self.auto_update = self.settings['auto_update']
-        # self.allow_update = self.settings["allow_update"]
 
     def initialize(self):
         self.make_active()  # Make this skill active so that it never
@@ -227,7 +226,7 @@ class CustomConversations(MycroftSkill):
         LOG.info(available)
         if available:
             self.speak_dialog("available_script", {"available": f'{", ".join(available[:-1])}, and {available[-1]}'})
-            if message.context.get("mobile", None):
+            if self.request_from_mobile(message):
                 self.socket_io_emit("scripts_list", f"&files={available}", message.context["flac_filename"])
 
     @intent_handler(IntentBuilder("SetDefault").require('default'))
@@ -2213,13 +2212,13 @@ class CustomConversations(MycroftSkill):
             #     flac_filename = message.context["flac_filename"]
             #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
         else:
-            if message.context.get("mobile"):
+            if self.request_from_mobile(message):
                 # TODO: Handle sending audio data to mobile (non-server so can't assume public URL) DM
                 pass
             else:
 
                 # Skills will not block while speaking, so wait here to make sure reconveyed audio doesn't overlap
-                while self.check_for_signal("isSpeaking", 60):
+                while self.is_speaking(60):
                     time.sleep(0.2)
 
                 # Handle server audio file references
@@ -3035,7 +3034,6 @@ class CustomConversations(MycroftSkill):
         """
         # LOG.debug(f"DM: check_speak: {message.data}")
         try:
-            # LOG.info(f"CHECK SPEAK FOR {message.data}")
             user = self.get_utterance_user(message)
             # if self.server:
             #     user = nick(message.context["flac_filename"])
@@ -3046,10 +3044,6 @@ class CustomConversations(MycroftSkill):
             if message.context.get("cc_data", {}).get("request", None):
                 LOG.info(message.data)
                 LOG.info(f'checking {message.context["cc_data"].get("request", "")} ?= {active_dict["last_request"]}')
-                # LOG.info(message.data.get("cc_data")["speak_execute"])
-                # LOG.info(message.data.get('utterances'))
-                # LOG.info(type(message.data.get("cc_data")))
-
                 if self.check_for_signal(f"{user}_CC_active", -1) and \
                         message.context["cc_data"].get("signal_to_check", None):
                     LOG.info("Active, about to check request")
@@ -3058,24 +3052,19 @@ class CustomConversations(MycroftSkill):
                             user not in self.awaiting_input:
                         LOG.info("Neon response found. Continuing script.")
                         self.active_conversations[user]["last_request"] = ""
-                        timeout = time.time() + self.speak_timeout
+                        # timeout = time.time() + self.speak_timeout
 
                         # If this is a 'Neon speak' event, wait for the utterance to be spoken
                         LOG.info(f'Waiting for {message.context["cc_data"]["signal_to_check"]}')
                         # TODO: Try using wait_while_speaking instead of this while-loop
-                        while self.check_for_signal("isSpeaking", -1) and \
-                                time.time() < timeout:
-                            time.sleep(0.5)
+                        # while self.is_speaking() and time.time() < timeout:
+                        while self.is_speaking():
+                            time.sleep(1)
                         LOG.debug("Done waiting.")
                         self.clear_signals(message.context["cc_data"]["signal_to_check"])
                         # message.context["cc_data"]["signal_to_check"] = ""
                         # LOG.debug(f"DM: Continue Script Execution Call")
                         self._continue_script_execution(message, user)
-                    # LOG.info("CC: In speak duplicate")
-                    # LOG.info(message.data.get("flac_filename"))
-                    # if active_dict["speak_execute_flac"] == message.data.get("cc_data")["speak_execute"] or \
-                    #         active_dict["speak_execute_flac"] == message.data.get('utterances'):
-                    # active_dict["current"] = True
         except TypeError:
             pass
         # except KeyError:
