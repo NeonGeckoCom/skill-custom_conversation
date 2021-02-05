@@ -1,0 +1,36 @@
+{
+    "title": "Custom Conversations",
+    "url": "https://github.com/NeonGeckoCom/custom-conversation.neon",
+    "summary": "Create your own or use text script files shared by other users.",
+    "short_description": "Create your own or use text script files shared by other users.",
+    "description": "Skill, which works using the custom text parsing implementation, provides the functionality to create, share, modify, and use any script files obtained from the shared library.",
+    "examples": [
+        "run my (script name) skill file",
+        "run my (script name) skill file at (tag name)",
+        "update my scripts",
+        "mail me my (script name) script"
+    ],
+    "desktopFile": false,
+    "warning": "",
+    "systemDeps": false,
+    "platforms": [
+        "i386",
+        "x86_64",
+        "ia64",
+        "arm64",
+        "arm"
+    ],
+    "branch": "master",
+    "license": "NeonAI License v1.0",
+    "icon": "https://0000.us/klatchat/app/files/neon_images/icons/neon_skill.png",
+    "category": "",
+    "categories": [
+        ""
+    ],
+    "tags": [
+        ""
+    ],
+    "skillname": "Custom Conversations",
+    "authorname": "NeonGeckoCom",
+    "foldername": "custom-conversation.neon"
+}
