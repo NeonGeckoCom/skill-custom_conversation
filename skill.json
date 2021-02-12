@@ -13,6 +13,14 @@
     "desktopFile": false,
     "warning": "",
     "systemDeps": false,
+    "requirements": {
+        "python": [
+            "bs4",
+            "git+https://github.com/neongeckocom/neon-skill-utils"
+        ],
+        "system": {},
+        "skill": []
+    },
     "platforms": [
         "i386",
         "x86_64",
@@ -31,6 +39,7 @@
         ""
     ],
     "skillname": "Custom Conversations",
-    "authorname": "NeonGeckoCom",
-    "foldername": "custom-conversation.neon"
+    "authorname": "Neon",
+    "foldername": "custom-conversation.neon",
+    "download_url": "https://api.github.com/repos/NeonGeckoCom/custom-conversation.neon/zipball/master"
 }

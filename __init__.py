@@ -456,12 +456,12 @@ class CustomConversations(MycroftSkill):
 
     def _reset_values(self, user="local"):
         """
-        Resets active_conversations entry for the given user (resets script execution
+        Resets active_conversations entry for the given user (resets script execution)
         :param user: nick on klat server, else "local"
         """
         # LOG.debug(f"reset values for {user}")
         if user in self.active_conversations and self.active_conversations[user]["script_filename"]:
-            LOG.warning(f'Removing {user} running {self.active_conversations[user]["script_filename"]}')
+            LOG.info(f'Removing {user} running {self.active_conversations[user]["script_filename"]}')
 
         self.active_conversations[user] = {
             # Script Globals
