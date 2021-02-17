@@ -214,8 +214,9 @@ class CustomConversations(MycroftSkill):
         LOG.info(available)
         if available:
             self.speak_dialog("available_script", {"available": f'{", ".join(available[:-1])}, and {available[-1]}'})
-            if message.context["mobile"]:
-                self.socket_io_emit("scripts_list", f"&files={available}", message.context["flac_filename"])
+            if self.request_from_mobile(message):
+                self.mobile_skill_intent("scripts_list", {"files": available}, message)
+                # self.socket_io_emit("scripts_list", f"&files={available}", message.context["flac_filename"])
 
     @intent_handler(IntentBuilder("SetDefault").require('default'))
     def handle_set_default(self, message):
@@ -231,10 +232,12 @@ class CustomConversations(MycroftSkill):
                      if os.path.isfile(os.path.join(self.text_location, x))]
         if script_name in available:
             LOG.debug("Good Request")
-            if message.context["mobile"]:
+            if self.request_from_mobile(message):
                 # self.speak(f"Updating your startup script to {script_name}")
                 self.speak_dialog("startup_script", {"script_name": script_name}, private=True)
-                self.socket_io_emit("scripts_default", f"&name={script_name}", message.context["flac_filename"])
+                self.mobile_skill_intent("scripts_default", {"name": script_name}, message)
+
+                # self.socket_io_emit("scripts_default", f"&name={script_name}", message.context["flac_filename"])
             # TODO: Non-Mobile startup script DM
         else:
             self.speak_dialog("NotFound", {"file_to_open": script_name.replace('_', ' ')})
@@ -530,8 +533,8 @@ class CustomConversations(MycroftSkill):
             # Handle non-git scripts backup
             if os.path.isdir(f"{self.text_location}_bak"):
                 shutil.move(f"{self.text_location}_bak", os.path.join(self.text_location, "backup", "old"))
-
-            self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
+            self.update_skill_settings({"last_updated": str(datetime.datetime.now())}, skill_global=True)
+            # self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
             return True
         except Exception as e:
             LOG.error(e)
@@ -2176,7 +2179,7 @@ class CustomConversations(MycroftSkill):
             #     flac_filename = message.context["flac_filename"]
             #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
         else:
-            if message.context["mobile"]:
+            if self.request_from_mobile(message):
                 # TODO: Handle sending audio data to mobile (non-server so can't assume public URL) DM
                 pass
             else:
