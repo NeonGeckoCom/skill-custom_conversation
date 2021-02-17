@@ -8,3 +8,4 @@ __pycache__/
 !.github/*
 script_txt/*
 script_transcript/*
+settings.json
