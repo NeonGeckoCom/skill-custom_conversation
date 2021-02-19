@@ -5,10 +5,11 @@
     "short_description": "Create your own or use text script files shared by other users.",
     "description": "Skill, which works using the custom text parsing implementation, provides the functionality to create, share, modify, and use any script files obtained from the shared library.",
     "examples": [
-        "run my (script name) skill file",
-        "run my (script name) skill file at (tag name)",
-        "update my scripts",
-        "mail me my (script name) script"
+        "tell me available script files",
+        "what scripts are available",
+        "update my conversations",
+        "update my skill files",
+        "set my startup script to"
     ],
     "desktopFile": false,
     "warning": "",
@@ -21,6 +22,7 @@
         "system": {},
         "skill": []
     },
+    "incompatible_skills": [],
     "platforms": [
         "i386",
         "x86_64",
@@ -30,13 +32,16 @@
     ],
     "branch": "master",
     "license": "NeonAI License v1.0",
-    "icon": "https://0000.us/klatchat/app/files/neon_images/icons/neon_skill.png",
-    "category": "",
+    "icon": "https://0000.us/klatchat/app/files/neon_images/icons/neon_paw.png",
+    "category": "Configuration",
     "categories": [
-        ""
+        "Configuration"
     ],
     "tags": [
-        ""
+        "Neongecko",
+        "Neon",
+        "CustomConversations",
+        "Custom"
     ],
     "skillname": "Custom Conversations",
     "authorname": "Neon",
