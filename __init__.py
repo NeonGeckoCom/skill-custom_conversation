@@ -33,6 +33,7 @@ from adapt.intent import IntentBuilder
 from dateutil.tz import gettz
 from git import InvalidGitRepositoryError
 
+from mycroft.audio import wait_while_speaking
 from mycroft.messagebus.message import Message
 from mycroft.skills.core import MycroftSkill, intent_handler
 from mycroft.util.log import LOG
@@ -42,7 +43,7 @@ from neon_utils.web_utils import scrape_page_for_links as scrape
 from neon_utils.parse_utils import clean_quotes
 # from NGI.utilities.parseUtils import clean_quotes
 from mycroft.util.parse import normalize
-from mycroft.util import play_wav, play_mp3
+from mycroft.util import play_wav, play_mp3  # TODO: play_audio exists to handle both cases DM
 
 
 # TIMEOUT = 8
@@ -88,7 +89,6 @@ class CustomConversations(MycroftSkill):
 
         if skill_needs_patching(self):
             stub_missing_parameters(self)
-
         if self.neon_core:
             self.tz = gettz(self.user_info_available["location"]["tz"])
             self.auto_update = self.settings['auto_update']
@@ -2221,8 +2221,9 @@ class CustomConversations(MycroftSkill):
             else:
 
                 # Skills will not block while speaking, so wait here to make sure reconveyed audio doesn't overlap
-                while self.is_speaking(60):
-                    time.sleep(0.2)
+                wait_while_speaking()
+                # while self.is_speaking(60):
+                #     time.sleep(0.2)
 
                 # Handle server audio file references
                 # if audio.startswith("https://"):
@@ -3062,8 +3063,9 @@ class CustomConversations(MycroftSkill):
                         LOG.info(f'Waiting for {message.context["cc_data"]["signal_to_check"]}')
                         # TODO: Try using wait_while_speaking instead of this while-loop
                         # while self.is_speaking() and time.time() < timeout:
-                        while self.is_speaking():
-                            time.sleep(1)
+                        wait_while_speaking()
+                        # while self.is_speaking():
+                        #     time.sleep(1)
                         LOG.debug("Done waiting.")
                         self.clear_signals(message.context["cc_data"]["signal_to_check"])
                         # message.context["cc_data"]["signal_to_check"] = ""
