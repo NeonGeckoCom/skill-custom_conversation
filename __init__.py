@@ -227,7 +227,8 @@ class CustomConversations(MycroftSkill):
         if available:
             self.speak_dialog("available_script", {"available": f'{", ".join(available[:-1])}, and {available[-1]}'})
             if self.request_from_mobile(message):
-                self.socket_io_emit("scripts_list", f"&files={available}", message.context["flac_filename"])
+                self.mobile_skill_intent("scripts_list", {"files": available}, message)
+                # self.socket_io_emit("scripts_list", f"&files={available}", message.context["flac_filename"])
 
     @intent_handler(IntentBuilder("SetDefault").require('default'))
     def handle_set_default(self, message):
@@ -243,10 +244,12 @@ class CustomConversations(MycroftSkill):
                      if os.path.isfile(os.path.join(self.text_location, x))]
         if script_name in available:
             LOG.debug("Good Request")
-            if message.context["mobile"]:
+            if self.request_from_mobile(message):
                 # self.speak(f"Updating your startup script to {script_name}")
                 self.speak_dialog("startup_script", {"script_name": script_name}, private=True)
-                self.socket_io_emit("scripts_default", f"&name={script_name}", message.context["flac_filename"])
+                self.mobile_skill_intent("scripts_default", {"name": script_name}, message)
+
+                # self.socket_io_emit("scripts_default", f"&name={script_name}", message.context["flac_filename"])
             # TODO: Non-Mobile startup script DM
         else:
             self.speak_dialog("NotFound", {"file_to_open": script_name.replace('_', ' ')})
@@ -468,12 +471,12 @@ class CustomConversations(MycroftSkill):
 
     def _reset_values(self, user="local"):
         """
-        Resets active_conversations entry for the given user (resets script execution
+        Resets active_conversations entry for the given user (resets script execution)
         :param user: nick on klat server, else "local"
         """
         # LOG.debug(f"reset values for {user}")
         if user in self.active_conversations and self.active_conversations[user]["script_filename"]:
-            LOG.warning(f'Removing {user} running {self.active_conversations[user]["script_filename"]}')
+            LOG.info(f'Removing {user} running {self.active_conversations[user]["script_filename"]}')
 
         self.active_conversations[user] = {
             # Script Globals
@@ -542,8 +545,8 @@ class CustomConversations(MycroftSkill):
             # Handle non-git scripts backup
             if os.path.isdir(f"{self.text_location}_bak"):
                 shutil.move(f"{self.text_location}_bak", os.path.join(self.text_location, "backup", "old"))
-
-            self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
+            self.update_skill_settings({"last_updated": str(datetime.datetime.now())}, skill_global=True)
+            # self.ngi_settings.update_yaml_file("last_updated", value=str(datetime.datetime.now()), final=True)
             return True
         except Exception as e:
             LOG.error(e)
@@ -609,12 +612,12 @@ class CustomConversations(MycroftSkill):
             # Catch when we are waiting for input
             # if not self.check_for_signal(f"{user}_CC_inputNeeded", -1):
             if user not in self.awaiting_input:
-                LOG.info(f'Continuing script from index {active_dict["current_index"]}')
+                LOG.debug(f'Continuing script from index {active_dict["current_index"]}')
 
                 # Continue only if there is an active script for the user
                 if active_dict["formatted_script"]:
                     # Read values out of dictionary (current_index is line index, not line number)
-                    LOG.info(f'Going to idx: {active_dict["current_index"]} in script of length: '
+                    LOG.debug(f'Going to idx: {active_dict["current_index"]} in script of length: '
                               f'{len(active_dict["formatted_script"])}')
                     if active_dict["current_index"] >= len(active_dict["formatted_script"]):
                         LOG.error("Requested line outside of script length! Exiting.")
@@ -625,11 +628,11 @@ class CustomConversations(MycroftSkill):
                         self._run_exit(user, "", message)
                     else:
                         line_to_evaluate = active_dict["formatted_script"][active_dict["current_index"]]
-                        LOG.info(f'Line: {line_to_evaluate}')
+                        LOG.debug(f'Line: {line_to_evaluate}')
                         prev_line_indent = active_dict["last_indent"]
                         active_dict["last_indent"] = \
                             active_dict["formatted_script"][active_dict["current_index"]]["indent"]
-                        LOG.info(f'previous line was indented {prev_line_indent}. '
+                        LOG.debug(f'previous line was indented {prev_line_indent}. '
                                   f'current line at {line_to_evaluate["indent"]}')
                         command = line_to_evaluate["command"]
                         text = line_to_evaluate["text"]
@@ -675,7 +678,7 @@ class CustomConversations(MycroftSkill):
                         # This is outside any cases
                         # LOG.info(f"OUTSIDE ANY CASES WITH {execute_this_line}")
                         if execute_this_line:
-                            LOG.info(f'execute {command}: {text}')
+                            LOG.debug(f'execute {command}: {text}')
                             # This is an executable line
                             if command in self.runtime_execution:
                                 # LOG.info(f"{command} IN RUNTIME EXECUTION")
@@ -699,11 +702,11 @@ class CustomConversations(MycroftSkill):
 
                                         # Make sure right value is a list for IN/!IN
                                         if left and right and "[" not in right:
-                                            LOG.info(f"updating right={right}")
+                                            LOG.debug(f"updating right={right}")
                                             right = re.sub("}", "[*]}", right)
-                                            LOG.info(f"updating right={right}")
+                                            LOG.debug(f"updating right={right}")
                                             text = f" {comparison} ".join([left, right])
-                                        LOG.info(text)
+                                        LOG.debug(text)
                                     # else:
                                     # LOG.info(f"ABOUT TO PARSE {text} WITH SUBSTITUTE VARIABLES")
                                     parsed_text = self._substitute_variables(user, text, message, False)
@@ -711,10 +714,10 @@ class CustomConversations(MycroftSkill):
                                 else:
                                     parsed_text = text
                                 # parsed_text = normalize(parsed_text)  WYSIWYG, no normalization necessary
-                                LOG.info(f"runtime_execute({command}|{parsed_text})")
+                                LOG.debug(f"runtime_execute({command}|{parsed_text})")
                                 LOG.debug(line_to_evaluate)
                                 message.data["parser_data"] = deepcopy(line_to_evaluate.get("data"))
-                                LOG.info(f'parser_data={message.data.get("parser_data")}')
+                                LOG.debug(f'parser_data={message.data.get("parser_data")}')
 
                                 # # TODO: Annotate this DM
                                 try:
@@ -1022,7 +1025,7 @@ class CustomConversations(MycroftSkill):
             self.active_conversations[user]["last_request"] = text
             self.create_signal(signal)
             LOG.info(f"ABOUT TO SPEAK {text}")
-            self.speak(text, message=to_speak, wait=True)
+            self.speak(text, message=to_speak)
             # LOG.info(f"{text} SUCCESSFULLY SPOKEN")
             user_input = message.data.get("utterances")
             if user_input:
@@ -1104,7 +1107,7 @@ class CustomConversations(MycroftSkill):
             LOG.debug(to_speak.data)
             self.active_conversations[user]["last_request"] = text
             self.create_signal(signal)
-            self.speak(text, message=to_speak, wait=True)
+            self.speak(text, message=to_speak)
             user_input = message.data.get("utterances")
             if user_input:
                 self.update_transcript(f'{datetime.datetime.now().isoformat()}, {user} said: \"{user_input[0]}\" \n',
@@ -1264,7 +1267,7 @@ class CustomConversations(MycroftSkill):
                     right = int(right)
 
                 execute_if = True
-                LOG.info(f"Checking: {left} {comparator} {right}")
+                LOG.debug(f"Checking: {left} {comparator} {right}")
                 if not comparator:
                     LOG.warning(f"no valid comparator found in {text}")
                     execute_if = False
@@ -1298,14 +1301,14 @@ class CustomConversations(MycroftSkill):
                         LOG.warning(f"right was a string! now={right}")
 
                     if comparator == "IN" and str(left) not in right:
-                        LOG.info(f"not in, go to else")
+                        LOG.debug(f"not in, go to else")
                         execute_if = False
                     elif comparator == "!IN" and str(left) in right:
-                        LOG.info(f"in, go to else")
+                        LOG.debug(f"in, go to else")
                         execute_if = False
                     elif comparator.endswith("CONTAINS"):  # Handle CONTAINS/!CONTAINS
-                        LOG.info(f"left={left}")
-                        LOG.info(f"right={right}")
+                        LOG.debug(f"left={left}")
+                        LOG.debug(f"right={right}")
                         contains = False
                         # Iterate over right items to find a match
                         for opt in right:
@@ -1494,7 +1497,7 @@ class CustomConversations(MycroftSkill):
                 # Found an else at the same level, go to the following line
                 if active_dict["formatted_script"][active_dict["current_index"]]["command"] == "else" and \
                         active_dict["formatted_script"][active_dict["current_index"]]["indent"] == if_indent:
-                    LOG.info(f'DM: Reached else: {active_dict["formatted_script"][active_dict["current_index"]]}')
+                    LOG.debug(f'DM: Reached else: {active_dict["formatted_script"][active_dict["current_index"]]}')
                     active_dict["current_index"] += 1
                     break
                 # Found an equally indented or outdented line that is NOT a comment, go here
@@ -2186,7 +2189,7 @@ class CustomConversations(MycroftSkill):
                 audio = None
                 try:
                     LOG.debug(f'About to speak {active_dict["variables"][var_to_speak][0]}')
-                    self.speak(active_dict["variables"][var_to_speak][0], wait=True)
+                    self.speak(active_dict["variables"][var_to_speak][0])
                 except Exception as e:
                     LOG.error(e)
             LOG.debug(active_dict["variables"])
@@ -2234,7 +2237,7 @@ class CustomConversations(MycroftSkill):
                     LOG.info(f"Should have played {audio}")
                 else:
                     LOG.error(f"Audio file not found! {audio}")
-                    self.speak(text, wait=True)
+                    self.speak(text)
 
         active_dict["current_index"] += 1
         # LOG.debug(f"DM: Continue Script Execution Call")
@@ -2246,6 +2249,7 @@ class CustomConversations(MycroftSkill):
         :param user   : nick on klat server, else "local"
         :param content: title and body variable names
         :param message: incoming messagebus Message
+
         """
         LOG.debug(f"DM: {content}")
         if user not in self.active_conversations.keys():
@@ -2735,7 +2739,7 @@ class CustomConversations(MycroftSkill):
         :param user: user profile requested
         :return: yml value for requested key
         """
-        # TODO: Skip for now
+        # TODO: Skip Mycroft compat for now
         LOG.info(f"ENTERING VARIABLE SKILL FOR {key}")
         LOG.info(key)
         intent, data_key = key.split(",", 1)
@@ -2762,10 +2766,10 @@ class CustomConversations(MycroftSkill):
         """
         # LOG.info(f"ENTERING SUBSTITUTE VARIABLES WITH {line}")
         line = line.strip()
-        LOG.info(f"_sub_vars: {line}")
+        LOG.debug(f"_sub_vars: {line}")
         # Handle wildcard substitutions (may include trailing punctuation)
         if do_wildcards:
-            LOG.info(f"Do Wildcards for {line}")
+            LOG.debug(f"Do Wildcards for {line}")
             i = 1
             for word in line.split():
                 if "*" in word:
@@ -2780,7 +2784,7 @@ class CustomConversations(MycroftSkill):
         tokens = [line]
         LOG.info(f"TOKENS FOR {line} are {tokens}")
         variables = self.active_conversations[user]["variables"]
-        LOG.info(f"len(variables)={len(variables)}")
+        LOG.debug(f"len(variables)={len(variables)}")
         join_char = ""
         # TODO: Use parser_data for this? DM
         if not (line.startswith('"') and line.endswith('"')) and not (line.startswith("'") and line.endswith("'")):
@@ -2862,15 +2866,15 @@ class CustomConversations(MycroftSkill):
                 var = token.lstrip('{').rstrip('}')
             # var = str(token.strip('\\'))  # This catches leftover '\' in variable names
             #     if any(i for i in self.from_caffeine_wiz if i[0] in drink or drink in i[0]):
-                LOG.info(var)
+                LOG.debug(var)
                 if any(x for x in self.variable_functions if x in var):  # Handle variable substitution
-                    LOG.info(var)
+                    LOG.debug(var)
                     cmd, key = var.split("(", 1)
                     key = key.rstrip(")")
-                    LOG.info(cmd)
+                    LOG.debug(cmd)
                     result = self.variable_functions[cmd](key, user, message)
 
-                    LOG.info(f"replacing {token} with {result} in {line}")
+                    LOG.debug(f"replacing {token} with {result} in {line}")
                     index = tokens.index(token)
                     tokens.remove(token)
                     tokens.insert(index, str(result))
@@ -2902,11 +2906,11 @@ class CustomConversations(MycroftSkill):
                         # var = var.split('[')[0]
                         var, indices = var.split('[', 1)
                         idx = indices.split(']', 1)[0]  # Multiple indices could be handled in the remainder here
-                        LOG.info(f"get {var}[{idx}] in {raw_val}")
+                        LOG.debug(f"get {var}[{idx}] in {raw_val}")
                         # Wildcard return all
                         if idx == '*':
-                            # val = ', '.join(raw_val) # if raw_value is list, this turns val into str
-                            val = raw_val
+                            val = ', '.join(raw_val) # if raw_value is list, this turns val into str
+                            # val = raw_val
                         # Get value at requested index
                         elif idx in range(0, len(raw_val)):
                             val = variables.get(var, [''])[idx]
@@ -2941,10 +2945,10 @@ class CustomConversations(MycroftSkill):
 
                     # If variable is a list (no index requested), use the first element
                     if isinstance(val, list):
-                        # if len(val) > 1 and message.data["cc_data"].get("return_list", False):
-                        #     new_word = ",".join(variables.get(var))
-                        # else:
-                        new_word = str(val[0]).strip().strip('"')
+                        if len(val) > 1 and message.data.get("cc_data", {}).get("return_list", False):
+                            new_word = ",".join(variables.get(var))
+                        else:
+                            new_word = str(val[0]).strip().strip('"')
                     else:
                         LOG.error(f"Value is string and should be list! {val}")
                         new_word = str(val).strip().strip('"')
@@ -2957,7 +2961,7 @@ class CustomConversations(MycroftSkill):
                     # new_word = f"{prefix}{new_word}{suffix}"
                     # new_word = clean_quotes(new_word)
 
-                    LOG.info(f"replacing {token} with {new_word} in {line}")
+                    LOG.debug(f"replacing {token} with {new_word} in {line}")
                     index = tokens.index(token)
                     tokens.remove(token)
                     tokens.insert(index, new_word)
@@ -2978,8 +2982,8 @@ class CustomConversations(MycroftSkill):
                     # LOG.debug(line)
 
             line = join_char.join(tokens)
-            LOG.info(f"interim: {line}")
-        LOG.info(f">>>{line}")
+            LOG.debug(f"interim: {line}")
+        LOG.debug(f">>>{line}")
         return line
 
     def _update_language(self, message, language):
@@ -3046,11 +3050,11 @@ class CustomConversations(MycroftSkill):
                 LOG.info(f'checking {message.context["cc_data"].get("request", "")} ?= {active_dict["last_request"]}')
                 if self.check_for_signal(f"{user}_CC_active", -1) and \
                         message.context["cc_data"].get("signal_to_check", None):
-                    LOG.info("Active, about to check request")
+                    LOG.debug("Active, about to check request")
                     # Check if this speak event is related to the last request
                     if message.context["cc_data"]["request"] == active_dict.get("last_request", "") and \
                             user not in self.awaiting_input:
-                        LOG.info("Neon response found. Continuing script.")
+                        LOG.debug("Neon response found. Continuing script.")
                         self.active_conversations[user]["last_request"] = ""
                         # timeout = time.time() + self.speak_timeout
 
