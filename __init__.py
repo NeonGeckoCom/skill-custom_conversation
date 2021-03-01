@@ -459,9 +459,10 @@ class CustomConversations(MycroftSkill):
             self.speak_dialog("ProblemInFile", {"file_name": active_dict["script_filename"].replace('_', ' ')})
 
     def _script_exists(self, message):
-        script_name = self._get_script_name()
-        status = self._script_file_exists(message.data.get("script_name"))
-        self.bus.emit(message.reply(data={"script_name": script_name, "script_exists": status}))
+        LOG.info(message)
+        script_name = self._get_script_name(message)
+        status = self._script_file_exists(script_name)
+        self.bus.emit(message.reply("neon.script_exists.response", data={"script_name": script_name, "script_exists": status}))
 
     def _get_script_name(self, message: Message) -> str:
         """
@@ -476,11 +477,11 @@ class CustomConversations(MycroftSkill):
         # consider having several script file names starting with the same words, e.g. "pat", "pat test"
         candidates = []
         utt = message.data.get("utterance")
-        file_path_to_check = os.path.join(self.__location__, "/script_txt/")
+        file_path_to_check = os.path.join(self.__location__, "script_txt")
+        LOG.debug(file_path_to_check)
         # Look for recording by name if recordings are available
         for f in os.listdir(file_path_to_check):
-            filename = f.split('.')[0]
-            # TODO: Use regex to filter files by user associated instead of iterating all DM
+            filename = os.path.splitext(f)[0]
             LOG.info(f"Looking for {filename} in {utt}")
             if filename in utt:
                 candidates.append(filename)
