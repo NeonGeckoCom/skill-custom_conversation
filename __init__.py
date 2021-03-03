@@ -1289,13 +1289,12 @@ class CustomConversations(MycroftSkill):
                 right = parsed.get("right")
                 if isinstance(left, str):
                     left = clean_quotes(left).strip()
+                    if left.isnumeric():
+                        left = int(left)
                 if isinstance(right, str):
                     right = clean_quotes(right).strip()
-
-                if left.isnumeric():
-                    left = int(left)
-                if right.isnumeric():
-                    right = int(right)
+                    if right.isnumeric():
+                        right = int(right)
 
                 execute_if = True
                 LOG.debug(f"Checking: {left} {comparator} {right}")
@@ -1325,10 +1324,10 @@ class CustomConversations(MycroftSkill):
                 elif any(x for x in self.string_comparators if x in comparator):
                     # Catch error where right is a string
                     if isinstance(right, str) and ',' in right:
-                        right = str(re.sub(", ", ",", right)).split(',')
+                        right = str(re.sub(", ", ",", right)).lower().split(',')
                         LOG.warning(f"right was a string! now={right}")
                     elif isinstance(right, str):
-                        right = [right]
+                        right = [right.lower()]
                         LOG.warning(f"right was a string! now={right}")
 
                     if comparator == "IN" and str(left) not in right:
@@ -1343,7 +1342,7 @@ class CustomConversations(MycroftSkill):
                         contains = False
                         # Iterate over right items to find a match
                         for opt in right:
-                            if f" {opt} " in f" {left} ":
+                            if f" {opt} " in f" {left} ":  # Maybe multiple words, can't just split
                                 LOG.info(f"Found {opt} in {left}")
                                 contains = True
                                 break
