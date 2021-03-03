@@ -2219,7 +2219,7 @@ class CustomConversations(MycroftSkill):
                 audio = None
                 try:
                     LOG.debug(f'About to speak {active_dict["variables"][var_to_speak][0]}')
-                    self.speak(active_dict["variables"][var_to_speak][0], wait=True)
+                    self.speak(active_dict["variables"][var_to_speak][0])
                 except Exception as e:
                     LOG.error(e)
             LOG.debug(active_dict["variables"])
@@ -2268,7 +2268,7 @@ class CustomConversations(MycroftSkill):
                     LOG.info(f"Should have played {audio}")
                 else:
                     LOG.error(f"Audio file not found! {audio}")
-                    self.speak(text, wait=True)
+                    self.speak(text)
 
         active_dict["current_index"] += 1
         # LOG.debug(f"DM: Continue Script Execution Call")
@@ -2964,10 +2964,10 @@ class CustomConversations(MycroftSkill):
 
                     # If variable is a list (no index requested), use the first element
                     if isinstance(val, list):
-                        # if len(val) > 1 and message.data["cc_data"].get("return_list", False):
-                        #     new_word = ",".join(variables.get(var))
-                        # else:
-                        new_word = str(val[0]).strip().strip('"')
+                        if len(val) > 1 and message.data.get("cc_data", {}).get("return_list", False):
+                            new_word = ",".join(variables.get(var))
+                        else:
+                            new_word = str(val[0]).strip().strip('"')
                     else:
                         LOG.error(f"Value is string and should be list! {val}")
                         new_word = str(val).strip().strip('"')
