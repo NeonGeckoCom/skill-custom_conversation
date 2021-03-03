@@ -33,7 +33,7 @@ from adapt.intent import IntentBuilder
 from dateutil.tz import gettz
 from git import InvalidGitRepositoryError
 
-from mycroft.audio import wait_while_speaking
+from mycroft.audio import is_speaking, wait_while_speaking
 from mycroft.messagebus.message import Message
 from mycroft.skills.core import MycroftSkill, intent_handler
 from mycroft.util.log import LOG
@@ -185,6 +185,8 @@ class CustomConversations(MycroftSkill):
 
         # Add event listeners
         self.add_event("neon.script_upload", self._handle_script_upload)
+        self.add_event("neon.script_exists", self._script_exists)
+        self.add_event("neon.run_alert_script", self.handle_start_script)
         # self.add_event("cc_loop:utterance", self.check_if_script_response)
         # self.add_event('recognizer_loop:audio_output_end', self.check_end)
         self.add_event('speak', self.check_speak_event)
@@ -454,6 +456,39 @@ class CustomConversations(MycroftSkill):
                 self._continue_script_execution(message, user)
         else:
             self.speak_dialog("ProblemInFile", {"file_name": active_dict["script_filename"].replace('_', ' ')})
+
+    def _script_exists(self, message):
+        LOG.info(message)
+        script_name = self._get_script_name(message)
+        status = self._script_file_exists(script_name)
+        self.bus.emit(message.reply("neon.script_exists.response", data={"script_name": script_name, "script_exists": status}))
+
+    def _get_script_name(self, message: Message) -> str:
+        """
+        Tries to locate a filename in the input utterance and returns that filename or None
+
+        This one will be depreciated once we place all the scripts in a single dir that is available
+        to all skills, e.g. ~/.neon
+
+        :param message: Message associated with request
+        :return: Requested script name (may be None)
+        """
+        # consider having several script file names starting with the same words, e.g. "pat", "pat test"
+        candidates = []
+        utt = message.data.get("utterance")
+        file_path_to_check = os.path.join(self.__location__, "script_txt")
+        LOG.debug(file_path_to_check)
+        # Look for recording by name if recordings are available
+        for f in os.listdir(file_path_to_check):
+            filename = os.path.splitext(f)[0]
+            LOG.info(f"Looking for {filename} in {utt}")
+            if filename in utt:
+                candidates.append(filename)
+        try:
+            script_name = max(candidates, key=len)
+        except ValueError:
+            script_name = None
+        return script_name
 
     def _script_file_exists(self, script_name):
         """
@@ -2316,17 +2351,16 @@ class CustomConversations(MycroftSkill):
 
         LOG.debug(line)
         language = line[0].lower().strip('"').strip("'").rstrip(",")
-        if language in self.configuration_available["ttsVoice"]:
-            voice = self.configuration_available["ttsVoice"][language][gender]
-            LOG.debug(voice)
+        # if language in self.configuration_available["ttsVoice"]:
+        #     voice = self.configuration_available["ttsVoice"][language][gender]
+        #     LOG.debug(voice)
 
-            active_dict["speaker_data"] = {"name": "Neon",
-                                           "language": language,
-                                           "gender": gender,
-                                           "voice": voice,
-                                           "override_user": True}
-        else:
-            LOG.error(f"{language} is not a valid language option!")
+        active_dict["speaker_data"] = {"name": "Neon",
+                                       "language": language,
+                                       "gender": gender,
+                                       "override_user": True}
+        # else:
+        #     LOG.error(f"{language} is not a valid language option!")
 
         active_dict["current_index"] += 1
         # LOG.debug(f"DM: Continue Script Execution Call")
@@ -2895,8 +2929,8 @@ class CustomConversations(MycroftSkill):
                         LOG.debug(f"get {var}[{idx}] in {raw_val}")
                         # Wildcard return all
                         if idx == '*':
-                            # val = ', '.join(raw_val) # if raw_value is list, this turns val into str
-                            val = raw_val
+                            val = ', '.join(raw_val)  # if raw_value is list, this turns val into str
+                            # val = raw_val
                         # Get value at requested index
                         elif idx in range(0, len(raw_val)):
                             val = variables.get(var, [''])[idx]
@@ -3046,15 +3080,10 @@ class CustomConversations(MycroftSkill):
 
                         # If this is a 'Neon speak' event, wait for the utterance to be spoken
                         LOG.info(f'Waiting for {message.context["cc_data"]["signal_to_check"]}')
-
-                        # TODO: This might be a little hacky, could we get Mycroft to handle some event when a response
-                        #       is handled? Signal or message reply? DM
-                        if self.neon_core:
-                            while self.check_for_signal(message.context["cc_data"]["signal_to_check"], 30):
-                                time.sleep(1)
-                        else:
-                            wait_while_speaking()
-                            self.check_for_signal(message.context["cc_data"]["signal_to_check"])
+                        # TODO: Try using wait_while_speaking instead of this while-loop
+                        # while self.is_speaking() and time.time() < timeout:
+                        while is_speaking():
+                            time.sleep(1)
                         LOG.debug("Done waiting.")
                         # message.context["cc_data"]["signal_to_check"] = ""
                         # LOG.debug(f"DM: Continue Script Execution Call")
