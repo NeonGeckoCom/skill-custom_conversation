@@ -1,19 +1,34 @@
+# ![](https://0000.us/klatchat/app/files/neon_images/icons/neon_paw.png) Custom Conversations
+Create your own or use text script files shared by other users.
 
-# <img src='https://0000.us/klatchat/app/files/neon_images/icons/neon_skill.png' card_color="#FF8600" width="50" style="vertical-align:bottom">Custom Conversations  
-  
-## Summary  
-  
-Create your own or use text script files shared by other users.   
-  
+## About
+Skill, which works using the custom text parsing implementation, provides the functionality to create, share, modify, and use any script files obtained from the shared library.
+
+## Examples
+* "Tell me available script files"
+* "What scripts are available"
+* "Update my conversations"
+* "Update my skill files"
+* "Set my startup script to"
+
+## Credits
+[reginaneon](https://github.com/reginaneon) [NeonDaniel](https://github.com/neondaniel) [neongeckocom](https://neongecko.com/)
+
+## Category
+**Configuration**
+
+## Tags
+#Neongecko
+#Neon
+#CustomConversations
+#Custom
+
 ## Requirements  
   
 No special required packages for this skill.  
   
-## Description  
-  
-Skill, which works using the custom text parsing implementation, provides the functionality to create, share, modify, and use any script files obtained from the shared library.  
 
-## Examples
+## How to Use
 
 Scripts update automatically when Neon is started; you can start a script by saying:
     
@@ -33,7 +48,7 @@ You can request an emailed copy of a script:
     
 - Email me my (script name) script
 
-# What are scripts?  
+## What are scripts?  
 Scripts are user-constructed text files that contain various Neon commands. 
 Using a few simple keywords, described below in the detail, you can specify exactly what Neon should say, do, repeat, 
 and answer; you can create new dialogs, routines, loops, and query lookups, while utilizing every skill, 
@@ -54,7 +69,7 @@ share with all the other Neon users.
 
 You can also find various demo scripts there if you need somewhere to start or something to reference.
 
-# Script Syntax
+## Script Syntax
 Command syntax in general includes a Command and some command arguments, in the form:
 
     Command: argument1, argument2
@@ -73,7 +88,7 @@ Braces are used to return variable values within a literal string, for example i
 
     Neon Speak: "You said: {var_to_fill}"
 
-# Starting a Script File
+## Starting a Script File
 Scripts must begin with a `Script: ` line containing the script name and then any optional 
 [Variable](#variable), [Claps](#claps), [Language](#language), and [Synonym](#synonym) lines.
 After this, you can continue with any of the other script commands. It is recommended to include a 
@@ -166,7 +181,7 @@ The number of claps that should be associated with a command while the script is
 
     Claps: 2, "what time is it"  
 
-# Script Keywords and Spacing
+## Script Keywords and Spacing
 Neon scripts follow the Python convention of 4 spaces to indent subordinate lines. A line without a command will be considered
 a subordinate of the previous line that has one fewer indent; for example, all of the lines below after `Neon speak:` 
 would be spoken:
@@ -591,7 +606,7 @@ should only be used if you maintain the required skill and script, as these para
     
 *Note: "weather" is defined in the weather skill dialog for this intent*
  
-## Examples  
+## How to Use Scripts 
 
 Scripts can be downloaded from Neongecko's library or drafted and added to the script_txt folder in the skill directory.
 The demo skill files (found in the library at neongecko.net) and descriptions above provide a summary and examples 
@@ -601,8 +616,4 @@ of the available functionality and formatting requirements.
   
 ## Contact Support  
   
-Use the [link](https://neongecko.com/ContactUs) or [submit an issue on GitHub](https://help.github.com/en/articles/creating-an-issue)  
-  
-## Credits  
-  
-[reginaneon](https://github.com/reginaneon) [NeonDaniel](https://github.com/neondaniel) [neongeckocom](https://neongecko.com/)
+Use the [link](https://neongecko.com/ContactUs) or [submit an issue on GitHub](https://help.github.com/en/articles/creating-an-issue)
