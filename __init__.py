@@ -236,8 +236,8 @@ class CustomConversations(MycroftSkill):
         user = self.get_utterance_user(message)
         # if self.server:
         #     user = nick(message.context["flac_filename"])
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
+        # if user not in self.active_conversations.keys():
+        #     self._reset_values(user)
         utt = message.data.get("utterance")
         script_name = " ".join(utt.split("to")[1:]).strip().replace(" ", "_")
         LOG.info(script_name)
@@ -262,8 +262,8 @@ class CustomConversations(MycroftSkill):
             user = self.get_utterance_user(message)
             # if self.server:
             #     user = nick(message.context["flac_filename"])
-            if user not in self.active_conversations.keys():
-                self._reset_values(user)
+            # if user not in self.active_conversations.keys():
+            #     self._reset_values(user)
             utt = message.data.get("utterance")
             # LOG.debug(message.data)
             script_name = " ".join(utt.split("my")[1:]) \
@@ -350,23 +350,22 @@ class CustomConversations(MycroftSkill):
         # Check if compiled or text script exists
         if not self._script_file_exists(active_dict["script_filename"]):
             self.speak_dialog("NotFound", {"file_to_open": active_dict["script_filename"].replace('_', ' ')})
-
-        elif self._check_script_file(active_dict["script_filename"] + self.file_ext) or \
-                self._check_script_file(active_dict["script_filename"] + ".nct", False):
-            # Check if the file has already been parsed and cached or if we need to parse it here
-            if not self._check_script_file(active_dict["script_filename"] + self.file_ext):
-                LOG.info(f'{active_dict["formatted_script"]} not yet parsed!')
-                try:
-                    # Try to parse if we have the script parser available
-                    from script_parser import ScriptParser
-                    output = ScriptParser().parse_script_to_file(os.path.join(self.__location__, "script_txt",
-                                                                              active_dict["script_filename"] + ".nct"))
-                    # Update our active_dict in case internal title doesn't match filename
-                    output_name = os.path.splitext(os.path.basename(output))[0]
-                    LOG.info(f"Parsed to {output_name}")
-                    active_dict["script_filename"] = output_name
-                except Exception as e:
-                    LOG.error(e)
+            self.active_conversations.pop(user)
+        elif self._check_script_file(active_dict["script_filename"] + self.file_ext):
+            # # Check if the file has already been parsed and cached or if we need to parse it here
+            # if not self._check_script_file(active_dict["script_filename"] + self.file_ext):
+            #     LOG.info(f'{active_dict["formatted_script"]} not yet parsed!')
+            #     try:
+            #         # Try to parse if we have the script parser available
+            #         from script_parser import ScriptParser
+            #         output = ScriptParser().parse_script_to_file(os.path.join(self.__location__, "script_txt",
+            #                                                                   active_dict["script_filename"] + ".nct"))
+            #         # Update our active_dict in case internal title doesn't match filename
+            #         output_name = os.path.splitext(os.path.basename(output))[0]
+            #         LOG.info(f"Parsed to {output_name}")
+            #         active_dict["script_filename"] = output_name
+            #     except Exception as e:
+            #         LOG.error(e)
             # We have this in cache now, load values from there
             LOG.debug("Loading from Cache!")
             try:
@@ -456,6 +455,7 @@ class CustomConversations(MycroftSkill):
                 self._continue_script_execution(message, user)
         else:
             self.speak_dialog("ProblemInFile", {"file_name": active_dict["script_filename"].replace('_', ' ')})
+            self.active_conversations.pop(user)
 
     def _script_exists(self, message):
         LOG.info(message)
@@ -1055,7 +1055,7 @@ class CustomConversations(MycroftSkill):
             to_speak = self.build_message("neon speak", text, message, signal,
                                           self.active_conversations[user]["speaker_data"])
             self.active_conversations[user]["last_request"] = text
-            self.create_signal(signal)
+            self.create_signal(signal)  # TODO: Depreciate signal? DM
             LOG.info(f"ABOUT TO SPEAK {text}")
             self.speak(text, message=to_speak)
             # LOG.info(f"{text} SUCCESSFULLY SPOKEN")
@@ -1137,7 +1137,7 @@ class CustomConversations(MycroftSkill):
             LOG.debug(speaker)
             LOG.debug(to_speak.data)
             self.active_conversations[user]["last_request"] = text
-            self.create_signal(signal)
+            self.create_signal(signal)  # TODO: Depreciate signal? DM
             self.speak(text, message=to_speak)
             user_input = message.data.get("utterances")
             if user_input:
@@ -2144,7 +2144,7 @@ class CustomConversations(MycroftSkill):
             value.extend([to_update])
             # active_dict["variables"][var.strip()] = value.extend([to_update])  #[val.strip(), to_update]
         else:
-            LOG.warning(f"Requested to update undeclared (or empty) variable: {var}")
+            LOG.debug(f"Requested to update empty variable: {var}")
         # TODO: Handle var here as profile value (i.e. user.email = something)
         #       Maybe have Neon notify user to prevent hidden script functionality DM
         active_dict["variables"][var] = value  # [val.strip()]
@@ -2231,7 +2231,7 @@ class CustomConversations(MycroftSkill):
             # daniel-2020-07-07/daniel-2020-07-07 20:33:37.034829 just kidding .wav'
 
             signal_name = build_signal_name(user, text)
-            self.create_signal(signal_name)
+            self.create_signal(signal_name)  # TODO: Depreciate signal+wait? We emit synchronously now DM
             message.context["cc_data"]["signal_to_check"] = signal_name
             if audio:
                 self.send_with_audio(text, audio, message,
@@ -2255,18 +2255,11 @@ class CustomConversations(MycroftSkill):
                 # TODO: Handle sending audio data to mobile (non-server so can't assume public URL) DM
                 pass
             else:
-
-                # Skills will not block while speaking, so wait here to make sure reconveyed audio doesn't overlap
-                wait_while_speaking()
                 # while self.is_speaking(60):
                 #     time.sleep(0.2)
-
-                # Handle server audio file references
-                # if audio.startswith("https://"):
-                #     audio_data = requests.get(audio)
-                #     audio = self.configuration_available["dirVars"]["tempDir"] + f"/cc_tmp_{time.time()}"
-                #     open(audio, 'wb').write(audio_data.content)
                 if os.path.isfile(audio):
+                    # Skills will not block while speaking, so wait here to make sure reconveyed audio doesn't overlap
+                    wait_while_speaking()
                     LOG.info(f"The audio path is {audio}")
                     process = play_audio_file(audio)
                     while process and process.poll() is None:
@@ -2423,7 +2416,7 @@ class CustomConversations(MycroftSkill):
             value = parser_data.get("variable_value")
 
         if not value:
-            LOG.warning(f"No value parsed for line: {text}")
+            LOG.info(f"No value parsed for line: {text}")
             if "=" in text and "{" not in text.split("=")[0]:  # This is a work-around for table_scraped dicts
                 key, value = text.split("=", 1)
             elif ":" in text:
@@ -2975,7 +2968,7 @@ class CustomConversations(MycroftSkill):
                         else:
                             new_word = str(val[0]).strip().strip('"')
                     else:
-                        LOG.error(f"Value is string and should be list! {val}")
+                        LOG.debug(f"Value is string. {val}")
                         new_word = str(val).strip().strip('"')
                     # LOG.debug(new_word)
 
@@ -3087,7 +3080,7 @@ class CustomConversations(MycroftSkill):
                         LOG.info(f'Waiting for {message.context["cc_data"]["signal_to_check"]}')
                         # TODO: Try using wait_while_speaking instead of this while-loop
                         # while self.is_speaking() and time.time() < timeout:
-                        while is_speaking():
+                        while is_speaking():  # TODO: Depreciate?
                             time.sleep(1)
                         LOG.debug("Done waiting.")
                         # message.context["cc_data"]["signal_to_check"] = ""
