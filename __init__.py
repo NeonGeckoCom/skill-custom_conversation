@@ -2239,7 +2239,7 @@ class CustomConversations(MycroftSkill):
             else:
                 LOG.error(f"Reconvey audio not found!")
                 speaker_data = self.active_conversations[user]["speaker_data"]
-                speaker_data["namne"] = name
+                speaker_data["name"] = name
                 to_speak = self.build_message("neon speak", text, message, signal_name, speaker_data)
                 self.speak(text, message=to_speak)
             while self.check_for_signal(signal_name, -1):
