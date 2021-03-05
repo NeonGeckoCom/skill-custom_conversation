@@ -2161,7 +2161,7 @@ class CustomConversations(MycroftSkill):
         :param text: variable to find associated utterance for
         :param message: incoming messagebus Message
         """
-        LOG.info(f"RECONVEY EnTERED for {user} with {text} ")
+        LOG.info(f"RECONVEY ENTERED for {user} with {text} ")
         LOG.info(f"DM: {text}")
         LOG.info(message.data.get("parser_data"))
         if user not in self.active_conversations.keys():
@@ -2233,8 +2233,14 @@ class CustomConversations(MycroftSkill):
             signal_name = build_signal_name(user, text)
             self.create_signal(signal_name)
             message.context["cc_data"]["signal_to_check"] = signal_name
-            self.send_with_audio(text, audio, message,
-                                 speaker={"name": name, "language": None, "gender": None, "voice": None})
+            if audio:
+                self.send_with_audio(text, audio, message,
+                                     speaker={"name": name, "language": None, "gender": None, "voice": None})
+            else:
+                LOG.error(f"Reconvey audio not found!")
+                to_speak = self.build_message("neon speak", text, message, signal_name,
+                                              self.active_conversations[user]["speaker_data"])
+                self.speak(text, message=to_speak)
             while self.check_for_signal(signal_name, -1):
                 time.sleep(0.2)  # Pad next response
             # if message.data.get("mobile"):
