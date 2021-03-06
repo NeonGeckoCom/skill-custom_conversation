@@ -1038,6 +1038,10 @@ class CustomConversations(MycroftSkill):
 
         parser_data = message.data.get("parser_data")
         if parser_data:
+            if parser_data.get("name"):
+                LOG.warning(f"Neon Speak called instead of Name Speak!!")
+                self._run_name_speak(user, text, message)
+                return
             text = clean_quotes(parser_data.get("phrase"))
         else:
             text = clean_quotes(text)
