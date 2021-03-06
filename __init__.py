@@ -1038,6 +1038,10 @@ class CustomConversations(MycroftSkill):
 
         parser_data = message.data.get("parser_data")
         if parser_data:
+            if parser_data.get("name"):
+                LOG.warning(f"Neon Speak called instead of Name Speak!!")
+                self._run_name_speak(user, text, message)
+                return
             text = clean_quotes(parser_data.get("phrase"))
         else:
             text = clean_quotes(text)
@@ -2238,8 +2242,9 @@ class CustomConversations(MycroftSkill):
                                      speaker={"name": name, "language": None, "gender": None, "voice": None})
             else:
                 LOG.error(f"Reconvey audio not found!")
-                to_speak = self.build_message("neon speak", text, message, signal_name,
-                                              self.active_conversations[user]["speaker_data"])
+                speaker_data = self.active_conversations[user]["speaker_data"]
+                speaker_data["name"] = name
+                to_speak = self.build_message("neon speak", text, message, signal_name, speaker_data)
                 self.speak(text, message=to_speak)
             while self.check_for_signal(signal_name, -1):
                 time.sleep(0.2)  # Pad next response
