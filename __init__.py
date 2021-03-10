@@ -187,6 +187,7 @@ class CustomConversations(MycroftSkill):
         self.add_event("neon.script_upload", self._handle_script_upload)
         self.add_event("neon.script_exists", self._script_exists)
         self.add_event("neon.run_alert_script", self.handle_start_script)
+        self.add_event("neon.friendly_chat", self._run_friendly_chat)
         # self.add_event("cc_loop:utterance", self.check_if_script_response)
         # self.add_event('recognizer_loop:audio_output_end', self.check_end)
         self.add_event('speak', self.check_speak_event)
@@ -342,11 +343,6 @@ class CustomConversations(MycroftSkill):
                                filename=active_dict["script_filename"],
                                start_time=active_dict["script_start_time"]
                                )
-        # if self.formatted_file in
-
-        # file_path_to_check = self.__location__ + "/script_txt/" + active_dict["script_filename"] + ".txt"
-        # LOG.info(file_path_to_check)
-
         # Check if compiled or text script exists
         if not self._script_file_exists(active_dict["script_filename"]):
             self.speak_dialog("NotFound", {"file_to_open": active_dict["script_filename"].replace('_', ' ')})
@@ -425,19 +421,22 @@ class CustomConversations(MycroftSkill):
 
                 # Check if a starting tag was specified at skill run
                 spoken = message.data.get("utterance")
-                to_parse = spoken.split(file_to_run)[1]
                 start_index = None
-                LOG.debug(to_parse)
-                if " at " in to_parse:
-                    start_tag = to_parse.split(" at ", 1)[1].replace(" ", "_")
-                    LOG.debug(start_tag)
-                    LOG.debug(f'searching {dict(active_dict["goto_tags"]).keys()}')
-                    for key in dict(active_dict["goto_tags"]).keys():
-                        if key in start_tag:
-                            LOG.debug(f"DM: found {key} in goto_tags")
-                            start_index = active_dict["goto_tags"][key]
-                            break
-                    LOG.debug(f"DM: starting at {start_index}")
+                try:
+                    to_parse = spoken.split(file_to_run)[1]
+                    LOG.debug(to_parse)
+                    if " at " in to_parse:
+                        start_tag = to_parse.split(" at ", 1)[1].replace(" ", "_")
+                        LOG.debug(start_tag)
+                        LOG.debug(f'searching {dict(active_dict["goto_tags"]).keys()}')
+                        for key in dict(active_dict["goto_tags"]).keys():
+                            if key in start_tag:
+                                LOG.debug(f"DM: found {key} in goto_tags")
+                                start_index = active_dict["goto_tags"][key]
+                                break
+                        LOG.debug(f"DM: starting at {start_index}")
+                except IndexError:
+                    LOG.debug("Cannot split utterance by the file name")
 
                 # If a starting tag was specified, go to the associated index
                 if start_index:
@@ -456,6 +455,23 @@ class CustomConversations(MycroftSkill):
         else:
             self.speak_dialog("ProblemInFile", {"file_name": active_dict["script_filename"].replace('_', ' ')})
             self.active_conversations.pop(user)
+
+    def _run_friendly_chat(self, message: Message):
+        """
+        Run the friendly_chat script
+        :param message:
+        :return:
+        """
+        try:
+            # message.data["file_to_run"] = "friendly_chat"
+            self.handle_start_script(message)
+        except Exception as e:
+            LOG.error(e)
+            self.bus.emit(message.reply("neon.friendly_chat.response",
+                                        context={"friendly_chat_executed": False}))
+        else:
+            self.bus.emit(message.reply("neon.friendly_chat.response",
+                                        context={"friendly_chat_executed": True}))
 
     def _script_exists(self, message):
         LOG.info(message)
