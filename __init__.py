@@ -2388,12 +2388,20 @@ class CustomConversations(MycroftSkill):
         speak_name = filename.replace("_", " ")
         filename = filename.replace(" ", "_")
         if self._script_file_exists(filename):
+            cache = self.get_cached_data(filename + self.file_ext, os.path.join(self.__location__, "script_txt"))
             old_dict = deepcopy(self.active_conversations[user])
             old_dict["current_index"] += 1
             self._reset_values(user)
             new_dict = self.active_conversations[user]
             new_dict["script_filename"] = filename
-            new_dict = self.get_cached_data(filename + self.file_ext, os.path.join(self.__location__, "script_txt"))
+            new_dict["formatted_script"] = cache[0]
+            new_dict["speaker_data"] = cache[1]
+            new_dict["variables"] = cache[2]
+            new_dict["loops_dict"] = cache[3]
+            new_dict["goto_tags"] = cache[4]
+            new_dict["timeout"] = cache[5]
+            new_dict["timeout_action"] = cache[6]
+            new_dict["script_meta"] = cache[9]
             # new_dict = self._load_to_cache(new_dict, speak_name, user)
             new_dict["pending_scripts"].insert(0, old_dict)
             LOG.debug(f"DM: {new_dict}")
