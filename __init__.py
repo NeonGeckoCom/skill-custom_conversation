@@ -44,6 +44,8 @@ from mycroft.util.parse import normalize
 from mycroft.util.audio_utils import play_audio_file
 # from mycroft.util import play_wav, play_mp3
 
+# from utils_dict import Script, ScriptStack
+from .utils_emulate import Conversation
 
 # TIMEOUT = 8
 
@@ -404,7 +406,7 @@ class CustomConversations(MycroftSkill):
 
             # Check if script was found and loaded
             if active_dict:
-                LOG.debug(f">>> {json.dumps(active_dict, indent=4)}")
+                LOG.debug(f">>> {json.dumps(active_dict.to_json(), indent=4)}")
                 # If language is specified, change to that now
                 # if active_dict["speaker_data"]:
                 #     cache_lang = None
@@ -513,37 +515,38 @@ class CustomConversations(MycroftSkill):
         if user in self.active_conversations and self.active_conversations[user]["script_filename"]:
             LOG.info(f'Removing {user} running {self.active_conversations[user]["script_filename"]}')
 
-        self.active_conversations[user] = {
-            # Script Globals
-            "script_meta": {},          # Parser metadata
-            "script_filename": None,    # Script filename
-            "timeout": -1,              # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
-            "timeout_action": '',       # String to speak when timeout is reached (before exit dialog)
-            "variables": {},            # Dict of declared variables and values
-            "speaker_data": {},         # Language defined in script
-            "loops_dict": {},           # Dict of loop names and associated dict of values
-            "formatted_script": [],     # List of script line dictionaries (excludes empty and comment lines)
-            "goto_tags": {},            # Dict of script tags and associated indexes
-
-            # Load time Variables
-            "line": '',                 # Current formatted_file Line being loaded (includes empty and comment lines)
-            "user_language": None,      # User language setting (not script setting)
-            "last_variable": None,      # Last variable read from the script (used to handle continuations)
-            "synonym_command": None,    # Command to execute when a synonym is heard (run script)
-            "synonyms": [],             # List of synonyms available to run the script
-            "script_start_time": None,  # Epoch time of script start
-
-            # Runtime Variables
-            "current_index": 0,         # Current formatted_script index being parsed or executed
-            "last_indent": 0,           # Indentation of last line executed (^\s%4)
-            "variable_to_fill": '',     # Name of variable to which next input is assigned
-            "last_request": '',         # Identifier of last speak/execute emit to catch the response
-            "sub_string_counters": {},  # Counters associated with each string substitution option
-            "audio_responses": {},      # Dict of variables and associated audio inputs (file paths)
-
-            # Persistence Variables
-            "pending_scripts": []       # List of pending script dicts
-        }
+        self.active_conversations[user] = Conversation()
+        # self.active_conversations[user] = {
+        #     # Script Globals
+        #     "script_meta": {},          # Parser metadata
+        #     "script_filename": None,    # Script filename
+        #     "timeout": -1,              # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
+        #     "timeout_action": '',       # String to speak when timeout is reached (before exit dialog)
+        #     "variables": {},            # Dict of declared variables and values
+        #     "speaker_data": {},         # Language defined in script
+        #     "loops_dict": {},           # Dict of loop names and associated dict of values
+        #     "formatted_script": [],     # List of script line dictionaries (excludes empty and comment lines)
+        #     "goto_tags": {},            # Dict of script tags and associated indexes
+        #
+        #     # Load time Variables
+        #     "line": '',                 # Current formatted_file Line being loaded (includes empty and comment lines)
+        #     "user_language": None,      # User language setting (not script setting)
+        #     "last_variable": None,      # Last variable read from the script (used to handle continuations)
+        #     "synonym_command": None,    # Command to execute when a synonym is heard (run script)
+        #     "synonyms": [],             # List of synonyms available to run the script
+        #     "script_start_time": None,  # Epoch time of script start
+        #
+        #     # Runtime Variables
+        #     "current_index": 0,         # Current formatted_script index being parsed or executed
+        #     "last_indent": 0,           # Indentation of last line executed (^\s%4)
+        #     "variable_to_fill": '',     # Name of variable to which next input is assigned
+        #     "last_request": '',         # Identifier of last speak/execute emit to catch the response
+        #     "sub_string_counters": {},  # Counters associated with each string substitution option
+        #     "audio_responses": {},      # Dict of variables and associated audio inputs (file paths)
+        #
+        #     # Persistence Variables
+        #     "pending_scripts": []       # List of pending script dicts
+        # }
 
         self.clear_signals(f"{user}_CC")
 
