@@ -655,7 +655,7 @@ class CustomConversations(MycroftSkill):
                 self._reset_values(user)
             # LOG.info(f"No RESET IN _continue_script_execution")
             active_dict = self.active_conversations.get(user).get_current_conversation()
-
+            LOG.debug(f"Active script is {active_dict['script_filename']} and continuing from {active_dict['current_index']}")
             # Catch when we are waiting for input
             # if not self.check_for_signal(f"{user}_CC_inputNeeded", -1):
             if user not in self.awaiting_input:
@@ -782,7 +782,9 @@ class CustomConversations(MycroftSkill):
                                     LOG.error(f"ERROR IN INNER TRY{e}")
 
                                 # Execute the line
+                                LOG.debug(f"Active script before execution is {active_dict['script_filename']}")
                                 self.runtime_execution[command](user, parsed_text, message)
+                                LOG.debug(f"Active script after execution is {active_dict['script_filename']}")
                                 if user in self.active_conversations:
                                     self._continue_script_execution(message, user)
 
@@ -1271,18 +1273,12 @@ class CustomConversations(MycroftSkill):
         #     self._update_language(message, active_dict["user_language"])
 
         # Resume pending script by removing the script-to-exit from the pending script stack
-        LOG.info(f"Before exit {len(self.active_conversations.get(user))}")
         self.active_conversations.get(user).pop()
-        LOG.info(f"After exit {len(self.active_conversations.get(user))}")
-        # if len(active_dict.get("pending_scripts", ())) > 0:
-        #     LOG.info("RESUMING PENDING SCRIPTS")
-        #     dict_to_resume = list(active_dict["pending_scripts"]).pop(0)
-        #     LOG.debug(f"DM: {dict_to_resume}")
-        #     self.active_conversations.get(user).pop()
-            # self.active_conversations[user] = dict_to_resume
-            # self._continue_script_execution(message, user)
-        if len(self.active_conversations.get(user)) == 0:
-        # else:
+
+        if len(self.active_conversations.get(user)) != 0:
+            active_dict = self.active_conversations.get(user).get_current_conversation()
+            active_dict['current_index'] += 1
+        else:
             # Clear signals and values because there are no pending scripts left in the stack
             LOG.info(f"CLEARING SIGNALS FOR {user}")
             self.clear_signals(f"{user}_CC_")
