@@ -1270,16 +1270,20 @@ class CustomConversations(MycroftSkill):
         # if active_dict["user_language"] and message:
         #     self._update_language(message, active_dict["user_language"])
 
-        # Resume pending script if exists
-        if len(active_dict.get("pending_scripts", ())) > 0:
-            LOG.info("RESUMING PENDING SCRIPTS")
-            dict_to_resume = list(active_dict["pending_scripts"]).pop(0)
-            LOG.debug(f"DM: {dict_to_resume}")
-            self.active_conversations.get(user).pop()
+        # Resume pending script by removing the script-to-exit from the pending script stack
+        LOG.info(f"Before exit {len(self.active_conversations.get(user))}")
+        self.active_conversations.get(user).pop()
+        LOG.info(f"After exit {len(self.active_conversations.get(user))}")
+        # if len(active_dict.get("pending_scripts", ())) > 0:
+        #     LOG.info("RESUMING PENDING SCRIPTS")
+        #     dict_to_resume = list(active_dict["pending_scripts"]).pop(0)
+        #     LOG.debug(f"DM: {dict_to_resume}")
+        #     self.active_conversations.get(user).pop()
             # self.active_conversations[user] = dict_to_resume
             # self._continue_script_execution(message, user)
-        else:
-            # Clear signals and values
+        if len(self.active_conversations.get(user)) == 0:
+        # else:
+            # Clear signals and values because there are no pending scripts left in the stack
             LOG.info(f"CLEARING SIGNALS FOR {user}")
             self.clear_signals(f"{user}_CC_")
             self.active_conversations.pop(user)
@@ -2222,7 +2226,7 @@ class CustomConversations(MycroftSkill):
                                         LOG.info(f"Resolved Audio: {audio}")
                                         break
                     if not os.path.isfile(audio):
-                        audio = active_dict["audio_responses"].get(to_reconvey, [None])[0]
+                        audio = active_dict["audio_responses"].get(to_reconvey, [""])[0]
         else:
             # This is original behavior, no parameters have been pre-parsed
             var_to_speak = text

@@ -118,6 +118,9 @@ class ConversationManager:
     def __init__(self):
         self.conversation_stack = []
 
+    def __len__(self):
+        return len(self.conversation_stack)
+
     def push(self, item):
         """
         Push conversation on top of the stack
