@@ -1,3 +1,6 @@
+from mycroft.util.log import LOG
+
+
 class Conversation:
     def __init__(self):
         # initialize script globals
@@ -72,6 +75,91 @@ class Conversation:
         return self.__dict__
 
 
+# class ConversationNode:
+#     def __init__(self, conversation):
+#         self.conversation = conversation
+#         self.next = None
+#
+#
+# class ConversationManager:
+#     def __init__(self):
+#         self.head = None
+#
+#     def is_empty(self):
+#         return not self.head
+#
+#     def push(self, conversation):
+#         if not self.head:
+#             self.head = ConversationNode(conversation)
+#         else:
+#             new_node = ConversationNode(conversation)
+#             new_node.next, self.head = self.head, new_node
+#
+#     def pop(self):
+#         if self.is_empty():
+#             return None
+#         else:
+#             popped_node, self.head = self.head, self.head.next
+#             popped_node.next = None
+#             return popped_node.conversation
+#
+#     def peek(self):
+#         return None if self.is_empty() else self.head.conversation
+#
+#     def get_current_conversation(self):
+#         try:
+#             return self.head.conversation
+#         except IndexError:
+#             LOG.warning(f"There are no active conversations!")
+#             return None
+
+
 class ConversationManager:
     def __init__(self):
-        pass
+        self.conversation_stack = []
+
+    def push(self, item):
+        """
+        Push conversation on top of the stack
+        :param item: Conversation to be pushed
+        :return: None
+        """
+        self.conversation_stack.append(item)
+
+    def pop(self):
+        """
+        Remove the last conversation from the stack and return it
+        :return: last conversation in the stack
+        """
+        try:
+            return self.conversation_stack.pop()
+        except IndexError:
+            return None
+
+    def transfer_variables(self, from_conversation, to_conversation):
+        """
+        Transfer variables between conversations
+        :param from_conversation: Conversation with variables to be transferred
+        :param to_conversation: Conversation with variables to transfer to
+        :return: None
+        """
+        # TODO: find a better implementation
+        if from_conversation in self.conversation_stack and to_conversation in self.conversation_stack:
+            from_conversation["variables"].update(to_conversation["variables"])
+
+    def get_current_conversation(self):
+        try:
+            return self.conversation_stack[-1]
+        except IndexError:
+            LOG.warning(f"There are no active conversations!")
+            return None
+
+    # def get_pending_conversation(self):
+    #     try:
+    #         return self.conversation_stack[-2]
+    #     except IndexError:
+    #         LOG.warning(f"There are no pending conversations!")
+    #         return None
+# add active_conversation[user], which stores the current Conversation object, in addition to active_conversations[user]
+# active_conversations[user] has ConversationManager instead. CM
+
