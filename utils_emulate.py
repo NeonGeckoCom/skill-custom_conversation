@@ -104,17 +104,6 @@ class ConversationManager:
         except IndexError:
             return None
 
-    # def transfer_variables(self, from_conversation, to_conversation):
-    #     """
-    #     Transfer variables between conversations
-    #     :param from_conversation: Conversation with variables to be transferred
-    #     :param to_conversation: Conversation with variables to transfer to
-    #     :return: None
-    #     """
-    #     # TODO: find a better implementation
-    #     if from_conversation in self.conversation_stack and to_conversation in self.conversation_stack:
-    #         from_conversation["variables"].update(to_conversation["variables"])
-
     def get_current_conversation(self):
         try:
             return self.conversation_stack[-1]
@@ -128,7 +117,6 @@ class ConversationManager:
         :param conversation: a Conversation object to update the scope with
         :return: None
         """
-        # active_dict = self.get_current_conversation()
         script_name, script_variables = conversation.get("script_filename"), conversation.get("variables")
         variables = {f"{script_name}.{key}": value for key, value in script_variables.items()}
         self.user_scope_variables.update(variables)
@@ -146,13 +134,3 @@ class ConversationManager:
                 variable_value = conversation.get("variables").get(variable_name)
                 break
         return variable_value
-
-    # def get_pending_conversation(self):
-    #     try:
-    #         return self.conversation_stack[-2]
-    #     except IndexError:
-    #         LOG.warning(f"There are no pending conversations!")
-    #         return None
-# add active_conversation[user], which stores the current Conversation object, in addition to active_conversations[user]
-# active_conversations[user] has ConversationManager instead. CM
-

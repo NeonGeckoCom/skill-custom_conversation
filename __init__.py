@@ -2816,7 +2816,6 @@ class CustomConversations(MycroftSkill):
         :return: line with all variables substituted
         """
         active_dict = self.active_conversations[user].get_current_conversation()
-        # LOG.info(f"ENTERING SUBSTITUTE VARIABLES WITH {line}")
         line = line.strip()
         LOG.debug(f"_sub_vars: {line}")
         # Handle wildcard substitutions (may include trailing punctuation)
@@ -2907,14 +2906,8 @@ class CustomConversations(MycroftSkill):
                     if var_name in variables.keys() and variables[var_name]:
                         raw_val = variables[var_name]
                     # Check if this variable is defined in a script that called this script
-                    # TODO: Look up user scope here!
                     elif "." in var_name:
-                        # script_name, variable_name = var_name.split(".")
                         raw_val = self.active_conversations[user].user_scope_variables.get(var_name)
-                        # for conversation in self.active_conversations[user].conversation_stack:
-                        #     if script_name == conversation["script_filename"]:
-                        #         raw_val = conversation.get("variables", {}).get(variable_name)
-                        #         break
                     else:
                         for script in active_dict["pending_scripts"]:
                             if var_name in script.get("variables", {}).keys():
@@ -3289,27 +3282,6 @@ class CustomConversations(MycroftSkill):
         """
         with open(os.path.join(self.transcript_location, f'{filename}_{start_time}.txt'), 'a') as transcript:
             transcript.write(utterance)
-
-    # ========== Lookup Functions ==========
-    @staticmethod
-    def _lookup_variables(variable, active_dict, conversation_manager):
-
-        # look up locally
-        value = active_dict["variables"].get(variable)
-        if not value and "." in variable:
-            script_name, variable_name = variable.split(".")
-            # look up user scope
-            for conversation in conversation_manager.conversation_stack:
-                if script_name == conversation["script_filename"]:
-                    value = conversation.get("variables").get(variable_name)
-                    break
-        return value
-
-
-
-
-
-
 
 
 def create_skill():
