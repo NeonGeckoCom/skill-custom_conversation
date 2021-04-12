@@ -1,3 +1,5 @@
+import time
+
 from mycroft.util.log import LOG
 
 
@@ -75,53 +77,16 @@ class Conversation:
         return self.__dict__
 
 
-# class ConversationNode:
-#     def __init__(self, conversation):
-#         self.conversation = conversation
-#         self.next = None
-#
-#
-# class ConversationManager:
-#     def __init__(self):
-#         self.head = None
-#
-#     def is_empty(self):
-#         return not self.head
-#
-#     def push(self, conversation):
-#         if not self.head:
-#             self.head = ConversationNode(conversation)
-#         else:
-#             new_node = ConversationNode(conversation)
-#             new_node.next, self.head = self.head, new_node
-#
-#     def pop(self):
-#         if self.is_empty():
-#             return None
-#         else:
-#             popped_node, self.head = self.head, self.head.next
-#             popped_node.next = None
-#             return popped_node.conversation
-#
-#     def peek(self):
-#         return None if self.is_empty() else self.head.conversation
-#
-#     def get_current_conversation(self):
-#         try:
-#             return self.head.conversation
-#         except IndexError:
-#             LOG.warning(f"There are no active conversations!")
-#             return None
-
-
 class ConversationManager:
     def __init__(self):
-        self.conversation_stack = []
+        self.manager_id = time.time()       # Epoch time as a unique id
+        self.conversation_stack = []        # A list with all pending and active Conversations
+        self.user_scope_variables = {}      # Dict of declared variables and values from all scripts
 
     def __len__(self):
         return len(self.conversation_stack)
 
-    def push(self, item):
+    def push(self, item: Conversation):
         """
         Push conversation on top of the stack
         :param item: Conversation to be pushed
@@ -139,16 +104,16 @@ class ConversationManager:
         except IndexError:
             return None
 
-    def transfer_variables(self, from_conversation, to_conversation):
-        """
-        Transfer variables between conversations
-        :param from_conversation: Conversation with variables to be transferred
-        :param to_conversation: Conversation with variables to transfer to
-        :return: None
-        """
-        # TODO: find a better implementation
-        if from_conversation in self.conversation_stack and to_conversation in self.conversation_stack:
-            from_conversation["variables"].update(to_conversation["variables"])
+    # def transfer_variables(self, from_conversation, to_conversation):
+    #     """
+    #     Transfer variables between conversations
+    #     :param from_conversation: Conversation with variables to be transferred
+    #     :param to_conversation: Conversation with variables to transfer to
+    #     :return: None
+    #     """
+    #     # TODO: find a better implementation
+    #     if from_conversation in self.conversation_stack and to_conversation in self.conversation_stack:
+    #         from_conversation["variables"].update(to_conversation["variables"])
 
     def get_current_conversation(self):
         try:
@@ -156,6 +121,31 @@ class ConversationManager:
         except IndexError:
             LOG.warning(f"There are no active conversations!")
             return None
+
+    def update_user_scope(self, conversation: Conversation):
+        """
+        Update the user scope variables with data from the Conversation
+        :param conversation: a Conversation object to update the scope with
+        :return: None
+        """
+        # active_dict = self.get_current_conversation()
+        script_name, script_variables = conversation.get("script_filename"), conversation.get("variables")
+        variables = {f"{script_name}.{key}": value for key, value in script_variables.items()}
+        self.user_scope_variables.update(variables)
+
+    def lookup_user_scope(self, variable):
+        """
+        Look up a variable in the user scope
+        :param variable: a variable in format script_name.variable_name
+        :return: a variable value for the variable
+        """
+        variable_value = None
+        script_name, variable_name = variable.split(".")
+        for conversation in self.conversation_stack:
+            if script_name == conversation["script_filename"]:
+                variable_value = conversation.get("variables").get(variable_name)
+                break
+        return variable_value
 
     # def get_pending_conversation(self):
     #     try:

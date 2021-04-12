@@ -655,11 +655,11 @@ class CustomConversations(MycroftSkill):
                 self._reset_values(user)
             # LOG.info(f"No RESET IN _continue_script_execution")
             active_dict = self.active_conversations.get(user).get_current_conversation()
-            LOG.debug(f"Active script is {active_dict['script_filename']} and continuing from {active_dict['current_index']}")
+            # LOG.debug(f"Active script is {active_dict['script_filename']} and continuing from {active_dict['current_index']}")
             # Catch when we are waiting for input
             # if not self.check_for_signal(f"{user}_CC_inputNeeded", -1):
-            if user not in self.awaiting_input:
-                LOG.debug(f'Continuing script from index {active_dict["current_index"]}')
+            if user not in self.awaiting_input and active_dict:
+                LOG.debug(f'Continuing {active_dict["script_filename"]} script from index {active_dict["current_index"]}')
 
                 # Continue only if there is an active script for the user
                 if active_dict["formatted_script"]:
@@ -1273,11 +1273,14 @@ class CustomConversations(MycroftSkill):
         #     self._update_language(message, active_dict["user_language"])
 
         # Resume pending script by removing the script-to-exit from the pending script stack
-        self.active_conversations.get(user).pop()
+        popped_conversation = self.active_conversations.get(user).pop()
+        # Update the user scope of variables
+        self.active_conversations[user].update_user_scope(popped_conversation)
 
         if len(self.active_conversations.get(user)) != 0:
             active_dict = self.active_conversations.get(user).get_current_conversation()
             active_dict['current_index'] += 1
+            LOG.debug(f"After exit, active dict is {active_dict['script_filename']}")
         else:
             # Clear signals and values because there are no pending scripts left in the stack
             LOG.info(f"CLEARING SIGNALS FOR {user}")
@@ -2904,6 +2907,14 @@ class CustomConversations(MycroftSkill):
                     if var_name in variables.keys() and variables[var_name]:
                         raw_val = variables[var_name]
                     # Check if this variable is defined in a script that called this script
+                    # TODO: Look up user scope here!
+                    elif "." in var_name:
+                        # script_name, variable_name = var_name.split(".")
+                        raw_val = self.active_conversations[user].user_scope_variables.get(var_name)
+                        # for conversation in self.active_conversations[user].conversation_stack:
+                        #     if script_name == conversation["script_filename"]:
+                        #         raw_val = conversation.get("variables", {}).get(variable_name)
+                        #         break
                     else:
                         for script in active_dict["pending_scripts"]:
                             if var_name in script.get("variables", {}).keys():
@@ -3278,6 +3289,27 @@ class CustomConversations(MycroftSkill):
         """
         with open(os.path.join(self.transcript_location, f'{filename}_{start_time}.txt'), 'a') as transcript:
             transcript.write(utterance)
+
+    # ========== Lookup Functions ==========
+    @staticmethod
+    def _lookup_variables(variable, active_dict, conversation_manager):
+
+        # look up locally
+        value = active_dict["variables"].get(variable)
+        if not value and "." in variable:
+            script_name, variable_name = variable.split(".")
+            # look up user scope
+            for conversation in conversation_manager.conversation_stack:
+                if script_name == conversation["script_filename"]:
+                    value = conversation.get("variables").get(variable_name)
+                    break
+        return value
+
+
+
+
+
+
 
 
 def create_skill():
