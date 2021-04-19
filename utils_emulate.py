@@ -35,12 +35,21 @@ class Conversation:
         # Initialize persistence variables
         self.pending_scripts = []       # List of pending script dicts
 
+        self._protected = "protected"   # TODO: remove after proper testing of protected attributes
+
+    @property
+    def protected(self):
+        return self._protected
+
     # Methods to emulate dicts
     def __getitem__(self, item):
         return self.__getattribute__(item)
 
     def __setitem__(self, key, value):
-        self.__setattr__(key, value)
+        if key.startswith("_"):
+            raise AttributeError("Cannot set a protected or private attribute")
+        else:
+            self.__setattr__(key, value)
 
     def __contains__(self, item):
         return True if hasattr(self, item) else False
@@ -63,11 +72,11 @@ class Conversation:
     def items(self):
         return self.__dict__.items()
 
-    def get(self, item, other=None):
+    def get(self, item, default=None):
         try:
             return self.__getitem__(item)
         except AttributeError:
-            return other
+            return default
 
     def to_json(self):
         """
@@ -78,13 +87,26 @@ class Conversation:
 
 
 class ConversationManager:
-    def __init__(self):
+    def __init__(self, user=None):
         self.manager_id = time.time()       # Epoch time as a unique id
-        self.conversation_stack = []        # A list with all pending and active Conversations
+        self._conversation_stack = []       # A list with all pending and active Conversations ordered from first to last
+        self._user = user                   # A user associated with this manager
         self.user_scope_variables = {}      # Dict of declared variables and values from all scripts
 
     def __len__(self):
-        return len(self.conversation_stack)
+        return len(self._conversation_stack)
+
+    @property
+    def conversation_stack(self):
+        return self._conversation_stack
+
+    @property
+    def user(self):
+        return self._user
+
+    # @user.setter
+    # def user(self, user):
+    #     self._user = user
 
     def push(self, item: Conversation):
         """
@@ -92,7 +114,10 @@ class ConversationManager:
         :param item: Conversation to be pushed
         :return: None
         """
-        self.conversation_stack.append(item)
+        if type(item) == Conversation:
+            self._conversation_stack.append(item)
+        else:
+            raise TypeError
 
     def pop(self):
         """
@@ -100,16 +125,25 @@ class ConversationManager:
         :return: last conversation in the stack
         """
         try:
-            return self.conversation_stack.pop()
+            return self._conversation_stack.pop()
         except IndexError:
             return None
 
     def get_current_conversation(self):
+        """
+        Get the last conversation in the manager stack
+        :return: last conversation or None
+        """
         try:
-            return self.conversation_stack[-1]
+            current_conversation = self._conversation_stack[-1]
         except IndexError:
             LOG.warning(f"There are no active conversations!")
             return None
+        else:
+            if type(current_conversation) == Conversation:
+                return current_conversation
+            else:
+                raise TypeError
 
     def update_user_scope(self, conversation: Conversation):
         """
@@ -117,20 +151,32 @@ class ConversationManager:
         :param conversation: a Conversation object to update the scope with
         :return: None
         """
-        script_name, script_variables = conversation.get("script_filename"), conversation.get("variables")
+        script_name, script_variables = conversation.get("script_filename", str()), conversation.get("variables", dict())
         variables = {f"{script_name}.{key}": value for key, value in script_variables.items()}
         self.user_scope_variables.update(variables)
 
-    def lookup_user_scope(self, variable):
+    def lookup_variable_in_conversation(self, variable):
         """
-        Look up a variable in the user scope
+        Look up a variable in a specific conversation
         :param variable: a variable in format script_name.variable_name
         :return: a variable value for the variable
         """
         variable_value = None
-        script_name, variable_name = variable.split(".")
-        for conversation in self.conversation_stack:
-            if script_name == conversation["script_filename"]:
-                variable_value = conversation.get("variables").get(variable_name)
-                break
+        try:
+            script_name, variable_name = variable.split(".", 1)
+        except ValueError:
+            LOG.warning("Wrong variable format, use script_name.variable_name instead")
+        else:
+            for conversation in self._conversation_stack:
+                if script_name == conversation["script_filename"]:
+                    variable_value = conversation.get("variables").get(variable_name)
+                    break
         return variable_value
+
+    def lookup_user_scope(self, variable):
+        """
+        Look up a variable in the user scope
+        :param variable: a variable to look up
+        :return: a variable value for the variable
+        """
+        return self.user_scope_variables.get(variable)
