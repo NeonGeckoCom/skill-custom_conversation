@@ -129,7 +129,6 @@ class CustomConversations(MycroftSkill):
         self.string_comparators = ("IN", "CONTAINS", "STARTSWITH", "ENDSWITH")
         self.math_comparators = ("==", "!=", ">", "<", ">=", "<=")
         self.active_conversations = dict()
-        # self.conversation_manager = ConversationManager()
         self.awaiting_input = list()
         self._reset_values("local")
 
@@ -337,7 +336,7 @@ class CustomConversations(MycroftSkill):
         file_to_run = message.data.get('file_to_run')
         # LOG.info(file_to_run)
         active_dict["script_filename"] = file_to_run.rstrip().replace(" ", "_").replace("-", "_")
-        active_dict["script_start_time"] = int(time.time())
+        # active_dict["script_start_time"] = int(time.time())
         LOG.info(active_dict["script_filename"])
 
         # Start transcript file
@@ -425,7 +424,7 @@ class CustomConversations(MycroftSkill):
                 # self.speak_init_message(message)
                 # active_dict["outer_option"] = 0
                 active_dict["last_indent"] = 0
-                active_dict["current_index"] = 1
+                # active_dict["current_index"] = 1
 
                 # Check if a starting tag was specified at skill run
                 spoken = message.data.get("utterance")
@@ -514,7 +513,7 @@ class CustomConversations(MycroftSkill):
         """
         # initialize a conversation manager for user if does not exist already
         if user not in self.active_conversations.keys():
-            self.active_conversations[user] = ConversationManager()
+            self.active_conversations[user] = ConversationManager(user)
         # if user not in self.conversations:
         #     self.conversations[user] = ConversationManager()
         # LOG.debug(f"reset values for {user}")

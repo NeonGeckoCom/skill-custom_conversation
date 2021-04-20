@@ -23,146 +23,145 @@ from utils_emulate import Conversation, ConversationManager
 
 
 class TestConversation(unittest.TestCase):
-    global conversation
-    conversation = Conversation()
+
+    def setUp(self) -> None:
+        self.conversation = Conversation()
 
     def test_getitem(self):
-        self.assertEqual(conversation["script_meta"], conversation.script_meta)
+        self.assertEqual(self.conversation["script_meta"], self.conversation.script_meta)
 
     def test_setitem(self):
-        conversation["line"] = "random"
-        self.assertEqual(conversation.line, "random")
+        self.conversation["line"] = "random"
+        self.assertEqual(self.conversation.line, "random")
 
     def test_contains(self):
-        self.assertTrue("script_meta" in conversation)
-        self.assertFalse("random" in conversation)
+        self.assertTrue("script_meta" in self.conversation)
+        self.assertFalse("random" in self.conversation)
 
     def test_len(self):
-        conversation_length = len(conversation)
-        self.assertEqual(type(conversation_length), int)
-        conversation.foo = "bar"
-        self.assertEqual(len(conversation), conversation_length+1)
+        conversation_length = len(self.conversation)
+        self.assertIsInstance(conversation_length, int)
+        self.conversation.foo = "bar"
+        self.assertEqual(len(self.conversation), conversation_length+1)
 
     def test_setitem_protected(self):
         with self.assertRaises(AttributeError):
-            conversation["_protected"] = "random"
+            self.conversation["_protected"] = "random"
 
     def test_setitem_protected_with_for_items_loop(self):
         with self.assertRaises(AttributeError):
-            for a, b in conversation.items():
+            for a, b in self.conversation.items():
                 if a.startswith("_"):
-                    conversation[a] = "new_value"
+                    self.conversation[a] = "new_value"
 
     def test_protected_property(self):
-        self.assertEqual(conversation["protected"], "protected")
+        self.assertEqual(self.conversation["protected"], "protected")
 
-        conversation._protected = "random"
-        self.assertEqual(conversation["_protected"], "random")
+        self.conversation._protected = "random"
+        self.assertEqual(self.conversation["_protected"], "random")
         with self.assertRaises(AttributeError):
-            conversation["protected"] = "protected"
+            self.conversation["protected"] = "protected"
 
     def test_items(self):
-        self.assertEqual(type(conversation.items()), type({}.items()))
-        self.assertEqual(len(conversation), len(conversation.items()))
+        self.assertIsInstance(self.conversation.items(), type({}.items()))
+        self.assertEqual(len(self.conversation), len(self.conversation.items()))
 
         new_items = {}
-        for a, b in conversation.items():
+        for a, b in self.conversation.items():
             new_items[a] = b
-        self.assertEqual(conversation.__dict__, new_items)
+        self.assertEqual(self.conversation.__dict__, new_items)
 
     def test_keys(self):
-        self.assertEqual(type(conversation.keys()), type({}.keys()))
-        self.assertEqual(len(conversation), len(conversation.keys()))
+        self.assertIsInstance(self.conversation.keys(), type({}.keys()))
+        self.assertEqual(len(self.conversation), len(self.conversation.keys()))
 
     def test_values(self):
-        self.assertEqual(type(conversation.values()), type({}.values()))
-        self.assertEqual(len(conversation), len(conversation.values()))
+        self.assertIsInstance(self.conversation.values(), type({}.values()))
+        self.assertEqual(len(self.conversation), len(self.conversation.values()))
 
     def test_get(self):
-        self.assertEqual(conversation.get("random"), None)
-        self.assertEqual(conversation.get("script_meta"), {})
+        self.assertIsNone(self.conversation.get("random"))
+        self.assertEqual(self.conversation.get("script_meta"), {})
 
     def test_to_json(self):
-        self.assertEqual(type(conversation.to_json()), dict)
+        self.assertIsInstance(self.conversation.to_json(), dict)
 
 
 class TestConversationManager(unittest.TestCase):
-    global manager
-    manager = ConversationManager()
+
+    def setUp(self) -> None:
+        self.conversation = Conversation()
+        self.manager = ConversationManager()
 
     def test_len(self):
-        self.assertEqual(type(len(manager)), int)
-        self.assertEqual(len(manager), len(manager._conversation_stack))
+        self.assertIsInstance(len(self.manager), int)
+        self.assertEqual(len(self.manager), len(self.manager._conversation_stack))
 
     def test_conversation_stack_property(self):
-        self.assertEqual(type(manager.conversation_stack), list)
-        self.assertIs(manager.conversation_stack, manager._conversation_stack)
+        self.assertIsInstance(self.manager.conversation_stack, list)
+        self.assertIs(self.manager.conversation_stack, self.manager._conversation_stack)
         with self.assertRaises(AttributeError):
-            manager.conversation_stack = ["foo", "bar"]
+            self.manager.conversation_stack = ["foo", "bar"]
 
     def test_user_property(self):
-        self.assertEqual(type(manager.user), type(None))
-        self.assertIs(manager.user, manager._user)
+        self.assertIsNone(self.manager.user)
+        self.assertIs(self.manager.user, self.manager._user)
 
-        manager._user = "foo"
-        self.assertEqual(manager.user, "foo")
+        self.manager._user = "foo"
+        self.assertEqual(self.manager.user, "foo")
         with self.assertRaises(AttributeError):
-            manager.user = "bar"
+            self.manager.user = "bar"
 
     def test_push(self):
-        test_conversation = Conversation()
-        stack_length = len(manager)
-        manager.push(test_conversation)
-        self.assertEqual(stack_length+1, len(manager))
+        stack_length = len(self.manager)
+        self.manager.push(self.conversation)
+        self.assertEqual(stack_length+1, len(self.manager))
 
         with self.assertRaises(TypeError):
-            manager.push("foo")
+            self.manager.push("foo")
 
     def test_pop(self):
-        manager._conversation_stack = ["foo"]
-        stack_length = len(manager)
-        manager.pop()
-        self.assertEqual(len(manager), stack_length-1)
+        self.manager._conversation_stack = ["foo"]
+        stack_length = len(self.manager)
+        with self.assertRaises(ValueError):
+            self.manager.pop()
+        self.assertEqual(len(self.manager), stack_length-1)
 
-        manager._conversation_stack = []
-        self.assertEqual(manager.pop(), None)
+        self.manager._conversation_stack = [self.conversation]
+        self.assertIsInstance(self.manager.pop(), Conversation)
+        self.assertIsNone(self.manager.pop())
 
     def test_get_current_conversation(self):
-        self.assertEqual(manager.get_current_conversation(), None)
+        self.assertIsNone(self.manager.get_current_conversation())
 
-        test_conversation = Conversation()
-        manager.push(test_conversation)
-        self.assertIs(manager.get_current_conversation(), test_conversation)
+        self.manager.push(self.conversation)
+        self.assertIs(self.manager.get_current_conversation(), self.conversation)
 
-        manager._conversation_stack = ["foo", "bar"]
+        self.manager._conversation_stack = ["foo", "bar"]
         with self.assertRaises(TypeError):
-            manager.get_current_conversation()
+            self.manager.get_current_conversation()
 
     def test_update_user_scope(self):
-        test_conversation = Conversation()
-        test_conversation.script_filename = "test"
-        test_conversation.variables = {"foo": "bar"}
-        manager.update_user_scope(test_conversation)
-        self.assertEqual(len(manager.user_scope_variables), len(test_conversation.variables))
+        self.conversation.script_filename = "test"
+        self.conversation.variables = {"foo": "bar"}
+        self.manager.update_user_scope(self.conversation)
+        self.assertEqual(len(self.manager.user_scope_variables), len(self.conversation.variables))
 
     def test_lookup_user_scope(self):
-        lookup_manager = ConversationManager()
-        lookup_manager.user_scope_variables = {"foo.bar": "foobar"}
-        self.assertEqual(lookup_manager.lookup_user_scope("foo.bar"), "foobar")
-        self.assertEqual(lookup_manager.lookup_user_scope("foo.bar.baz"), None)
+        self.manager.user_scope_variables = {"foo.bar": "foobar"}
+        self.assertEqual(self.manager.lookup_user_scope("foo.bar"), "foobar")
+        self.assertEqual(self.manager.lookup_user_scope("foo.bar.baz"), None)
 
     def test_lookup_variable_in_conversation(self):
-        test_conversation = Conversation()
-        test_conversation.script_filename = "foobar"
-        test_conversation.variables = {"foo": "bar"}
-        test_manager = ConversationManager()
-        test_manager._conversation_stack.append(test_conversation)
-        self.assertEqual(test_manager.lookup_variable_in_conversation("foobar.foo"), "bar")
-        self.assertEqual(test_manager.lookup_variable_in_conversation("foobar.foo.baz"), None)
-        self.assertEqual(test_manager.lookup_variable_in_conversation("foobar."), None)
-        self.assertEqual(test_manager.lookup_variable_in_conversation(".foo"), None)
-        self.assertEqual(test_manager.lookup_variable_in_conversation("."), None)
-        self.assertEqual(test_manager.lookup_variable_in_conversation(""), None)
+        self.conversation.script_filename = "foobar"
+        self.conversation.variables = {"foo": "bar"}
+        self.manager._conversation_stack.append(self.conversation)
+        self.assertEqual(self.manager.lookup_variable_in_conversation("foobar.foo"), "bar")
+        self.assertEqual(self.manager.lookup_variable_in_conversation("foobar.foo.baz"), None)
+        self.assertEqual(self.manager.lookup_variable_in_conversation("foobar."), None)
+        self.assertEqual(self.manager.lookup_variable_in_conversation(".foo"), None)
+        self.assertEqual(self.manager.lookup_variable_in_conversation("."), None)
+        self.assertEqual(self.manager.lookup_variable_in_conversation(""), None)
 
 
 if __name__ == '__main__':

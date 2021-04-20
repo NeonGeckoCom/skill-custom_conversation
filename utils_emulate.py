@@ -17,15 +17,15 @@ class Conversation:
         self.goto_tags = {}             # Dict of script tags and associated indexes
 
         # Initialize time variables
-        self.line = ''                  # Current formatted_file Line being loaded (includes empty and comment lines)
-        self.user_language = None       # User language setting (not script setting)
-        self.last_variable = None       # Last variable read from the script (used to handle continuations)
-        self.synonym_command = None     # Command to execute when a synonym is heard (run script)
-        self.synonyms = []              # List of synonyms available to run the script
-        self.script_start_time = None   # Epoch time of script start
+        self.line = ''                              # Current formatted_file Line being loaded (includes empty and comment lines)
+        self.user_language = None                   # User language setting (not script setting)
+        self.last_variable = None                   # Last variable read from the script (used to handle continuations)
+        self.synonym_command = None                 # Command to execute when a synonym is heard (run script)
+        self.synonyms = []                          # List of synonyms available to run the script
+        self.script_start_time = int(time.time())   # Epoch time of script start
 
         # Initialize runtime variables
-        self.current_index = 0          # Current formatted_script index being parsed or executed
+        self.current_index = 1          # Current formatted_script index being parsed or executed
         self.last_indent = 0            # Indentation of last line executed (^\s%4)
         self.variable_to_fill = ''      # Name of variable to which next input is assigned
         self.last_request = ''          # Identifier of last speak/execute emit to catch the response
@@ -125,7 +125,11 @@ class ConversationManager:
         :return: last conversation in the stack
         """
         try:
-            return self._conversation_stack.pop()
+            last_conversation = self._conversation_stack.pop()
+            if not isinstance(last_conversation, Conversation):
+                # TODO should we return this value back to the stack or keep it removed?
+                raise ValueError("Last item in stack in of the Conversation class")
+            return last_conversation
         except IndexError:
             return None
 
