@@ -527,6 +527,8 @@ class CustomConversations(MycroftSkill):
         #  The latter has a basic check and does not pass user anywhere.
         #  _reset_values method is supposed to terminate the current script execution. So is it replaced by
         #  _terminate_execution
+        if user not in self.active_conversations.keys():
+            self.active_conversations[user] = ConversationManager(user)
         # LOG.debug(f"reset values for current_conversation of {user}")
         # if user in self.active_conversations:
         #     current_conversation = self.active_conversations[user].get_current_conversation()
@@ -3063,7 +3065,7 @@ class CustomConversations(MycroftSkill):
                         # message.context["cc_data"]["signal_to_check"] = ""
                         # LOG.debug(f"DM: Continue Script Execution Call")
                         # self._continue_script_execution(message, user)
-        except TypeError:
+        except Exception:
             pass
         # except KeyError:
         #     if user in self.active_conversations.keys():
@@ -3163,7 +3165,7 @@ class CustomConversations(MycroftSkill):
                         active_dict["last_indent"] = goto_ind
                         self.bus.emit(message.reply("skill.converse.response",
                                                     {"skill_id": "custom-conversation.neon", "result": True}))
-                        time.sleep(1)
+                        # time.sleep(1)
                         LOG.debug(f"about to continue from {goto_idx}")
                         # LOG.debug(f"DM: Continue Script Execution Call")
                         self._continue_script_execution(message, user)
