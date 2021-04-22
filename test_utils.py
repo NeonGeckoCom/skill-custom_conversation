@@ -25,7 +25,9 @@ from utils_emulate import Conversation, ConversationManager
 class TestConversation(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.conversation = Conversation()
+        self.script_meta = {"foo": "bar"}
+        self.script_filename = "foo"
+        self.conversation = Conversation(script_meta=self.script_meta, script_filename=self.script_filename)
 
     def test_getitem(self):
         self.assertEqual(self.conversation["script_meta"], self.conversation.script_meta)
@@ -46,21 +48,21 @@ class TestConversation(unittest.TestCase):
 
     def test_setitem_protected(self):
         with self.assertRaises(AttributeError):
-            self.conversation["_protected"] = "random"
+            self.conversation["_script_meta"] = "foo"
 
     def test_setitem_protected_with_for_items_loop(self):
         with self.assertRaises(AttributeError):
             for a, b in self.conversation.items():
                 if a.startswith("_"):
-                    self.conversation[a] = "new_value"
+                    self.conversation[a] = "foo "
 
     def test_protected_property(self):
-        self.assertEqual(self.conversation["protected"], "protected")
+        self.assertEqual(self.conversation["script_meta"], {"foo": "bar"})
 
-        self.conversation._protected = "random"
-        self.assertEqual(self.conversation["_protected"], "random")
+        self.conversation._script_meta = {"foobar": "baz"}
+        self.assertEqual(self.conversation["_script_meta"], {"foobar": "baz"})
         with self.assertRaises(AttributeError):
-            self.conversation["protected"] = "protected"
+            self.conversation["script_meta"] = {"foo": "bar"}
 
     def test_items(self):
         self.assertIsInstance(self.conversation.items(), type({}.items()))
@@ -81,7 +83,7 @@ class TestConversation(unittest.TestCase):
 
     def test_get(self):
         self.assertIsNone(self.conversation.get("random"))
-        self.assertEqual(self.conversation.get("script_meta"), {})
+        self.assertEqual(self.conversation.get("script_meta"), self.script_meta)
 
     def test_to_json(self):
         self.assertIsInstance(self.conversation.to_json(), dict)
@@ -90,7 +92,9 @@ class TestConversation(unittest.TestCase):
 class TestConversationManager(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.conversation = Conversation()
+        self.script_meta = {"foo": "bar"}
+        self.script_filename = "foo"
+        self.conversation = Conversation(script_meta=self.script_meta, script_filename=self.script_filename)
         self.manager = ConversationManager()
 
     def test_len(self):
@@ -142,7 +146,7 @@ class TestConversationManager(unittest.TestCase):
             self.manager.get_current_conversation()
 
     def test_update_user_scope(self):
-        self.conversation.script_filename = "test"
+        self.conversation._script_filename = "test"
         self.conversation.variables = {"foo": "bar"}
         self.manager.update_user_scope(self.conversation)
         self.assertEqual(len(self.manager.user_scope_variables), len(self.conversation.variables))
@@ -153,7 +157,7 @@ class TestConversationManager(unittest.TestCase):
         self.assertEqual(self.manager.lookup_user_scope("foo.bar.baz"), None)
 
     def test_lookup_variable_in_conversation(self):
-        self.conversation.script_filename = "foobar"
+        self.conversation._script_filename = "foobar"
         self.conversation.variables = {"foo": "bar"}
         self.manager._conversation_stack.append(self.conversation)
         self.assertEqual(self.manager.lookup_variable_in_conversation("foobar.foo"), "bar")

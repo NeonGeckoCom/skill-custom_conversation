@@ -130,7 +130,7 @@ class CustomConversations(MycroftSkill):
         self.math_comparators = ("==", "!=", ">", "<", ">=", "<=")
         self.active_conversations = dict()
         self.awaiting_input = list()
-        self._reset_values("local")
+        # self._reset_values("local")
 
         self.speak_timeout = 5
         self.response_timeout = 10
@@ -315,46 +315,21 @@ class CustomConversations(MycroftSkill):
         :return:
         """
         user = self.get_utterance_user(message)
-        # if self.server:
-        #     user = nick(message.context["flac_filename"])
-        # if self.active_conversations.get(user, None):
-        #     LOG.info("Exiting previously open skill file")
-        self._reset_values(user)
-        active_dict = self.active_conversations.get(user).get_current_conversation()
-        LOG.info(f"Active dict is {active_dict}")
-        LOG.debug(user)
-        # self.add_event("cc_loop:utterance", self.check_if_correct_response)
-        # self.add_event('recognizer_loop:audio_output_end', self.check_end)
-        # self.add_event('speak', self.check_speak)
-        # if self.server and not self.formatted_file:
-        #     index = 'local'
-        # elif (self.server and self.formatted_file) or (self.server and self.to_say):
-        #     self.speak_dialog("AlreadyRunning", {"file_name": self.formatted_file.title()})
-        #     return
-        # self.clear_signals("CC")
         LOG.debug(message.data.get("utterance"))
         file_to_run = message.data.get('file_to_run')
-        # LOG.info(file_to_run)
-        active_dict["script_filename"] = file_to_run.rstrip().replace(" ", "_").replace("-", "_")
-        # active_dict["script_start_time"] = int(time.time())
-        LOG.info(active_dict["script_filename"])
-
+        script_filename = file_to_run.rstrip().replace(" ", "_").replace("-", "_")
+        LOG.info(script_filename)
+        # self._reset_values(user)
+        # active_dict = self.active_conversations.get(user).get_current_conversation()
+        # LOG.info(f"Active dict is {active_dict}")
+        LOG.debug(user)
         # Start transcript file
         os.makedirs(self.transcript_location, exist_ok=True)
-        self.update_transcript(f'RUNNING SCRIPT {active_dict["script_filename"]}\n',
-                               filename=active_dict["script_filename"],
-                               start_time=active_dict["script_start_time"]
-                               )
-        # if self.formatted_file in
-
-        # file_path_to_check = self.__location__ + "/script_txt/" + active_dict["script_filename"] + ".txt"
-        # LOG.info(file_path_to_check)
-
         # Check if compiled or text script exists
-        if not self._script_file_exists(active_dict["script_filename"]):
-            self.speak_dialog("NotFound", {"file_to_open": active_dict["script_filename"].replace('_', ' ')})
+        if not self._script_file_exists(script_filename):
+            self.speak_dialog("NotFound", {"file_to_open": script_filename.replace('_', ' ')})
             self.active_conversations.pop(user)
-        elif self._check_script_file(active_dict["script_filename"] + self.file_ext):
+        elif self._check_script_file(script_filename + self.file_ext):
             # # Check if the file has already been parsed and cached or if we need to parse it here
             # if not self._check_script_file(active_dict["script_filename"] + self.file_ext):
             #     LOG.info(f'{active_dict["formatted_script"]} not yet parsed!')
@@ -372,7 +347,7 @@ class CustomConversations(MycroftSkill):
             # We have this in cache now, load values from there
             LOG.debug("Loading from Cache!")
             try:
-                cache = self.get_cached_data(active_dict["script_filename"] + self.file_ext,
+                cache = self.get_cached_data(script_filename + self.file_ext,
                                              os.path.join(self.__location__, "script_txt"))
                 # TODO: Claps and Synonyms here! DM
                 LOG.info(json.dumps(cache, indent=4))
@@ -387,7 +362,20 @@ class CustomConversations(MycroftSkill):
             #     # LOG.info(json.dumps(cache, indent=4))
             #     # LOG.info(f'Checking for cache AP')
 
-            LOG.info(f'{active_dict["script_filename"]} loaded from cache')
+            LOG.info(f'{script_filename} loaded from cache')
+            try:
+                script_meta = cache[9]
+            except Exception as e:
+                LOG.error(e)
+                script_meta = None
+            # initialize conversation
+            self._init_conversation(user=user, script_meta=script_meta, script_filename=script_filename)
+            active_dict = self.active_conversations.get(user).get_current_conversation()
+
+            self.update_transcript(f'RUNNING SCRIPT {active_dict["script_filename"]}\n',
+                                   filename=active_dict["script_filename"],
+                                   start_time=active_dict["script_start_time"]
+                                   )
             try:
                 active_dict["formatted_script"] = cache[0]
                 active_dict["speaker_data"] = cache[1]
@@ -396,10 +384,10 @@ class CustomConversations(MycroftSkill):
                 active_dict["goto_tags"] = cache[4]
                 active_dict["timeout"] = cache[5]
                 active_dict["timeout_action"] = cache[6]
-                active_dict["script_meta"] = cache[9]
+                # active_dict["script_meta"] = cache[9]
             except Exception as e:
                 LOG.error(e)
-                self._reset_values(user)
+                active_dict.reset_values()
                 # TODO: Speak error! DM
                 # active_dict = self.active_conversations[user]
                 # active_dict = self._load_to_cache(active_dict, file_to_run, user)
@@ -457,7 +445,7 @@ class CustomConversations(MycroftSkill):
                 # LOG.debug(f"DM: Continue Script Execution Call")
                 self._continue_script_execution(message, user)
         else:
-            self.speak_dialog("ProblemInFile", {"file_name": active_dict["script_filename"].replace('_', ' ')})
+            self.speak_dialog("ProblemInFile", {"file_name": script_filename.replace('_', ' ')})
             self.active_conversations.pop(user)
 
     def _script_exists(self, message):
@@ -506,56 +494,77 @@ class CustomConversations(MycroftSkill):
             return os.path.isfile(second_path_to_check)
         return True
 
+    def _init_conversation(self, user, script_meta=None, script_filename=None):
+        """
+        Initialize a conversation manager for user if does not exist and add a new conversation there
+        :param user: nick on klat server, else "local"
+        :param script_meta: script metadata from cache
+        :param script_filename: script filename to run
+        :return:
+        """
+        # initialize a conversation manager for user if does not exist already
+        if user not in self.active_conversations.keys():
+            self.active_conversations[user] = ConversationManager(user)
+
+        # push a new conversation to the conversation manager
+        current_conversation = Conversation(script_meta=script_meta, script_filename=script_filename)
+        self.active_conversations.get(user).push(current_conversation)
+
+    # def _terminate_execution(self, user="local"):
+    #     """
+    #     Terminates execution of current script
+    #     :return user: nick on klat server, else "local"
+    #     """
+        # active_dict = self.active_conversations.get(user).
     def _reset_values(self, user="local"):
         """
         Resets active_conversations entry for the given user (resets script execution)
         :param user: nick on klat server, else "local"
         """
-        # initialize a conversation manager for user if does not exist already
-        if user not in self.active_conversations.keys():
-            self.active_conversations[user] = ConversationManager(user)
-        # if user not in self.conversations:
-        #     self.conversations[user] = ConversationManager()
-        # LOG.debug(f"reset values for {user}")
-        if user in self.active_conversations and self.active_conversations[user].get_current_conversation():
-            LOG.info(f'Removing {user} running {self.active_conversations[user].get_current_conversation().get("script_filename")}')
-
-        # push a new conversation to the conversation manager
-        current_conversation = Conversation()
-        self.active_conversations.get(user).push(current_conversation)
-        # self.conversations[user].push(self.active_conversations[user])
-        # self.active_conversations[user] = {
-        #     # Script Globals
-        #     "script_meta": {},          # Parser metadata
-        #     "script_filename": None,    # Script filename
-        #     "timeout": -1,              # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
-        #     "timeout_action": '',       # String to speak when timeout is reached (before exit dialog)
-        #     "variables": {},            # Dict of declared variables and values
-        #     "speaker_data": {},         # Language defined in script
-        #     "loops_dict": {},           # Dict of loop names and associated dict of values
-        #     "formatted_script": [],     # List of script line dictionaries (excludes empty and comment lines)
-        #     "goto_tags": {},            # Dict of script tags and associated indexes
-        #
-        #     # Load time Variables
-        #     "line": '',                 # Current formatted_file Line being loaded (includes empty and comment lines)
-        #     "user_language": None,      # User language setting (not script setting)
-        #     "last_variable": None,      # Last variable read from the script (used to handle continuations)
-        #     "synonym_command": None,    # Command to execute when a synonym is heard (run script)
-        #     "synonyms": [],             # List of synonyms available to run the script
-        #     "script_start_time": None,  # Epoch time of script start
-        #
-        #     # Runtime Variables
-        #     "current_index": 0,         # Current formatted_script index being parsed or executed
-        #     "last_indent": 0,           # Indentation of last line executed (^\s%4)
-        #     "variable_to_fill": '',     # Name of variable to which next input is assigned
-        #     "last_request": '',         # Identifier of last speak/execute emit to catch the response
-        #     "sub_string_counters": {},  # Counters associated with each string substitution option
-        #     "audio_responses": {},      # Dict of variables and associated audio inputs (file paths)
-        #
-        #     # Persistence Variables
-        #     "pending_scripts": []       # List of pending script dicts
-        # }
-
+        # TODO: all the conversations in conversation-manager are indexed by user.
+        #  To reset values in conversation, we need to know user. Thus, this method does not make sense.
+        #  The only two places that introduce users into the script directly are handle_start_script and converse.
+        #  The latter has a basic check and does not pass user anywhere.
+        #  _reset_values method is supposed to terminate the current script execution. So is it replaced by
+        #  _terminate_execution
+        # LOG.debug(f"reset values for current_conversation of {user}")
+        # if user in self.active_conversations:
+        #     current_conversation = self.active_conversations[user].get_current_conversation()
+        #     if current_conversation:
+        #         LOG.info(f'Removing {user} running {current_conversation.get("script_filename")}')
+        #         current_conversation.reset_values()
+    #     # self.active_conversations[user] = {
+    #     #     # Script Globals
+    #     #     "script_meta": {},          # Parser metadata
+    #     #     "script_filename": None,    # Script filename
+    #     #     "timeout": -1,              # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
+    #     #     "timeout_action": '',       # String to speak when timeout is reached (before exit dialog)
+    #     #     "variables": {},            # Dict of declared variables and values
+    #     #     "speaker_data": {},         # Language defined in script
+    #     #     "loops_dict": {},           # Dict of loop names and associated dict of values
+    #     #     "formatted_script": [],     # List of script line dictionaries (excludes empty and comment lines)
+    #     #     "goto_tags": {},            # Dict of script tags and associated indexes
+    #     #
+    #     #     # Load time Variables
+    #     #     "line": '',                 # Current formatted_file Line being loaded (includes empty and comment lines)
+    #     #     "user_language": None,      # User language setting (not script setting)
+    #     #     "last_variable": None,      # Last variable read from the script (used to handle continuations)
+    #     #     "synonym_command": None,    # Command to execute when a synonym is heard (run script)
+    #     #     "synonyms": [],             # List of synonyms available to run the script
+    #     #     "script_start_time": None,  # Epoch time of script start
+    #     #
+    #     #     # Runtime Variables
+    #     #     "current_index": 0,         # Current formatted_script index being parsed or executed
+    #     #     "last_indent": 0,           # Indentation of last line executed (^\s%4)
+    #     #     "variable_to_fill": '',     # Name of variable to which next input is assigned
+    #     #     "last_request": '',         # Identifier of last speak/execute emit to catch the response
+    #     #     "sub_string_counters": {},  # Counters associated with each string substitution option
+    #     #     "audio_responses": {},      # Dict of variables and associated audio inputs (file paths)
+    #     #
+    #     #     # Persistence Variables
+    #     #     "pending_scripts": []       # List of pending script dicts
+    #     # }
+    #
         self.clear_signals(f"{user}_CC")
 
     def _update_scripts(self):
@@ -2405,9 +2414,10 @@ class CustomConversations(MycroftSkill):
             cache = self.get_cached_data(filename + self.file_ext, os.path.join(self.__location__, "script_txt"))
             old_dict = deepcopy(self.active_conversations[user].get_current_conversation())
             old_dict["current_index"] += 1
-            self._reset_values(user)
+            script_meta = cache[9]
+            self._init_conversation(user, script_meta=script_meta, script_filename=filename)
             new_dict = self.active_conversations[user].get_current_conversation()
-            new_dict["script_filename"] = filename
+            # new_dict["script_filename"] = filename
             new_dict["formatted_script"] = cache[0]
             new_dict["speaker_data"] = cache[1]
             new_dict["variables"] = cache[2]
@@ -2415,7 +2425,6 @@ class CustomConversations(MycroftSkill):
             new_dict["goto_tags"] = cache[4]
             new_dict["timeout"] = cache[5]
             new_dict["timeout_action"] = cache[6]
-            new_dict["script_meta"] = cache[9]
             # new_dict = self._load_to_cache(new_dict, speak_name, user)
             new_dict["pending_scripts"].insert(0, old_dict)
             LOG.debug(f"DM: {new_dict}")
@@ -2543,7 +2552,7 @@ class CustomConversations(MycroftSkill):
         LOG.info(var_to_fill)
         LOG.info(user)
         if user not in self.active_conversations.keys():
-            LOG.error(f"Voice input called for uninitalized Conversation!")
+            LOG.error(f"Voice input called for uninitialized Conversation!")
             self._reset_values(user)
 
         if ',' in var_to_fill:

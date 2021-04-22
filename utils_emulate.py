@@ -1,13 +1,18 @@
 import time
 
-from mycroft.util.log import LOG
+# from mycroft.util.log import LOG
 
 
 class Conversation:
-    def __init__(self):
+    def __init__(self, script_meta=None, script_filename=None):
+        # initialize static protected globals
+        self._script_meta = script_meta if isinstance(script_meta, dict) else dict()        # Parser metadata
+        self._script_filename = script_filename                                             # Script filename
+
+        # Initialize static protected time variables
+        self._script_start_time = int(time.time())                                          # Epoch time of script start
+
         # initialize script globals
-        self.script_meta = {}           # Parser metadata
-        self.script_filename = None     # Script filename
         self.timeout = -1               # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
         self.timeout_action = ''        # String to speak when timeout is reached (before exit dialog)
         self.variables = {},            # Dict of declared variables and values
@@ -22,7 +27,6 @@ class Conversation:
         self.last_variable = None                   # Last variable read from the script (used to handle continuations)
         self.synonym_command = None                 # Command to execute when a synonym is heard (run script)
         self.synonyms = []                          # List of synonyms available to run the script
-        self.script_start_time = int(time.time())   # Epoch time of script start
 
         # Initialize runtime variables
         self.current_index = 1          # Current formatted_script index being parsed or executed
@@ -35,11 +39,18 @@ class Conversation:
         # Initialize persistence variables
         self.pending_scripts = []       # List of pending script dicts
 
-        self._protected = "protected"   # TODO: remove after proper testing of protected attributes
+    # properties for protected attributes
+    @property
+    def script_meta(self):
+        return self._script_meta
 
     @property
-    def protected(self):
-        return self._protected
+    def script_filename(self):
+        return self._script_filename
+
+    @property
+    def script_start_time(self):
+        return self._script_start_time
 
     # Methods to emulate dicts
     def __getitem__(self, item):
@@ -49,6 +60,7 @@ class Conversation:
         if key.startswith("_"):
             raise AttributeError("Cannot set a protected or private attribute")
         else:
+            # TODO: should we force a type check? e.g. variables have to be always be a dict
             self.__setattr__(key, value)
 
     def __contains__(self, item):
@@ -78,12 +90,45 @@ class Conversation:
         except AttributeError:
             return default
 
+    # custom-conversations methods
     def to_json(self):
         """
         Return a JSON serializable representation of the object
         :return: dict with the object attributes
         """
         return self.__dict__
+
+    def reset_values(self):
+        """
+        Resets dynamic attributes to their default values
+        :return:
+        """
+        # reset script globals
+        self.timeout = -1               # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
+        self.timeout_action = ''        # String to speak when timeout is reached (before exit dialog)
+        self.variables = {},            # Dict of declared variables and values
+        self.speaker_data = {},         # Language defined in script
+        self.loops_dict = {}            # Dict of loop names and associated dict of values
+        self.formatted_script = []      # List of script line dictionaries (excludes empty and comment lines)
+        self.goto_tags = {}             # Dict of script tags and associated indexes
+
+        # reset time variables
+        self.line = ''                  # Current formatted_file Line being loaded (includes empty and comment lines)
+        self.user_language = None       # User language setting (not script setting)
+        self.last_variable = None       # Last variable read from the script (used to handle continuations)
+        self.synonym_command = None     # Command to execute when a synonym is heard (run script)
+        self.synonyms = []              # List of synonyms available to run the script
+
+        # reset runtime variables
+        self.current_index = 1          # Current formatted_script index being parsed or executed
+        self.last_indent = 0            # Indentation of last line executed (^\s%4)
+        self.variable_to_fill = ''      # Name of variable to which next input is assigned
+        self.last_request = ''          # Identifier of last speak/execute emit to catch the response
+        self.sub_string_counters = {}   # Counters associated with each string substitution option
+        self.audio_responses = {}       # Dict of variables and associated audio inputs (file paths)
+
+        # reset persistence variables
+        self.pending_scripts = []       # List of pending script dicts
 
 
 class ConversationManager:
@@ -141,7 +186,7 @@ class ConversationManager:
         try:
             current_conversation = self._conversation_stack[-1]
         except IndexError:
-            LOG.warning(f"There are no active conversations!")
+            print(f"There are no active conversations!")
             return None
         else:
             if type(current_conversation) == Conversation:
@@ -169,7 +214,7 @@ class ConversationManager:
         try:
             script_name, variable_name = variable.split(".", 1)
         except ValueError:
-            LOG.warning("Wrong variable format, use script_name.variable_name instead")
+            print("Wrong variable format, use script_name.variable_name instead")
         else:
             for conversation in self._conversation_stack:
                 if script_name == conversation["script_filename"]:
