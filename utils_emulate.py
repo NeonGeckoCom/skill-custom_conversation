@@ -1,6 +1,6 @@
 import time
 
-# from mycroft.util.log import LOG
+from mycroft.util.log import LOG
 
 
 class Conversation:
@@ -186,7 +186,7 @@ class ConversationManager:
         try:
             current_conversation = self._conversation_stack[-1]
         except IndexError:
-            print(f"There are no active conversations!")
+            LOG.warning(f"There are no active conversations!")
             return None
         else:
             if type(current_conversation) == Conversation:
@@ -212,9 +212,9 @@ class ConversationManager:
         """
         variable_value = None
         try:
-            script_name, variable_name = variable.split(".", 1)
+            script_name, variable_name = variable.split(".")
         except ValueError:
-            print("Wrong variable format, use script_name.variable_name instead")
+            LOG.warning("Wrong variable format, use script_name.variable_name instead")
         else:
             for conversation in self._conversation_stack:
                 if script_name == conversation["script_filename"]:

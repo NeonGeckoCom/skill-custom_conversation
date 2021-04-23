@@ -160,18 +160,18 @@ class TestConversationManager(unittest.TestCase):
     def test_lookup_user_scope(self):
         self.manager.user_scope_variables = {"foo.bar": "foobar"}
         self.assertEqual(self.manager.lookup_user_scope("foo.bar"), "foobar")
-        self.assertEqual(self.manager.lookup_user_scope("foo.bar.baz"), None)
+        self.assertIsNone(self.manager.lookup_user_scope("foo.bar.baz"))
 
     def test_lookup_variable_in_conversation(self):
         self.conversation._script_filename = "foobar"
         self.conversation.variables = {"foo": "bar"}
         self.manager._conversation_stack.append(self.conversation)
         self.assertEqual(self.manager.lookup_variable_in_conversation("foobar.foo"), "bar")
-        self.assertEqual(self.manager.lookup_variable_in_conversation("foobar.foo.baz"), None)
-        self.assertEqual(self.manager.lookup_variable_in_conversation("foobar."), None)
-        self.assertEqual(self.manager.lookup_variable_in_conversation(".foo"), None)
-        self.assertEqual(self.manager.lookup_variable_in_conversation("."), None)
-        self.assertEqual(self.manager.lookup_variable_in_conversation(""), None)
+        self.assertIsNone(self.manager.lookup_variable_in_conversation("foobar.foo.baz"))
+        self.assertIsNone(self.manager.lookup_variable_in_conversation("foobar."))
+        self.assertIsNone(self.manager.lookup_variable_in_conversation(".foo"))
+        self.assertIsNone(self.manager.lookup_variable_in_conversation("."))
+        self.assertIsNone(self.manager.lookup_variable_in_conversation(""))
 
 
 if __name__ == '__main__':
