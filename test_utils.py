@@ -88,6 +88,12 @@ class TestConversation(unittest.TestCase):
     def test_to_json(self):
         self.assertIsInstance(self.conversation.to_json(), dict)
 
+    def test_reset_values(self):
+        self.conversation.user_language = 'foo'
+        self.conversation.reset_values()
+        self.assertIsNone(self.conversation["user_language"])
+        self.assertEqual(self.conversation["script_meta"], self.script_meta)
+
 
 class TestConversationManager(unittest.TestCase):
 

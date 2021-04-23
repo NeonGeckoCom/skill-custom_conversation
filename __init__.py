@@ -130,7 +130,6 @@ class CustomConversations(MycroftSkill):
         self.math_comparators = ("==", "!=", ">", "<", ">=", "<=")
         self.active_conversations = dict()
         self.awaiting_input = list()
-        # self._reset_values("local")
 
         self.speak_timeout = 5
         self.response_timeout = 10
@@ -238,8 +237,6 @@ class CustomConversations(MycroftSkill):
         user = self.get_utterance_user(message)
         # if self.server:
         #     user = nick(message.context["flac_filename"])
-        # if user not in self.active_conversations.keys():
-        #     self._reset_values(user)
         utt = message.data.get("utterance")
         script_name = " ".join(utt.split("to")[1:]).strip().replace(" ", "_")
         LOG.info(script_name)
@@ -264,8 +261,6 @@ class CustomConversations(MycroftSkill):
             user = self.get_utterance_user(message)
             # if self.server:
             #     user = nick(message.context["flac_filename"])
-            # if user not in self.active_conversations.keys():
-            #     self._reset_values(user)
             utt = message.data.get("utterance")
             # LOG.debug(message.data)
             script_name = " ".join(utt.split("my")[1:]) \
@@ -319,7 +314,6 @@ class CustomConversations(MycroftSkill):
         file_to_run = message.data.get('file_to_run')
         script_filename = file_to_run.rstrip().replace(" ", "_").replace("-", "_")
         LOG.info(script_filename)
-        # self._reset_values(user)
         # active_dict = self.active_conversations.get(user).get_current_conversation()
         # LOG.info(f"Active dict is {active_dict}")
         LOG.debug(user)
@@ -510,63 +504,44 @@ class CustomConversations(MycroftSkill):
         current_conversation = Conversation(script_meta=script_meta, script_filename=script_filename)
         self.active_conversations.get(user).push(current_conversation)
 
-    # def _terminate_execution(self, user="local"):
-    #     """
-    #     Terminates execution of current script
-    #     :return user: nick on klat server, else "local"
-    #     """
-        # active_dict = self.active_conversations.get(user).
     def _reset_values(self, user="local"):
         """
-        Resets active_conversations entry for the given user (resets script execution)
+        Resets active_conversations entry for the given user (resets script execution).
+        The method is DEPRECIATED.
         :param user: nick on klat server, else "local"
         """
-        # TODO: all the conversations in conversation-manager are indexed by user.
-        #  To reset values in conversation, we need to know user. Thus, this method does not make sense.
-        #  The only two places that introduce users into the script directly are handle_start_script and converse.
-        #  The latter has a basic check and does not pass user anywhere.
-        #  _reset_values method is supposed to terminate the current script execution. So is it replaced by
-        #  _terminate_execution
-        if user not in self.active_conversations.keys():
-            self.active_conversations[user] = ConversationManager(user)
-        # LOG.debug(f"reset values for current_conversation of {user}")
-        # if user in self.active_conversations:
-        #     current_conversation = self.active_conversations[user].get_current_conversation()
-        #     if current_conversation:
-        #         LOG.info(f'Removing {user} running {current_conversation.get("script_filename")}')
-        #         current_conversation.reset_values()
-    #     # self.active_conversations[user] = {
-    #     #     # Script Globals
-    #     #     "script_meta": {},          # Parser metadata
-    #     #     "script_filename": None,    # Script filename
-    #     #     "timeout": -1,              # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
-    #     #     "timeout_action": '',       # String to speak when timeout is reached (before exit dialog)
-    #     #     "variables": {},            # Dict of declared variables and values
-    #     #     "speaker_data": {},         # Language defined in script
-    #     #     "loops_dict": {},           # Dict of loop names and associated dict of values
-    #     #     "formatted_script": [],     # List of script line dictionaries (excludes empty and comment lines)
-    #     #     "goto_tags": {},            # Dict of script tags and associated indexes
-    #     #
-    #     #     # Load time Variables
-    #     #     "line": '',                 # Current formatted_file Line being loaded (includes empty and comment lines)
-    #     #     "user_language": None,      # User language setting (not script setting)
-    #     #     "last_variable": None,      # Last variable read from the script (used to handle continuations)
-    #     #     "synonym_command": None,    # Command to execute when a synonym is heard (run script)
-    #     #     "synonyms": [],             # List of synonyms available to run the script
-    #     #     "script_start_time": None,  # Epoch time of script start
-    #     #
-    #     #     # Runtime Variables
-    #     #     "current_index": 0,         # Current formatted_script index being parsed or executed
-    #     #     "last_indent": 0,           # Indentation of last line executed (^\s%4)
-    #     #     "variable_to_fill": '',     # Name of variable to which next input is assigned
-    #     #     "last_request": '',         # Identifier of last speak/execute emit to catch the response
-    #     #     "sub_string_counters": {},  # Counters associated with each string substitution option
-    #     #     "audio_responses": {},      # Dict of variables and associated audio inputs (file paths)
-    #     #
-    #     #     # Persistence Variables
-    #     #     "pending_scripts": []       # List of pending script dicts
-    #     # }
-    #
+        # self.active_conversations[user] = {
+        #     # Script Globals
+        #     "script_meta": {},          # Parser metadata
+        #     "script_filename": None,    # Script filename
+        #     "timeout": -1,              # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
+        #     "timeout_action": '',       # String to speak when timeout is reached (before exit dialog)
+        #     "variables": {},            # Dict of declared variables and values
+        #     "speaker_data": {},         # Language defined in script
+        #     "loops_dict": {},           # Dict of loop names and associated dict of values
+        #     "formatted_script": [],     # List of script line dictionaries (excludes empty and comment lines)
+        #     "goto_tags": {},            # Dict of script tags and associated indexes
+        #
+        #     # Load time Variables
+        #     "line": '',                 # Current formatted_file Line being loaded (includes empty and comment lines)
+        #     "user_language": None,      # User language setting (not script setting)
+        #     "last_variable": None,      # Last variable read from the script (used to handle continuations)
+        #     "synonym_command": None,    # Command to execute when a synonym is heard (run script)
+        #     "synonyms": [],             # List of synonyms available to run the script
+        #     "script_start_time": None,  # Epoch time of script start
+        #
+        #     # Runtime Variables
+        #     "current_index": 0,         # Current formatted_script index being parsed or executed
+        #     "last_indent": 0,           # Indentation of last line executed (^\s%4)
+        #     "variable_to_fill": '',     # Name of variable to which next input is assigned
+        #     "last_request": '',         # Identifier of last speak/execute emit to catch the response
+        #     "sub_string_counters": {},  # Counters associated with each string substitution option
+        #     "audio_responses": {},      # Dict of variables and associated audio inputs (file paths)
+        #
+        #     # Persistence Variables
+        #     "pending_scripts": []       # List of pending script dicts
+        # }
+
         self.clear_signals(f"{user}_CC")
 
     def _update_scripts(self):
@@ -659,13 +634,7 @@ class CustomConversations(MycroftSkill):
         LOG.info(f"THE MESSAGE CONTEXT IS {message.context}")
         line_to_evaluate, active_dict = None, None
         try:
-            # LOG.info(f"ENTERING THE TRY BLOCK with {user}")
-            if user not in self.active_conversations.keys():
-                LOG.info(f"RESETTING VALUES in _continue_script_execution with {user}")
-                self._reset_values(user)
-            # LOG.info(f"No RESET IN _continue_script_execution")
             active_dict = self.active_conversations.get(user).get_current_conversation()
-            # LOG.debug(f"Active script is {active_dict['script_filename']} and continuing from {active_dict['current_index']}")
             # Catch when we are waiting for input
             # if not self.check_for_signal(f"{user}_CC_inputNeeded", -1):
             if user not in self.awaiting_input and active_dict:
@@ -696,13 +665,11 @@ class CustomConversations(MycroftSkill):
                         execute_this_line = True
 
                         # Check if outdented
-                        # LOG.info(f"CHECKING IF OUTDeNTED FOR LINE {line_to_evaluate}")
                         if line_to_evaluate["indent"] < prev_line_indent:
                             parent_case_indents = list(deepcopy(line_to_evaluate["parent_case_indents"]))
                             execute_this_line = True
 
                             # Iterate over parent cases
-                            # LOG.info(f"ITERATING OVER PARENT CASES")
                             while parent_case_indents:
                                 LOG.debug(f'parent case in effect! {parent_case_indents}')
                                 parent_indent = parent_case_indents.pop()
@@ -733,7 +700,6 @@ class CustomConversations(MycroftSkill):
                                     LOG.debug(f'Outside of case, parent_case_indents={parent_case_indents}')
 
                         # This is outside any cases
-                        # LOG.info(f"OUTSIDE ANY CASES WITH {execute_this_line}")
                         if execute_this_line:
                             LOG.debug(f'execute {command}: {text}')
                             # This is an executable line
@@ -765,7 +731,6 @@ class CustomConversations(MycroftSkill):
                                             text = f" {comparison} ".join([left, right])
                                         LOG.debug(text)
                                     # else:
-                                    # LOG.info(f"ABOUT TO PARSE {text} WITH SUBSTITUTE VARIABLES")
                                     parsed_text = self._substitute_variables(user, text, message, False)
                                     LOG.info(f"SUCCESSFULLY PARSED {text} to {parsed_text}")
                                 else:
@@ -778,7 +743,6 @@ class CustomConversations(MycroftSkill):
 
                                 # # TODO: Annotate this DM
                                 try:
-                                    # LOG.info("ENTERING ANOTHER TRY BLOCK IN THE TRY BLOCK")
                                     if message.data.get("parser_data"):
                                         LOG.info(f'PARSER DATA {message.data.get("parser_data")} and '
                                                  f'PARSED TEXT {parsed_text}')
@@ -1608,8 +1572,6 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         """
         LOG.debug(text)
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
         active_dict = self.active_conversations[user].get_current_conversation()
         if '{' in text:
             # Value substitution
@@ -1654,8 +1616,6 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         """
         LOG.debug(f"DM: {text}")
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
         active_dict = self.active_conversations[user].get_current_conversation()
 
         # Parse out function arguments
@@ -2125,8 +2085,6 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         """
         LOG.debug(text)
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
         active_dict = self.active_conversations[user].get_current_conversation()
 
         parser_data = message.data.get("parser_data")
@@ -2199,8 +2157,6 @@ class CustomConversations(MycroftSkill):
         LOG.info(f"RECONVEY ENTERED for {user} with {text} ")
         LOG.info(f"DM: {text}")
         LOG.info(message.data.get("parser_data"))
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
         active_dict = self.active_conversations[user].get_current_conversation()
 
         if message.data.get("parser_data"):
@@ -2318,8 +2274,6 @@ class CustomConversations(MycroftSkill):
 
         """
         LOG.debug(f"DM: {content}")
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
         active_dict = self.active_conversations[user].get_current_conversation()
 
         email_addr = self.preference_user(message).get("email")
@@ -2361,8 +2315,6 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         """
         LOG.debug(f"DM: {content}")
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
         active_dict = self.active_conversations[user].get_current_conversation()
 
         if message.data.get("parser_data"):
@@ -2406,8 +2358,6 @@ class CustomConversations(MycroftSkill):
         """
         # TODO: check this implementation thoroughly
         LOG.debug(f"content={content}")
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
 
         filename = content.strip()
         speak_name = filename.replace("_", " ")
@@ -2444,8 +2394,6 @@ class CustomConversations(MycroftSkill):
         :param message: incoming messagebus Message
         :return:
         """
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
         active_dict = self.active_conversations[user].get_current_conversation()
 
         parser_data = message.data.get("parser_data")
@@ -2553,9 +2501,6 @@ class CustomConversations(MycroftSkill):
             LOG.warning(f"Requested voice_input with null variable!")
         LOG.info(var_to_fill)
         LOG.info(user)
-        if user not in self.active_conversations.keys():
-            LOG.error(f"Voice input called for uninitialized Conversation!")
-            self._reset_values(user)
 
         if ',' in var_to_fill:
             var_to_fill, var_options = var_to_fill.split(',', 1)
@@ -2578,8 +2523,6 @@ class CustomConversations(MycroftSkill):
         LOG.debug(message)
         try:
             variable_key = key.replace(list(self.variable_functions.keys())[0], '')
-            if user not in self.active_conversations.keys():
-                self._reset_values(user)
             active_dict = self.active_conversations[user].get_current_conversation()
             LOG.debug(variable_key)
             LOG.info(active_dict["variables"][variable_key])
@@ -2603,8 +2546,6 @@ class CustomConversations(MycroftSkill):
         # LOG.debug(f"{key}, {user}")
         # LOG.info(key)
         # LOG.info(user)
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
         active_dict = self.active_conversations[user].get_current_conversation()
         LOG.debug(list(active_dict["variables"].items()))
         # reverse_value = {v[0]: k for k, v in list(active_dict["variables"].items())}
@@ -2640,8 +2581,6 @@ class CustomConversations(MycroftSkill):
         try:
             LOG.debug(f"{key}, {user}")
             # key = key.replace("random", '')
-            if user not in self.active_conversations.keys():
-                self._reset_values(user)
             active_dict = self.active_conversations[user].get_current_conversation()
             # LOG.debug(active_dict)
             LOG.debug(f'Looking for {key} in {active_dict["variables"]}')
@@ -2712,8 +2651,6 @@ class CustomConversations(MycroftSkill):
         key = key.replace(list(self.variable_functions.keys())[4], '')
         # LOG.debug(key)
         # LOG.debug(user)
-        if user not in self.active_conversations.keys():
-            self._reset_values(user)
         active_dict = self.active_conversations[user].get_current_conversation()
 
         # Parse out relevant variables
@@ -3040,32 +2977,33 @@ class CustomConversations(MycroftSkill):
             # if self.server:
             #     user = nick(message.context["flac_filename"])
             if user not in self.active_conversations.keys():
-                self._reset_values(user)
-            active_dict = self.active_conversations[user].get_current_conversation()
+                pass
+            else:
+                active_dict = self.active_conversations[user].get_current_conversation()
 
-            if message.context.get("cc_data", {}).get("request", None):
-                LOG.info(message.data)
-                LOG.info(f'checking {message.context["cc_data"].get("request", "")} ?= {active_dict["last_request"]}')
-                if active_dict["script_filename"] and \
-                        message.context["cc_data"].get("signal_to_check", None):
-                    LOG.debug("Active, about to check request")
-                    # Check if this speak event is related to the last request
-                    if message.context["cc_data"]["request"] == active_dict.get("last_request", "") and \
-                            user not in self.awaiting_input:
-                        LOG.debug("Neon response found. Continuing script.")
-                        active_dict["last_request"] = ""
-                        # timeout = time.time() + self.speak_timeout
+                if message.context.get("cc_data", {}).get("request", None):
+                    LOG.info(message.data)
+                    LOG.info(f'checking {message.context["cc_data"].get("request", "")} ?= {active_dict["last_request"]}')
+                    if active_dict["script_filename"] and \
+                            message.context["cc_data"].get("signal_to_check", None):
+                        LOG.debug("Active, about to check request")
+                        # Check if this speak event is related to the last request
+                        if message.context["cc_data"]["request"] == active_dict.get("last_request", "") and \
+                                user not in self.awaiting_input:
+                            LOG.debug("Neon response found. Continuing script.")
+                            active_dict["last_request"] = ""
+                            # timeout = time.time() + self.speak_timeout
 
-                        # If this is a 'Neon speak' event, wait for the utterance to be spoken
-                        LOG.info(f'Waiting for {message.context["cc_data"]["signal_to_check"]}')
-                        # while self.is_speaking() and time.time() < timeout:
-                        # while is_speaking():
-                        #     time.sleep(1)
-                        LOG.debug("Done waiting.")
-                        # message.context["cc_data"]["signal_to_check"] = ""
-                        # LOG.debug(f"DM: Continue Script Execution Call")
-                        # self._continue_script_execution(message, user)
-        except Exception:
+                            # If this is a 'Neon speak' event, wait for the utterance to be spoken
+                            LOG.info(f'Waiting for {message.context["cc_data"]["signal_to_check"]}')
+                            # while self.is_speaking() and time.time() < timeout:
+                            # while is_speaking():
+                            #     time.sleep(1)
+                            LOG.debug("Done waiting.")
+                            # message.context["cc_data"]["signal_to_check"] = ""
+                            # LOG.debug(f"DM: Continue Script Execution Call")
+                            # self._continue_script_execution(message, user)
+        except TypeError:
             pass
         # except KeyError:
         #     if user in self.active_conversations.keys():
@@ -3115,7 +3053,6 @@ class CustomConversations(MycroftSkill):
 
         if user not in self.active_conversations.keys():
             return False
-            # self._reset_values(user)
         active_dict = self.active_conversations.get(user).get_current_conversation()
         LOG.debug(message.data)
 
