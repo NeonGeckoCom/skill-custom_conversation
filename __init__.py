@@ -69,16 +69,16 @@ from .utils_emulate import Conversation, ConversationManager
 #         return float(before)
 
 
-def build_signal_name(user, text):
-    """
-    Generate a signal name for the given user and utterance
-    :param user: (str) user to create signal for
-    :param text: (str) signal text to check for
-    :return: (str) signal name to create
-    """
-    # strip non-alphanumeric chars from text
-    clean_text = re.sub('[^0-9a-zA-Z]+', '', text)
-    return f"{user}_CC_{clean_text}"
+# def build_signal_name(user, text):
+#     """
+#     Generate a signal name for the given user and utterance
+#     :param user: (str) user to create signal for
+#     :param text: (str) signal text to check for
+#     :return: (str) signal name to create
+#     """
+#     # strip non-alphanumeric chars from text
+#     clean_text = re.sub('[^0-9a-zA-Z]+', '', text)
+#     return f"{user}_CC_{clean_text}"
 
 
 class CustomConversations(NeonSkill):
@@ -838,7 +838,7 @@ class CustomConversations(NeonSkill):
             # self._continue_script_execution(message, user)
         else:
             text = text.strip('"')
-            signal = build_signal_name(user, text)
+            # signal = build_signal_name(user, text)
             # LOG.info(f"SIGNAL IS {signal}")
             to_emit = self.build_message("execute", text, message, active_dict["speaker_data"])
             LOG.info(f"TO EMIT is {to_emit}")
@@ -1039,7 +1039,7 @@ class CustomConversations(NeonSkill):
             # self._continue_script_execution(message, user)
         else:
             # LOG.debug(f"Speak: {text}")
-            signal = build_signal_name(user, text)
+            # signal = build_signal_name(user, text)
 
             active_dict["current_index"] += 1  # Increment position first in case speak is fast
 
@@ -1121,7 +1121,7 @@ class CustomConversations(NeonSkill):
                     speaker_data = speaker_dict
 
             LOG.debug(f"{speaker} Speak: {text}")
-            signal = build_signal_name(user, text)
+            # signal = build_signal_name(user, text)
             text = str(text).strip().strip('"')
             to_speak = self.build_message("neon speak", text, message, speaker=speaker_data)
             LOG.debug(speaker)
