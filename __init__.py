@@ -34,10 +34,10 @@ from dateutil.tz import gettz
 from git import InvalidGitRepositoryError
 
 from mycroft.audio import wait_while_speaking
-from mycroft.messagebus.message import Message
-from mycroft.skills.core import MycroftSkill, intent_handler
+from mycroft_bus_client import Message
+from mycroft.skills.core import intent_handler
 from mycroft.util.log import LOG
-from neon_utils import stub_missing_parameters, skill_needs_patching
+from neon_utils.skills.neon_skill import NeonSkill
 from neon_utils.web_utils import scrape_page_for_links as scrape
 from neon_utils.parse_utils import clean_quotes
 from mycroft.util.parse import normalize
@@ -69,27 +69,24 @@ from .utils_emulate import Conversation, ConversationManager
 #         return float(before)
 
 
-def build_signal_name(user, text):
-    """
-    Generate a signal name for the given user and utterance
-    :param user: (str) user to create signal for
-    :param text: (str) signal text to check for
-    :return: (str) signal name to create
-    """
-    # strip non-alphanumeric chars from text
-    clean_text = re.sub('[^0-9a-zA-Z]+', '', text)
-    return f"{user}_CC_{clean_text}"
+# def build_signal_name(user, text):
+#     """
+#     Generate a signal name for the given user and utterance
+#     :param user: (str) user to create signal for
+#     :param text: (str) signal text to check for
+#     :return: (str) signal name to create
+#     """
+#     # strip non-alphanumeric chars from text
+#     clean_text = re.sub('[^0-9a-zA-Z]+', '', text)
+#     return f"{user}_CC_{clean_text}"
 
 
-class CustomConversations(MycroftSkill):
+class CustomConversations(NeonSkill):
     __location__ = os.path.realpath(
         os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
     def __init__(self):
         super(CustomConversations, self).__init__(name="CustomConversations")
-
-        if skill_needs_patching(self):
-            stub_missing_parameters(self)
         if self.neon_core:
             self.tz = gettz(self.user_info_available["location"]["tz"])
             self.auto_update = self.settings['auto_update']
@@ -322,7 +319,7 @@ class CustomConversations(MycroftSkill):
         # Check if compiled or text script exists
         if not self._script_file_exists(script_filename):
             self.speak_dialog("NotFound", {"file_to_open": script_filename.replace('_', ' ')})
-            self.active_conversations.pop(user)
+            # self.active_conversations.pop(user)
         elif self._check_script_file(script_filename + self.file_ext):
             # # Check if the file has already been parsed and cached or if we need to parse it here
             # if not self._check_script_file(active_dict["script_filename"] + self.file_ext):
@@ -841,10 +838,9 @@ class CustomConversations(MycroftSkill):
             # self._continue_script_execution(message, user)
         else:
             text = text.strip('"')
-            signal = build_signal_name(user, text)
+            # signal = build_signal_name(user, text)
             # LOG.info(f"SIGNAL IS {signal}")
-            to_emit = self.build_message("execute", text, message, signal,
-                                         active_dict["speaker_data"])
+            to_emit = self.build_message("execute", text, message, active_dict["speaker_data"])
             LOG.info(f"TO EMIT is {to_emit}")
             # self.create_signal(signal)
             active_dict["last_request"] = text
@@ -1043,12 +1039,11 @@ class CustomConversations(MycroftSkill):
             # self._continue_script_execution(message, user)
         else:
             # LOG.debug(f"Speak: {text}")
-            signal = build_signal_name(user, text)
+            # signal = build_signal_name(user, text)
 
             active_dict["current_index"] += 1  # Increment position first in case speak is fast
 
-            to_speak = self.build_message("neon speak", text, message, signal,
-                                          active_dict["speaker_data"])
+            to_speak = self.build_message("neon speak", text, message, active_dict["speaker_data"])
             active_dict["last_request"] = text
             # self.create_signal(signal)  # TODO: Depreciate signal? DM
             LOG.info(f"ABOUT TO SPEAK {text}")
@@ -1126,10 +1121,9 @@ class CustomConversations(MycroftSkill):
                     speaker_data = speaker_dict
 
             LOG.debug(f"{speaker} Speak: {text}")
-            signal = build_signal_name(user, text)
+            # signal = build_signal_name(user, text)
             text = str(text).strip().strip('"')
-            to_speak = self.build_message("neon speak", text, message, signal,
-                                          speaker=speaker_data)
+            to_speak = self.build_message("neon speak", text, message, speaker=speaker_data)
             LOG.debug(speaker)
             LOG.debug(to_speak.data)
             active_dict["last_request"] = text
@@ -2158,7 +2152,7 @@ class CustomConversations(MycroftSkill):
         LOG.info(f"DM: {text}")
         LOG.info(message.data.get("parser_data"))
         active_dict = self.active_conversations[user].get_current_conversation()
-
+        audio = None
         if message.data.get("parser_data"):
             parser_data = message.data.get("parser_data")
             to_reconvey = parser_data.get("reconvey_text")
@@ -2231,7 +2225,7 @@ class CustomConversations(MycroftSkill):
                 LOG.error(f"Reconvey audio not found!")
                 speaker_data = active_dict["speaker_data"]
                 speaker_data["name"] = name
-                to_speak = self.build_message("neon speak", text, message, None, speaker_data)
+                to_speak = self.build_message("neon speak", text, message, speaker_data)
                 self.speak(text, message=to_speak)
             # while self.check_for_signal(signal_name, 60):
             #     time.sleep(0.2)  # Pad next response
@@ -2745,8 +2739,7 @@ class CustomConversations(MycroftSkill):
         intent = active_dict["variables"].get(intent, [clean_quotes(intent)])[0]
         LOG.info(f"{intent}|{data_key}")
         LOG.info(f"BUILDING MESSAGE")
-        to_emit = self.build_message("skill_data", intent, message, None,
-                                     active_dict["speaker_data"])
+        to_emit = self.build_message("skill_data", intent, message, active_dict["speaker_data"])
         # LOG.info(f"MESSAGE BUILT WITH {to_emit.data}")
         resp = self.bus.wait_for_response(to_emit, "skills:execute.response", timeout=60)
         LOG.info(f"VARIABLE SKILL RESPONSE IS {resp}")
