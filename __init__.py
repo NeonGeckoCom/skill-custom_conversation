@@ -458,12 +458,12 @@ class CustomConversations(MycroftSkill):
 
     def _run_friendly_chat(self, message: Message):
         """
-        Run the friendly_chat script
-        :param message:
+        A wrapper around handle_start_script used to run the friendly_chat script specifically for the symptom-checker.
+        It emits a response that the request has been processed back to the checker.
+        :param message: a message from the symptom-checker
         :return:
         """
         try:
-            # message.data["file_to_run"] = "friendly_chat"
             self.handle_start_script(message)
         except Exception as e:
             LOG.error(e)
