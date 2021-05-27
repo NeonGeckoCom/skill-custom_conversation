@@ -17,6 +17,7 @@
     "requirements": {
         "python": [
             "bs4",
+            "gitpython~=3.1",
             "git+https://github.com/neongeckocom/neon-skill-utils"
         ],
         "system": {},
@@ -45,6 +46,5 @@
     ],
     "skillname": "Custom Conversations",
     "authorname": "Neon",
-    "foldername": "custom-conversation.neon",
-    "download_url": "https://api.github.com/repos/NeonGeckoCom/custom-conversation.neon/zipball/master"
+    "foldername": "custom-conversation.neon"
 }
