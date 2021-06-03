@@ -31,7 +31,7 @@
         "arm64",
         "arm"
     ],
-    "branch": "master",
+    "branch": "dev",
     "license": "NeonAI License v1.0",
     "icon": "https://0000.us/klatchat/app/files/neon_images/icons/neon_paw.png",
     "category": "Configuration",
@@ -46,5 +46,5 @@
     ],
     "skillname": "Custom Conversations",
     "authorname": "Neon",
-    "foldername": "custom-conversation.neon"
+    "foldername": null
 }
