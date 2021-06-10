@@ -91,6 +91,10 @@ Braces are used to return variable values within a literal string, for example i
 ## Starting a Script File
 Scripts must begin with a `Script: ` line containing the script name and then any optional 
 [Variable](#variable), [Claps](#claps), [Language](#language), and [Synonym](#synonym) lines.
+
+NOTE: a script name should match the name of the script file. The dot (".") is not a valid character
+to include in the script name and should be avoided.
+
 After this, you can continue with any of the other script commands. It is recommended to include a 
 [Neon Speak](#neon-speak) statement to tell the user what they can do/how to proceed prior to requesting any 
 [user input](#voice_input).
