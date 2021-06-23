@@ -2314,8 +2314,8 @@ class CustomConversations(NeonSkill):
         LOG.debug(f"DM: {content}")
         active_dict = self.active_conversations[user].get_current_conversation()
 
-        if message.data.get("parser_data") and not any((message.data["parser_data"].get("language"),
-                                                        message.data["parser_data"].get("gender"))):
+        if message.data.get("parser_data") and any((message.data["parser_data"].get("language"),
+                                                    message.data["parser_data"].get("gender"))):
             language = message.data["parser_data"].get("language", self.preference_speech(message)["tts_language"])
             gender = message.data["parser_data"].get("gender", self.preference_speech(message).get("tts_gender"))
             active_dict["speaker_data"] = {"name": "Neon",
