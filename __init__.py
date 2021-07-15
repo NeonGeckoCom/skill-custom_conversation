@@ -408,7 +408,9 @@ class CustomConversations(NeonSkill):
                 # active_dict["current_index"] = 1
 
                 # Check if a starting tag was specified at skill run
+
                 spoken = message.data.get("utterance")
+
                 start_index = None
                 try:
                     to_parse = spoken.split(file_to_run)[1]
@@ -2185,7 +2187,10 @@ class CustomConversations(NeonSkill):
             else:
                 text = active_dict["variables"].get(to_reconvey, [text])[0]
             if parser_data.get("reconvey_file"):
-                audio = clean_quotes(parser_data.get("reconvey_file"))
+                if '"' in to_reconvey or "'" in to_reconvey:
+                    audio = clean_quotes(parser_data.get("reconvey_file"))
+                else:
+                    audio = active_dict["variables"].get(parser_data["reconvey_file"], [text])[0]
                 if not audio.startswith("http"):
                     # Try handling as an absolute path
                     audio = os.path.expanduser(audio)
@@ -2333,7 +2338,8 @@ class CustomConversations(NeonSkill):
         LOG.debug(f"DM: {content}")
         active_dict = self.active_conversations[user].get_current_conversation()
 
-        if message.data.get("parser_data"):
+        if message.data.get("parser_data") and any((message.data["parser_data"].get("language"),
+                                                    message.data["parser_data"].get("gender"))):
             language = message.data["parser_data"].get("language", self.preference_speech(message)["tts_language"])
             gender = message.data["parser_data"].get("gender", self.preference_speech(message).get("tts_gender"))
             active_dict["speaker_data"] = {"name": "Neon",
@@ -2360,6 +2366,10 @@ class CustomConversations(NeonSkill):
 
             LOG.debug(line)
             language = line[0].lower().strip('"').strip("'").rstrip(",") or self.preference_speech(message)
+
+            active_dict["speaker_data"] = active_dict["speaker_data"] or {}
+            active_dict["speaker_data"]["language"] = language
+            active_dict["speaker_data"]["gender"] = gender
 
         active_dict["current_index"] += 1
         # LOG.debug(f"DM: Continue Script Execution Call")
