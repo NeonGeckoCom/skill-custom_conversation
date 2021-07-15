@@ -185,6 +185,7 @@ class CustomConversations(NeonSkill):
         self.add_event("neon.script_upload", self._handle_script_upload)
         self.add_event("neon.script_exists", self._script_exists)
         self.add_event("neon.run_alert_script", self.handle_start_script)
+        self.add_event("neon.friendly_chat", self._run_friendly_chat)
         # self.add_event("cc_loop:utterance", self.check_if_script_response)
         # self.add_event('recognizer_loop:audio_output_end', self.check_end)
         self.add_event('speak', self.check_speak_event)
@@ -316,6 +317,7 @@ class CustomConversations(NeonSkill):
         LOG.debug(user)
         # Start transcript file
         os.makedirs(self.transcript_location, exist_ok=True)
+
         # Check if compiled or text script exists
         if not self._script_file_exists(script_filename):
             self.speak_dialog("NotFound", {"file_to_open": script_filename.replace('_', ' ')})
@@ -406,20 +408,25 @@ class CustomConversations(NeonSkill):
                 # active_dict["current_index"] = 1
 
                 # Check if a starting tag was specified at skill run
-                spoken = message.data.get("utterance").lower()
-                to_parse = spoken.split(file_to_run)[1]
+
+                spoken = message.data.get("utterance")
+
                 start_index = None
-                LOG.debug(to_parse)
-                if " at " in to_parse:
-                    start_tag = to_parse.split(" at ", 1)[1].replace(" ", "_")
-                    LOG.debug(start_tag)
-                    LOG.debug(f'searching {dict(active_dict["goto_tags"]).keys()}')
-                    for key in dict(active_dict["goto_tags"]).keys():
-                        if key in start_tag:
-                            LOG.debug(f"DM: found {key} in goto_tags")
-                            start_index = active_dict["goto_tags"][key]
-                            break
-                    LOG.debug(f"DM: starting at {start_index}")
+                try:
+                    to_parse = spoken.split(file_to_run)[1]
+                    LOG.debug(to_parse)
+                    if " at " in to_parse:
+                        start_tag = to_parse.split(" at ", 1)[1].replace(" ", "_")
+                        LOG.debug(start_tag)
+                        LOG.debug(f'searching {dict(active_dict["goto_tags"]).keys()}')
+                        for key in dict(active_dict["goto_tags"]).keys():
+                            if key in start_tag:
+                                LOG.debug(f"DM: found {key} in goto_tags")
+                                start_index = active_dict["goto_tags"][key]
+                                break
+                        LOG.debug(f"DM: starting at {start_index}")
+                except IndexError:
+                    LOG.debug("Cannot split utterance by the file name")
 
                 # If a starting tag was specified, go to the associated index
                 if start_index:
@@ -438,6 +445,23 @@ class CustomConversations(NeonSkill):
         else:
             self.speak_dialog("ProblemInFile", {"file_name": script_filename.replace('_', ' ')})
             self.active_conversations.pop(user)
+
+    def _run_friendly_chat(self, message: Message):
+        """
+        A wrapper around handle_start_script used to run the friendly_chat script specifically for the symptom-checker.
+        It emits a response that the request has been processed back to the checker.
+        :param message: a message from the symptom-checker
+        :return:
+        """
+        try:
+            self.handle_start_script(message)
+        except Exception as e:
+            LOG.error(e)
+            self.bus.emit(message.reply("neon.friendly_chat.response",
+                                        context={"friendly_chat_executed": False}))
+        else:
+            self.bus.emit(message.reply("neon.friendly_chat.response",
+                                        context={"friendly_chat_executed": True}))
 
     def _script_exists(self, message):
         LOG.info(message)
