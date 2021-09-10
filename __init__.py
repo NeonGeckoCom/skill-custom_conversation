@@ -88,7 +88,7 @@ class CustomConversations(NeonSkill):
     def __init__(self):
         super(CustomConversations, self).__init__(name="CustomConversations")
         if self.neon_core:
-            self.tz = gettz(self.user_info_available["location"]["tz"])
+            self.tz = self.sys_tz
             self.auto_update = self.settings['auto_update']
             self.allow_update = self.settings["allow_update"]
         else:
@@ -177,7 +177,7 @@ class CustomConversations(NeonSkill):
             # self.remove_event("cc_loop:utterance")
             # self.remove_event('recognizer_loop:audio_output_end')
             self.remove_event('speak')
-            self.clear_signals("CC")
+            # self.clear_signals("CC")
         except Exception as e:
             LOG.error(e)
 
@@ -563,7 +563,7 @@ class CustomConversations(NeonSkill):
         #     "pending_scripts": []       # List of pending script dicts
         # }
 
-        self.clear_signals(f"{user}_CC")
+        # self.clear_signals(f"{user}_CC")
 
     def _update_scripts(self):
         """
@@ -1275,8 +1275,8 @@ class CustomConversations(NeonSkill):
             LOG.debug(f"After exit, active dict is {active_dict['script_filename']}")
         else:
             # Clear signals and values because there are no pending scripts left in the stack
-            LOG.info(f"CLEARING SIGNALS FOR {user}")
-            self.clear_signals(f"{user}_CC_")
+            # LOG.info(f"CLEARING SIGNALS FOR {user}")
+            # self.clear_signals(f"{user}_CC_")
             self.active_conversations.pop(user)
             if self.gui_enabled:
                 self.gui.clear()
