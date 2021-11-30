@@ -1,4 +1,6 @@
-# ![](https://0000.us/klatchat/app/files/neon_images/icons/neon_paw.png) Custom Conversations
+# <img src='https://0000.us/klatchat/app/files/neon_images/icons/neon_skill.png' card_color="#FF8600" width="50" style="vertical-align:bottom">Custom Conversations
+
+## Summary
 Create your own or use text script files shared by other users.
 
 ## About
@@ -9,26 +11,10 @@ Skill, which works using the custom text parsing implementation, provides the fu
 * "What scripts are available"
 * "Update my conversations"
 * "Update my skill files"
-* "Set my startup script to"
+* "Set my startup script to..."
 
-## Credits
-[reginaneon](https://github.com/reginaneon) [NeonDaniel](https://github.com/neondaniel) [neongeckocom](https://neongecko.com/)
-
-## Category
-**Configuration**
-
-## Tags
-#Neongecko
-#Neon
-#CustomConversations
-#Custom
-
-## Requirements  
-  
-No special required packages for this skill.  
-  
-
-## How to Use
+## Additional Documentation
+### How to Use
 
 Scripts update automatically when Neon is started; you can start a script by saying:
     
@@ -48,7 +34,7 @@ You can request an emailed copy of a script:
     
 - Email me my (script name) script
 
-## What are scripts?  
+### What are scripts?  
 Scripts are user-constructed text files that contain various Neon commands. 
 Using a few simple keywords, described below in the detail, you can specify exactly what Neon should say, do, repeat, 
 and answer; you can create new dialogs, routines, loops, and query lookups, while utilizing every skill, 
@@ -69,7 +55,7 @@ share with all the other Neon users.
 
 You can also find various demo scripts there if you need somewhere to start or something to reference.
 
-## Script Syntax
+### Script Syntax
 Command syntax in general includes a Command and some command arguments, in the form:
 
     Command: argument1, argument2
@@ -88,7 +74,7 @@ Braces are used to return variable values within a literal string, for example i
 
     Neon Speak: "You said: {var_to_fill}"
 
-## Starting a Script File
+### Starting a Script File
 Scripts must begin with a `Script: ` line containing the script name and then any optional 
 [Variable](#variable), [Claps](#claps), [Language](#language), and [Synonym](#synonym) lines.
 
@@ -131,12 +117,12 @@ argument is the duration in seconds to wait for a response (max 3600). The secon
 and can be a line number or tag.
 
 Go to the named tag "example" after 10 seconds of inactivity:
-```
-Timeout: 10, example
-...
-@example
-# Code here will be executed after 10 seconds of inactivity
-```
+ ```
+ Timeout: 10, example
+ ...
+ @example
+ # Code here will be executed after 10 seconds of inactivity
+ ```
 
 Go to line 7 after 30 seconds of inactivity:
 ```
@@ -185,7 +171,7 @@ The number of claps that should be associated with a command while the script is
 
     Claps: 2, "what time is it"  
 
-## Script Keywords and Spacing
+### Script Keywords and Spacing
 Neon scripts follow the Python convention of 4 spaces to indent subordinate lines. A line without a command will be considered
 a subordinate of the previous line that has one fewer indent; for example, all of the lines below after `Neon speak:` 
 would be spoken:
@@ -309,11 +295,11 @@ or removing problematic lines when troubleshooting.
 (ex. you remove a line and leave a comment for why the line is commented out). Block comments are also allowed where 
 blocks start and end with `"""`.
 
-```
-# Removed speak to troubleshoot voice_input
-    # Neon speak:
-    #     "Say your first name or exit" voice_input{first_name}
-```
+ ```
+ # Removed speak to troubleshoot voice_input
+     # Neon speak:
+     #     "Say your first name or exit" voice_input{first_name}
+ ```
 ```
 """
     This is inside a block comment.
@@ -410,22 +396,22 @@ indented from that case option. A `Case:` will execute the first matched option 
 following the end of the case; if no option is matched, the script will go back to the voice_input line immediately 
 before the case. Case options containing "or" will compare the Case variable against the string on either side of "or".
 
-```
-Neon speak:
-    "Say A or Athens for Athens's time"
-    "Say B or Bombay for Bombay's time"
-    "Say S or Seattle for Seattle's time"
-voice_input(response)
-Case {response}:
-    "A or Athens"
-        Execute: "What time is it in Athens"
-    "B or Bombay"
-        Execute: "What time is it in Bombay"
-    "S or Seattle"
-        Execute: "What time is it in Seattle"
-# Script continues here
-Exit
-```
+ ```
+ Neon speak:
+     "Say A or Athens for Athens's time"
+     "Say B or Bombay for Bombay's time"
+     "Say S or Seattle for Seattle's time"
+ voice_input(response)
+ Case {response}:
+     "A or Athens"
+         Execute: "What time is it in Athens"
+     "B or Bombay"
+         Execute: "What time is it in Bombay"
+     "S or Seattle"
+         Execute: "What time is it in Seattle"
+ # Script continues here
+ Exit
+ ```
 
 #### Python
 Any line of python 3 readable code will be executed in the order it was specified in the script file. These lines will 
@@ -610,7 +596,7 @@ should only be used if you maintain the required skill and script, as these para
     
 *Note: "weather" is defined in the weather skill dialog for this intent*
  
-## How to Use Scripts 
+### How to Use Scripts 
 
 Scripts can be downloaded from Neongecko's library or drafted and added to the script_txt folder in the skill directory.
 The demo skill files (found in the library at neongecko.net) and descriptions above provide a summary and examples 
@@ -621,3 +607,19 @@ of the available functionality and formatting requirements.
 ## Contact Support  
   
 Use the [link](https://neongecko.com/ContactUs) or [submit an issue on GitHub](https://help.github.com/en/articles/creating-an-issue)
+
+## Credits
+[neongeckocom](https://github.com/neongeckocom)
+[reginaneon](https://github.com/reginaneon)
+[NeonDaniel](https://github.com/neondaniel)
+[NeonAndrii](https://github.com/neonandrii)
+
+## Category
+**Daily**
+Productivity
+
+## Tags
+#NeonGecko Original
+#Neon
+#CustomConversations
+#Custom
