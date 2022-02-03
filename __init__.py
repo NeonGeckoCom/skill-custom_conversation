@@ -87,16 +87,11 @@ class CustomConversations(NeonSkill):
 
     def __init__(self):
         super(CustomConversations, self).__init__(name="CustomConversations")
-        if self.neon_core:
-            self.tz = self.sys_tz
-            self.auto_update = self.settings['auto_update']
-            self.allow_update = self.settings["allow_update"]
-        else:
-            self.tz = gettz(self.location_timezone)
-            self.auto_update = False
-            self.allow_update = False
+        self.tz = self.sys_tz if self.neon_core else \
+            gettz(self.location_timezone)
 
         self.file_ext = ".ncs"
+        # TODO: Refactor to skill FS
         self.text_location = f"{self.__location__}/script_txt"
         self.audio_location = f"{self.__location__}/script_audio"
         self.transcript_location = f"{self.__location__}/script_transcript"
@@ -130,6 +125,16 @@ class CustomConversations(NeonSkill):
 
         self.speak_timeout = 5
         self.response_timeout = 10
+
+    @property
+    def auto_update(self):
+        return False if not self.neon_core else \
+            self.settings.get('auto_update')
+
+    @property
+    def allow_update(self):
+        return False if not self.neon_core else \
+            self.settings.get('allow_update')
 
     def initialize(self):
         self.make_active()  # Make this skill active so that it never
