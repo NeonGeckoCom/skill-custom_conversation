@@ -37,6 +37,7 @@ from mycroft.audio import wait_while_speaking
 from mycroft_bus_client import Message
 from mycroft.skills.core import intent_handler
 from mycroft.util.log import LOG
+from neon_utils.message_utils import get_message_user
 from neon_utils.skills.neon_skill import NeonSkill
 from neon_utils.web_utils import scrape_page_for_links as scrape
 from neon_utils.parse_utils import clean_quotes
@@ -3003,9 +3004,7 @@ class CustomConversations(NeonSkill):
         """
         # LOG.debug(f"DM: check_speak: {message.data}")
         try:
-            user = self.get_utterance_user(message)
-            # if self.server:
-            #     user = nick(message.context["flac_filename"])
+            user = get_message_user(message)
             if user not in self.active_conversations.keys():
                 pass
             else:
