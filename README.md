@@ -23,11 +23,6 @@ Skill, which works using the custom text parsing implementation, provides the fu
 #CustomConversations
 #Custom
 
-## Requirements  
-  
-No special required packages for this skill.  
-  
-
 ## How to Use
 
 Scripts update automatically when Neon is started; you can start a script by saying:
