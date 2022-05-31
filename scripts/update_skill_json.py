@@ -48,6 +48,7 @@ def get_skill_json():
     skill_spec.pop("code here will be executed after 10 seconds of inactivity")
     skill_spec.pop("removed speak to troubleshoot voice_input")
     skill_spec.pop("script continues here")
+    skill_spec.pop("script keywords and spacing")
     pprint(skill_spec)
     try:
         with open(skill_json) as f:
