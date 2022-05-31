@@ -38,6 +38,11 @@ def get_skill_json():
     print(f"skill_dir={skill_dir}")
     skill_json = join(skill_dir, "skill.json")
     skill_spec = build_skill_spec(skill_dir)
+    # TODO: patching extra info, consider restructure of readme and/or parser
+    skill_spec.pop("how to use")
+    skill_spec.pop("what are scripts?")
+    skill_spec.pop("script syntax")
+    skill_spec.pop("how to use scripts")
     pprint(skill_spec)
     try:
         with open(skill_json) as f:
