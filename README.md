@@ -1,7 +1,8 @@
-# ![](https://0000.us/klatchat/app/files/neon_images/icons/neon_paw.png) Custom Conversations
+# <img src='https://0000.us/klatchat/app/files/neon_images/icons/neon_skill.png' card_color="#FF8600" width="50" style="vertical-align:bottom"> Custom Conversations
+
 Create your own or use text script files shared by other users.
 
-## About
+## Description
 Skill, which works using the custom text parsing implementation, provides the functionality to create, share, modify, and use any script files obtained from the shared library.
 
 ## Examples
@@ -12,7 +13,9 @@ Skill, which works using the custom text parsing implementation, provides the fu
 * "Set my startup script to"
 
 ## Credits
-[reginaneon](https://github.com/reginaneon) [NeonDaniel](https://github.com/neondaniel) [neongeckocom](https://neongecko.com/)
+[reginaneon](https://github.com/reginaneon)
+[NeonDaniel](https://github.com/neondaniel)
+[neongeckocom](https://neongecko.com/)
 
 ## Category
 **Configuration**
