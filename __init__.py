@@ -30,22 +30,20 @@ import time
 
 from copy import deepcopy
 from adapt.intent import IntentBuilder
-from dateutil.tz import gettz
 from git import InvalidGitRepositoryError
 
 from mycroft.audio import wait_while_speaking
 from mycroft_bus_client import Message
 from mycroft.skills.core import intent_handler
 from mycroft.util.log import LOG
-from neon_utils.message_utils import get_message_user
+from neon_utils.message_utils import get_message_user, request_from_mobile, request_for_neon, build_message
 from neon_utils.skills.neon_skill import NeonSkill
+from neon_utils.user_utils import get_user_prefs
 from neon_utils.web_utils import scrape_page_for_links as scrape
 from neon_utils.parse_utils import clean_quotes
 from mycroft.util.parse import normalize
 from mycroft.util.audio_utils import play_audio_file
-# from mycroft.util import play_wav, play_mp3
 
-# from utils_dict import Script, ScriptStack
 from .utils_emulate import Conversation, ConversationManager
 
 # TIMEOUT = 8
@@ -88,8 +86,6 @@ class CustomConversations(NeonSkill):
 
     def __init__(self):
         super(CustomConversations, self).__init__(name="CustomConversations")
-        self.tz = self.sys_tz if self.neon_core else \
-            gettz(self.location_timezone)
 
         self.file_ext = ".ncs"
         # TODO: Refactor to skill FS
@@ -192,8 +188,6 @@ class CustomConversations(NeonSkill):
         self.add_event("neon.script_exists", self._script_exists)
         self.add_event("neon.run_alert_script", self.handle_start_script)
         self.add_event("neon.friendly_chat", self._run_friendly_chat)
-        # self.add_event("cc_loop:utterance", self.check_if_script_response)
-        # self.add_event('recognizer_loop:audio_output_end', self.check_end)
         self.add_event('speak', self.check_speak_event)
         LOG.debug(">>> CC Skill Initialized! <<<")
 
@@ -204,24 +198,13 @@ class CustomConversations(NeonSkill):
     def handle_update_scripts(self, message):
         if self.allow_update:
             LOG.debug(message)
-            # if self.neon_in_request(message):
             self.speak_dialog("update_started")
-            # self.check_for_signal("CC_convoSuccess")
-            # self.check_for_signal("CC_convoFailure")
-            # self.create_signal("CC_updating")
-            # self.update_message = message
             success = self._update_scripts()
             time.sleep(1)
-            # while self.check_for_signal("CC_updating", 30):
-            #     time.sleep(1)
-            # if self.check_for_signal("CC_convoSuccess"):
-            if self.server:
-                if success:
-                    self.speak_dialog("update_success", message=message)
-                # elif self.check_for_signal("CC_convoFailure"):
-                else:
-                    self.speak_dialog("update_failed", message=message)
-                # self.check_for_signal("CC_updating")
+            if success:
+                self.speak_dialog("update_success", message=message)
+            else:
+                self.speak_dialog("update_failed", message=message)
         else:
             self.speak_dialog("update_disallowed")
 
@@ -232,15 +215,14 @@ class CustomConversations(NeonSkill):
         LOG.info(available)
         if available:
             self.speak_dialog("available_script", {"available": f'{", ".join(available[:-1])}, and {available[-1]}'})
-            if self.request_from_mobile(message):
-                self.mobile_skill_intent("scripts_list", {"files": available}, message)
+            if request_from_mobile(message):
+                pass
+                # TODO: Implement mobile handler
+                # self.mobile_skill_intent("scripts_list", {"files": available}, message)
                 # self.socket_io_emit("scripts_list", f"&files={available}", message.context["flac_filename"])
 
     @intent_handler(IntentBuilder("SetDefault").require('default'))
     def handle_set_default(self, message):
-        user = self.get_utterance_user(message)
-        # if self.server:
-        #     user = nick(message.context["flac_filename"])
         utt = message.data.get("utterance")
         script_name = " ".join(utt.split("to")[1:]).strip().replace(" ", "_")
         LOG.info(script_name)
@@ -248,11 +230,11 @@ class CustomConversations(NeonSkill):
                      if os.path.isfile(os.path.join(self.text_location, x))]
         if script_name in available:
             LOG.debug("Good Request")
-            if self.request_from_mobile(message):
+            if request_from_mobile(message):
                 # self.speak(f"Updating your startup script to {script_name}")
                 self.speak_dialog("startup_script", {"script_name": script_name}, private=True)
-                self.mobile_skill_intent("scripts_default", {"name": script_name}, message)
-
+                # TODO: Implement mobile handler
+                # self.mobile_skill_intent("scripts_default", {"name": script_name}, message)
                 # self.socket_io_emit("scripts_default", f"&name={script_name}", message.context["flac_filename"])
             # TODO: Non-Mobile startup script DM
         else:
@@ -261,12 +243,8 @@ class CustomConversations(NeonSkill):
     # TODO: consider how to handle this with compiled scripts
     @intent_handler(IntentBuilder("EmailScript").optionally('Neon').require('email').require('script'))
     def handle_email_file(self, message):
-        if self.neon_in_request(message):
-            user = self.get_utterance_user(message)
-            # if self.server:
-            #     user = nick(message.context["flac_filename"])
+        if request_for_neon(message):
             utt = message.data.get("utterance")
-            # LOG.debug(message.data)
             script_name = " ".join(utt.split("my")[1:]) \
                 .strip().replace(" ", "_").replace(message.data.get("script"), "").rstrip("_")
             # LOG.info(script_name)
@@ -278,20 +256,10 @@ class CustomConversations(NeonSkill):
                 LOG.debug(f"Good Request: {file_to_send}")
 
                 # Get user email address
-                preference_user = self.preference_user(message)
+                preference_user = get_user_prefs(message)["user"]
                 email_addr = preference_user["email"]
 
                 if email_addr:
-                    # Make attDir to hold file
-                    # if not os.path.exists(self.configuration_available["dirVars"]["tempDir"] + '/attachments/'):
-                    #     os.makedirs(self.configuration_available["dirVars"]["tempDir"] + '/attachments/',
-                    #     exist_ok=True)
-
-                    # Copy file to send
-                    # att_path = self.configuration_available["dirVars"]["tempDir"] + f'/attachments/{script_name}_' + \
-                    #     email_addr + '_' + str(datetime.date.today()) + '_att.txt'
-                    # LOG.debug(f"file_to_send: {file_to_send} | att_path: {att_path}")
-                    # dest = shutil.copyfile(file_to_send, att_path)
                     with open(file_to_send, "rb") as f:
                         encoded = base64.b64encode(f.read()).decode("utf-8")
                     attachments = {f"{script_name}.txt": encoded}
@@ -299,7 +267,6 @@ class CustomConversations(NeonSkill):
                     title = f"Neon Script: {script_name.replace('_', ' ')}"
                     body = f"\nAttached is your requested Neon Script: {script_name}\n\n-Neon"
                     self.send_email(title, body, email_addr=email_addr, attachments=attachments)
-                    # self.bus.emit(Message("neon.email", {"title": title, "email": email_addr, "body": body}))
                     self.speak_dialog("email_sent", {"script": script_name, "email": email_addr})
                 else:
                     self.speak_dialog("no_email")
@@ -313,7 +280,7 @@ class CustomConversations(NeonSkill):
         :param message: Message object
         :return:
         """
-        user = self.get_utterance_user(message)
+        user = get_message_user(message)
         LOG.debug(message.data.get("utterance"))
         file_to_run = message.data.get('file_to_run')
         script_filename = file_to_run.rstrip().replace(" ", "_").replace("-", "_")
@@ -531,46 +498,6 @@ class CustomConversations(NeonSkill):
         current_conversation = Conversation(script_meta=script_meta, script_filename=script_filename)
         self.active_conversations.get(user).push(current_conversation)
 
-    def _reset_values(self, user="local"):
-        """
-        Resets active_conversations entry for the given user (resets script execution).
-        The method is DEPRECIATED.
-        :param user: nick on klat server, else "local"
-        """
-        # self.active_conversations[user] = {
-        #     # Script Globals
-        #     "script_meta": {},          # Parser metadata
-        #     "script_filename": None,    # Script filename
-        #     "timeout": -1,              # Timeout in seconds before executing timeout_action (max 3600, -1 indefinite)
-        #     "timeout_action": '',       # String to speak when timeout is reached (before exit dialog)
-        #     "variables": {},            # Dict of declared variables and values
-        #     "speaker_data": {},         # Language defined in script
-        #     "loops_dict": {},           # Dict of loop names and associated dict of values
-        #     "formatted_script": [],     # List of script line dictionaries (excludes empty and comment lines)
-        #     "goto_tags": {},            # Dict of script tags and associated indexes
-        #
-        #     # Load time Variables
-        #     "line": '',                 # Current formatted_file Line being loaded (includes empty and comment lines)
-        #     "user_language": None,      # User language setting (not script setting)
-        #     "last_variable": None,      # Last variable read from the script (used to handle continuations)
-        #     "synonym_command": None,    # Command to execute when a synonym is heard (run script)
-        #     "synonyms": [],             # List of synonyms available to run the script
-        #     "script_start_time": None,  # Epoch time of script start
-        #
-        #     # Runtime Variables
-        #     "current_index": 0,         # Current formatted_script index being parsed or executed
-        #     "last_indent": 0,           # Indentation of last line executed (^\s%4)
-        #     "variable_to_fill": '',     # Name of variable to which next input is assigned
-        #     "last_request": '',         # Identifier of last speak/execute emit to catch the response
-        #     "sub_string_counters": {},  # Counters associated with each string substitution option
-        #     "audio_responses": {},      # Dict of variables and associated audio inputs (file paths)
-        #
-        #     # Persistence Variables
-        #     "pending_scripts": []       # List of pending script dicts
-        # }
-
-        # self.clear_signals(f"{user}_CC")
-
     def _update_scripts(self):
         """
         Updates conversation files from Git
@@ -648,11 +575,6 @@ class CustomConversations(NeonSkill):
             # Empty file
             return False
 
-        # if "Script:" in open(os.path.join(f'{self.__location__}/script_txt', filename)).readline():
-        #     return True
-        # else:
-        #     return False
-
     def _continue_script_execution(self, message, user="local"):
         """
         Continues iterating through script execution until we have to wait for a response
@@ -663,7 +585,6 @@ class CustomConversations(NeonSkill):
         try:
             active_dict = self.active_conversations.get(user).get_current_conversation()
             # Catch when we are waiting for input
-            # if not self.check_for_signal(f"{user}_CC_inputNeeded", -1):
             if user not in self.awaiting_input and active_dict:
                 LOG.debug(f'Continuing {active_dict["script_filename"]} script from index {active_dict["current_index"]}')
 
@@ -870,7 +791,7 @@ class CustomConversations(NeonSkill):
             text = text.strip('"')
             # signal = build_signal_name(user, text)
             # LOG.info(f"SIGNAL IS {signal}")
-            to_emit = self.build_message("execute", text, message, active_dict["speaker_data"])
+            to_emit = build_message("execute", text, message, active_dict["speaker_data"])
             LOG.info(f"TO EMIT is {to_emit}")
             # self.create_signal(signal)
             active_dict["last_request"] = text
@@ -939,15 +860,9 @@ class CustomConversations(NeonSkill):
             # Loop condition met, continue
             else:
                 active_dict["current_index"] += 1
-
-            # LOG.debug(f"DM: Continue Script Execution Call")
-            # self._continue_script_execution(message, user)
-
         else:
             # This is the start of a loop. Just continue
             active_dict["current_index"] += 1
-        # LOG.debug(f"DM: Continue Script Execution Call")
-        # self._continue_script_execution(message, user)
 
     def _run_goto(self, user, text, message):
         """
@@ -1017,9 +932,6 @@ class CustomConversations(NeonSkill):
             else:
                 var_to_assign = None
                 to_evaluate = text
-            # global ret
-            # ret = None
-            # exec(text, {"ret": ret, "sqrt": sqrt})
             try:
                 LOG.debug(to_evaluate)
                 ret = eval(to_evaluate, {}, {"sqrt": sqrt, "ln": log, "log": log10,
@@ -1042,8 +954,6 @@ class CustomConversations(NeonSkill):
                                                     "script": re.sub("_", " ", active_dict["script_filename"]),
                                                     "detail": text})
             active_dict["current_index"] += 1
-            # LOG.debug(f"DM: Continue Script Execution Call")
-        # self._continue_script_execution(message, user)
 
     def _run_neon_speak(self, user, text, message):
         """
@@ -1065,17 +975,11 @@ class CustomConversations(NeonSkill):
 
         if not text or text.lower().endswith("speak:"):
             active_dict["current_index"] += 1
-            # LOG.debug(f"DM: Continue Script Execution Call")
-            # self._continue_script_execution(message, user)
         else:
-            # LOG.debug(f"Speak: {text}")
-            # signal = build_signal_name(user, text)
-
             active_dict["current_index"] += 1  # Increment position first in case speak is fast
 
-            to_speak = self.build_message("neon speak", text, message, active_dict["speaker_data"])
+            to_speak = build_message("neon speak", text, message, active_dict["speaker_data"])
             active_dict["last_request"] = text
-            # self.create_signal(signal)  # TODO: Depreciate signal? DM
             LOG.info(f"ABOUT TO SPEAK {text}")
             self.speak(text, message=to_speak)
             # LOG.info(f"{text} SUCCESSFULLY SPOKEN")
@@ -1105,8 +1009,6 @@ class CustomConversations(NeonSkill):
         # Catch indented section start line
         if text == "Name speak:":
             active_dict["current_index"] += 1
-            # LOG.debug(f"DM: Continue Script Execution Call")
-            # self._continue_script_execution(message, user)
         else:
             speaker_dict = active_dict["speaker_data"]
             if message.data.get("parser_data"):
@@ -1142,7 +1044,7 @@ class CustomConversations(NeonSkill):
 
                     # Handle passed gender change without specified language
                     if not language:
-                        language = self.preference_speech(message)["tts_language"]
+                        language = get_user_prefs(message)["speech"]["tts_language"]
 
                     LOG.debug(f"{gender} {language} {name} {speaker}")
 
@@ -1151,13 +1053,11 @@ class CustomConversations(NeonSkill):
                     speaker_data = speaker_dict
 
             LOG.debug(f"{speaker} Speak: {text}")
-            # signal = build_signal_name(user, text)
             text = str(text).strip().strip('"')
-            to_speak = self.build_message("neon speak", text, message, speaker=speaker_data)
+            to_speak = build_message("neon speak", text, message, speaker=speaker_data)
             LOG.debug(speaker)
             LOG.debug(to_speak.data)
             active_dict["last_request"] = text
-            # self.create_signal(signal)
             self.speak(text, message=to_speak)
             user_input = message.data.get("utterances")
             if user_input:
@@ -2243,7 +2143,7 @@ class CustomConversations(NeonSkill):
             LOG.debug(active_dict["variables"])
 
         # Do actual playback
-        if self.server:
+        if message.context.get("klat_data"):
             # Example Filename
             # /home/guydaniels1953/NeonAI/NGI/Documents/NeonGecko/ts_transcript_audio_segments/
             # daniel-2020-07-07/daniel-2020-07-07 20:33:37.034829 just kidding .wav'
@@ -2258,24 +2158,13 @@ class CustomConversations(NeonSkill):
                 LOG.error(f"Reconvey audio not found!")
                 speaker_data = active_dict["speaker_data"]
                 speaker_data["name"] = name
-                to_speak = self.build_message("neon speak", text, message, speaker_data)
+                to_speak = build_message("neon speak", text, message, speaker_data)
                 self.speak(text, message=to_speak)
-            # while self.check_for_signal(signal_name, 60):
-            #     time.sleep(0.2)  # Pad next response
-            # if message.data.get("mobile"):
-            #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
-            # else:
-            #     self.speak(active_dict["variables"][var_to_speak])
-            # if message.context["mobile"]:
-            #     flac_filename = message.context["flac_filename"]
-            #     self.socket_io_emit("play_audio", file_to_play, flac_filename)
         else:
-            if self.request_from_mobile(message):
+            if request_from_mobile(message):
                 # TODO: Handle sending audio data to mobile (non-server so can't assume public URL) DM
                 pass
             else:
-                # while self.is_speaking(60):
-                #     time.sleep(0.2)
                 if os.path.isfile(audio):
                     # Skills will not block while speaking, so wait here to make sure reconveyed audio doesn't overlap
                     wait_while_speaking()
@@ -2287,10 +2176,7 @@ class CustomConversations(NeonSkill):
                 else:
                     LOG.error(f"Audio file not found! {audio}")
                     self.speak(text)
-
         active_dict["current_index"] += 1
-        # LOG.debug(f"DM: Continue Script Execution Call")
-        # self._continue_script_execution(message, user)
 
     def _run_email(self, user, content, message):
         """
@@ -2303,7 +2189,7 @@ class CustomConversations(NeonSkill):
         LOG.debug(f"DM: {content}")
         active_dict = self.active_conversations[user].get_current_conversation()
 
-        email_addr = self.preference_user(message).get("email")
+        email_addr = get_user_prefs(message)["user"].get("email")
 
         parser_data = message.data.get("parser_data")
         if parser_data:
@@ -2346,8 +2232,8 @@ class CustomConversations(NeonSkill):
 
         if message.data.get("parser_data") and any((message.data["parser_data"].get("language"),
                                                     message.data["parser_data"].get("gender"))):
-            language = message.data["parser_data"].get("language", self.preference_speech(message)["tts_language"])
-            gender = message.data["parser_data"].get("gender", self.preference_speech(message).get("tts_gender"))
+            language = message.data["parser_data"].get("language", get_user_prefs(message)["speech"]["tts_language"])
+            gender = message.data["parser_data"].get("gender", get_user_prefs(message)["speech"].get("tts_gender"))
             active_dict["speaker_data"] = {"name": "Neon",
                                            "language": language,
                                            "gender": gender,
@@ -2364,14 +2250,14 @@ class CustomConversations(NeonSkill):
             else:
                 LOG.warning("No gender specified in Language line!")
                 try:
-                    gender = self.preference_speech(message).get("tts_gender", "female")
+                    gender = get_user_prefs(message)["speech"].get("tts_gender", "female")
                     LOG.debug(f"Got user preferred gender: {gender}")
                 except Exception as e:
                     LOG.error(e)
                     gender = "female"
 
             LOG.debug(line)
-            language = line[0].lower().strip('"').strip("'").rstrip(",") or self.preference_speech(message)
+            language = line[0].lower().strip('"').strip("'").rstrip(",") or get_user_prefs(message)["speech"]
 
             active_dict["speaker_data"] = active_dict["speaker_data"] or {}
             active_dict["speaker_data"]["language"] = language
@@ -2745,16 +2631,17 @@ class CustomConversations(NeonSkill):
 
         LOG.debug(f"Lookup {section}.{variable}")
         section = section.lower().strip()
+        # TODO: Simplify this logic
         if section == "speech":
-            result = self.preference_speech(message).get(variable)
+            result = get_user_prefs(message)["speech"].get(variable)
         elif section == "user":
-            result = self.preference_user(message).get(variable)
+            result = get_user_prefs(message)["user"].get(variable)
         elif section == "brands":
-            result = self.preference_brands(message).get(variable)
+            result = get_user_prefs(message)["brands"].get(variable)
         elif section == "location":
-            result = self.preference_location(message).get(variable)
+            result = get_user_prefs(message)["location"].get(variable)
         elif section == "unit":
-            result = self.preference_unit(message).get(variable)
+            result = get_user_prefs(message)["units"].get(variable)
         else:
             LOG.warning(f"{section} is not a valid preference!")
             result = None
@@ -2777,7 +2664,7 @@ class CustomConversations(NeonSkill):
         intent = active_dict["variables"].get(intent, [clean_quotes(intent)])[0]
         LOG.info(f"{intent}|{data_key}")
         LOG.info(f"BUILDING MESSAGE")
-        to_emit = self.build_message("skill_data", intent, message, active_dict["speaker_data"])
+        to_emit = build_message("skill_data", intent, message, active_dict["speaker_data"])
         # LOG.info(f"MESSAGE BUILT WITH {to_emit.data}")
         resp = self.bus.wait_for_response(to_emit, "skills:execute.response", timeout=60)
         LOG.info(f"VARIABLE SKILL RESPONSE IS {resp}")
@@ -2975,9 +2862,7 @@ class CustomConversations(NeonSkill):
         Notify user they have not responded and script will exit
         :param message: message associated with last valid response
         """
-        user = self.get_utterance_user(message)
-        # if self.server:
-        #     user = nick(message.context["flac_filename"])
+        user = get_message_user(message)
         active_dict = self.active_conversations[user].get_current_conversation()
         LOG.debug(message)
 
@@ -2986,7 +2871,6 @@ class CustomConversations(NeonSkill):
             if active_dict["timeout_action"]:
                 if user in self.awaiting_input:
                     self.awaiting_input.remove(user)
-                # self.check_for_signal(f"{user}_CC_inputNeeded")
                 self._run_goto(user, active_dict["timeout_action"], message)
             else:
                 self.speak_dialog("TimeoutExit", {"duration": active_dict["timeout"]}, message=message, private=True,
@@ -3034,12 +2918,9 @@ class CustomConversations(NeonSkill):
                             # self._continue_script_execution(message, user)
         except TypeError:
             pass
-        # except KeyError:
-        #     if user in self.active_conversations.keys():
-        #         active_dict["current"] = True
 
     def converse(self, message=None):
-        user = self.get_utterance_user(message)
+        user = get_message_user(message)
         utterances = message.data.get('utterances')
         if not message or not message.context or not utterances:
             return False
@@ -3051,7 +2932,9 @@ class CustomConversations(NeonSkill):
         elif message.context.get("cc_data", {}).get("execute_from_script", False):
             LOG.info(f'Script execute for {user}, pass: {utterances}')
             return False
-        elif user in self.active_conversations and self.active_conversations[user].get_current_conversation().get("script_filename"):
+        elif user in self.active_conversations and \
+                self.active_conversations[user].get_current_conversation()\
+                        .get("script_filename"):
             LOG.info(f'Script input for {user} consume: {utterances}')
             consumed = self.check_if_script_response(message)
             LOG.info(f"consumed={consumed}")
@@ -3061,10 +2944,10 @@ class CustomConversations(NeonSkill):
                 event_name = f"CC_{user}_conversation"
                 LOG.info(f'handle event: {event_name} in {conversation_data["timeout"]}')
                 if conversation_data["timeout"] > 0:
-                    next_deadline = self.to_system_time(datetime.datetime.now(self.tz) +
-                                                        datetime.timedelta(seconds=conversation_data["timeout"]))
+                    next_deadline = datetime.datetime.now(self.sys_tz) +\
+                                    datetime.timedelta(seconds=conversation_data["timeout"])
                     self.cancel_scheduled_event(event_name)
-                    self.schedule_event(self._handle_timeout, self.to_system_time(next_deadline),
+                    self.schedule_event(self._handle_timeout, next_deadline,
                                         data={**message.data, **message.context}, name=event_name)
             # Return whether or not the script used the passed utterance
             return consumed
@@ -3078,7 +2961,7 @@ class CustomConversations(NeonSkill):
         :param message: message to evaluate
         """
         LOG.debug(f"check_if_script_response: {message.data}")
-        user = self.get_utterance_user(message)
+        user = get_message_user(message)
 
         if user not in self.active_conversations.keys():
             return False
