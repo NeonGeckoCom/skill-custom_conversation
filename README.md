@@ -21,8 +21,8 @@ Skill, which works using the custom text parsing implementation, provides the fu
 **Configuration**
 
 ## Tags
-#Neongecko
-#Neon
+#NeonAI
+#NeonGecko Original
 #CustomConversations
 #Custom
 
