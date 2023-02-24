@@ -35,12 +35,14 @@ from git import InvalidGitRepositoryError
 from mycroft.audio import wait_while_speaking
 from mycroft_bus_client import Message
 from mycroft.skills.core import intent_handler
-from mycroft.util.log import LOG
 from neon_utils.message_utils import get_message_user, request_from_mobile, request_for_neon, build_message
 from neon_utils.skills.neon_skill import NeonSkill
 from neon_utils.user_utils import get_user_prefs
 from neon_utils.web_utils import scrape_page_for_links as scrape
 from neon_utils.parse_utils import clean_quotes
+from ovos_utils import classproperty
+from ovos_utils.log import LOG
+from ovos_utils.process_utils import RuntimeRequirements
 from mycroft.util.parse import normalize
 from mycroft.util.audio_utils import play_audio_file
 
@@ -122,6 +124,18 @@ class CustomConversations(NeonSkill):
 
         self.speak_timeout = 5
         self.response_timeout = 10
+
+    @classproperty
+    def runtime_requirements(self):
+        return RuntimeRequirements(network_before_load=True,
+                                   internet_before_load=True,
+                                   gui_before_load=False,
+                                   requires_internet=True,
+                                   requires_network=True,
+                                   requires_gui=False,
+                                   no_internet_fallback=True,
+                                   no_network_fallback=True,
+                                   no_gui_fallback=True)
 
     @property
     def auto_update(self):
