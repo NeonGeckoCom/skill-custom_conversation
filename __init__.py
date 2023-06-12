@@ -33,7 +33,7 @@ from adapt.intent import IntentBuilder
 from git import InvalidGitRepositoryError
 
 from mycroft.audio import wait_while_speaking
-from mycroft_bus_client import Message
+from ovos_bus_client import Message
 from mycroft.skills.core import intent_handler
 from neon_utils.message_utils import get_message_user, request_from_mobile, request_for_neon, build_message
 from neon_utils.skills.neon_skill import NeonSkill
