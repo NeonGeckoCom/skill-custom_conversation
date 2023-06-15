@@ -86,8 +86,8 @@ class CustomConversations(NeonSkill):
     __location__ = os.path.realpath(
         os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
-    def __init__(self):
-        super(CustomConversations, self).__init__(name="CustomConversations")
+    def __init__(self, **kwargs):
+        NeonSkill.__init__(self, **kwargs)
 
         self.file_ext = ".ncs"
         # TODO: Refactor to skill FS
@@ -147,6 +147,7 @@ class CustomConversations(NeonSkill):
         return False if not self.neon_core else \
             self.settings.get('allow_update')
 
+    # TODO: Move to __init__ after stable ovos-workshop
     def initialize(self):
         self.make_active()  # Make this skill active so that it never
         # create_daemon(self.server_bus.run_forever())
@@ -3155,10 +3156,6 @@ class CustomConversations(NeonSkill):
         """
         with open(os.path.join(self.transcript_location, f'{filename}_{start_time}.txt'), 'a') as transcript:
             transcript.write(utterance)
-
-
-def create_skill():
-    return CustomConversations()
 
     # Helper functions
     # def _add_syn_intent(self, message):
